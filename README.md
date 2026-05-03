@@ -47,6 +47,7 @@ cmake --build build
 Create your own application by defining `CreateApplication()`:
 
 ```cpp
+#include "EntryPoint.h"
 #include <Azer.h>
 
 class SandboxApp : public azer::Application {
