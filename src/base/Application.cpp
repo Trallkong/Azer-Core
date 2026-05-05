@@ -4,11 +4,13 @@
 
 #include "azpch.h"
 #include "Application.h"
+
 #include "Renderer.h"
 
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
 #include "Logger.h"
+#include "RenderSettings.h"
 #include "SplashLayer.h"
 #include "SDL3GPURenderer.h"
 #include "SDL3Renderer.h"
@@ -28,7 +30,7 @@ namespace azer
             assert(false);
         }
 
-        m_Window = SDL_CreateWindow(m_WindowTitle.c_str(), 1280, 720, 0);
+        m_Window = Window::Create(1280, 720, m_WindowTitle);
 
         if (mode == AppMode::Simple2D)
         {
@@ -41,9 +43,9 @@ namespace azer
             assert(false && "Unsupported AppMode");
         }
 
-        if (!m_Renderer->Initialize(m_Window))
+        if (!m_Renderer->Initialize(m_Window.get()))
         {
-            std::cerr << "Failed to initialize renderer" << std::endl;
+            AZ_CORE_ERROR("Failed to initialize renderer");
             assert(false);
         }
 
@@ -64,14 +66,15 @@ namespace azer
         if (m_Mode == AppMode::Simple2D)
         {
             SDL_DestroyRenderer(dynamic_cast<SDL3Renderer*>(m_Renderer.get())->GetRenderer());
+            m_Window.reset();
         } else if (m_Mode == AppMode::ForwardPlus)
         {
-            // SDL_GPU device is managed by SDL, no need to destroy manually
+            m_Renderer.reset();
         } else
         {
             assert(false && "Unsupported AppMode");
         }
-        SDL_DestroyWindow(m_Window);
+
         SDL_Quit();
     }
 
@@ -92,6 +95,7 @@ namespace azer
                 if (!event)
                     continue;
 
+                OnEvent(*event);
                 for (auto i = layers.rbegin(); i != layers.rend(); ++i)
                 {
                     (*i)->OnEvent(*event);
@@ -164,12 +168,25 @@ namespace azer
         std::cout << std::endl;
     }
 
+    void Application::OnEvent(Event& e)
+    {
+        EventDispatcher dispatcher(e);
+        dispatcher.Dispatch<WindowResizeEvent>(OnWindowResize);
+    }
+
     void Application::OnImGuiRender()
     {
         if (!m_ShowSettings) return;
         ImGui::Begin("Azer Settings");
         ImGui::ColorEdit3("Clear Color", m_ClearColor);
         ImGui::End();
+    }
+
+    bool Application::OnWindowResize(const WindowResizeEvent& event)
+    {
+        AZ_CORE_TRACE("Window Resize Event: {0} {1}", event.GetWidth(), event.GetHeight());
+        RenderSettings::SetViewport(event.GetWidth(), event.GetHeight(), 0, 0);
+        return false;
     }
 }
 

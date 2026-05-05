@@ -17,6 +17,12 @@
 #include <cstdlib>
 #include <cassert>
 
-#include <SDL3/SDL.h>
+#include "SDL3/SDL.h"
+
+#include "glm/glm.hpp"
+#include "glm/ext/matrix_clip_space.hpp"
+#include "glm/ext/matrix_transform.hpp"
+
+#include "Logger.h"
 
 #endif //LEARNSDL_AZPCH_H

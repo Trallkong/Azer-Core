@@ -21,6 +21,7 @@ namespace azer
         void OnDetach() override;
         void OnUpdate(float deltaTime) override;
         void OnDraw() override;
+        void OnEvent(Event& event) override;
         void OnImGuiRender() override;
 
         static void Begin();

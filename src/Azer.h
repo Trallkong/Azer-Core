@@ -15,5 +15,10 @@
 // Renderer
 #include "renderer/Texture.h"
 #include "renderer/Renderer2D.h"
+#include "renderer/Renderer3D.h"
+#include "renderer/RenderSettings.h"
+#include "renderer/Camera.h"
+#include "renderer/Camera2D.h"
+#include "renderer/Camera3D.h"
 
 #endif //AZER_AZER_H

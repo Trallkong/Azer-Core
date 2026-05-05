@@ -11,6 +11,7 @@
 #include "SDL3/SDL.h"
 #include "LayerStack.h"
 #include "Renderer.h"
+#include "Window.h"
 
 namespace azer
 {
@@ -36,7 +37,7 @@ namespace azer
         Layer* PopLayer();
         Layer* PopOverlay();
 
-        SDL_Window* GetWindow() const { return m_Window; }
+        const Window& GetWindow() const { return *m_Window.get(); }
         const AppMode& GetMode() const { return m_Mode; }
         Renderer* GetRenderer() const { return m_Renderer.get(); }
 
@@ -48,10 +49,13 @@ namespace azer
         // 打印可用图形API
         static void print_available_graphic_api();
 
+        void OnEvent(Event& e);
+
         void OnImGuiRender();
+        static bool OnWindowResize(const WindowResizeEvent& event);
 
         AppMode m_Mode;
-        SDL_Window* m_Window = nullptr;
+        Scope<Window> m_Window = nullptr;
         Scope<Renderer> m_Renderer = nullptr;
 
         bool m_Running = true;

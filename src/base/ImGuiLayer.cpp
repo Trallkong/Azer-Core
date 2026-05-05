@@ -23,13 +23,13 @@ void azer::ImGuiLayer::OnAttach()
     {
         const auto renderer = dynamic_cast<SDL3Renderer*>(app.GetRenderer());
         ImGui::CreateContext();
-        ImGui_ImplSDL3_InitForSDLRenderer(app.GetWindow(), renderer->GetRenderer());
+        ImGui_ImplSDL3_InitForSDLRenderer(static_cast<SDL_Window*>(app.GetWindow().GetHandle()), renderer->GetRenderer());
         ImGui_ImplSDLRenderer3_Init(renderer->GetRenderer());
     } else if (app.GetMode() == AppMode::ForwardPlus)
     {
         const auto renderer = dynamic_cast<SDL3GPURenderer*>(app.GetRenderer());
         ImGui::CreateContext();
-        ImGui_ImplSDL3_InitForSDLGPU(app.GetWindow());
+        ImGui_ImplSDL3_InitForSDLGPU(static_cast<SDL_Window*>(app.GetWindow().GetHandle()));
         ImGui_ImplSDLGPU3_InitInfo init_info = {};
         init_info.Device = renderer->GetDevice();
         init_info.ColorTargetFormat = SDL_GPU_TEXTUREFORMAT_B8G8R8A8_UNORM;
@@ -65,6 +65,11 @@ void azer::ImGuiLayer::OnUpdate(const float deltaTime)
 void azer::ImGuiLayer::OnDraw()
 {
     Layer::OnDraw();
+}
+
+void azer::ImGuiLayer::OnEvent(Event& event)
+{
+    Layer::OnEvent(event);
 }
 
 void azer::ImGuiLayer::OnImGuiRender()
