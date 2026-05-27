@@ -7,6 +7,7 @@
 #include "SDL3GPURendererSupport.h"
 
 #include "GPUTexture.h"
+#include "imgui_impl_sdl3.h"
 #include "imgui_impl_sdlgpu3.h"
 
 
@@ -25,7 +26,8 @@ namespace azer
         if (m_VerticesTransferBuffer) SDL_ReleaseGPUTransferBuffer(m_Device, m_VerticesTransferBuffer);
         if (m_Sampler)         SDL_ReleaseGPUSampler(m_Device, m_Sampler);
         if (m_VertexBuffer)    SDL_ReleaseGPUBuffer(m_Device, m_VertexBuffer);
-        if (m_Pipeline)        SDL_ReleaseGPUGraphicsPipeline(m_Device, m_Pipeline);
+        if (m_Pipeline2D)        SDL_ReleaseGPUGraphicsPipeline(m_Device, m_Pipeline2D);
+        if (m_Pipeline3D)        SDL_ReleaseGPUGraphicsPipeline(m_Device, m_Pipeline3D);
         if (m_FragmentShader)  SDL_ReleaseGPUShader(m_Device, m_FragmentShader);
         if (m_VertexShader)    SDL_ReleaseGPUShader(m_Device, m_VertexShader);
         if (m_Window)          SDL_ReleaseWindowFromGPUDevice(m_Device, m_Window);
@@ -54,7 +56,9 @@ namespace azer
         SDL3GPURendererSupport::CreateVerticesTransferBuffer(this);
         SDL3GPURendererSupport::CreateSampler(this);
         SDL3GPURendererSupport::CreateWhiteTexture(this);
-        SDL3GPURendererSupport::CreateGraphicsPipeline(this);
+        SDL3GPURendererSupport::CreateShaders(this);
+        SDL3GPURendererSupport::CreateGraphicsPipeline2D(this);
+        SDL3GPURendererSupport::CreateGraphicsPipeline3D(this);
         SDL3GPURendererSupport::CreateBuffers(this);
 
         int winW = 1280, winH = 720;
@@ -116,18 +120,23 @@ namespace azer
 
         if (!m_Vertices.empty())
         {
-            SDL_BindGPUGraphicsPipeline(rp, m_Pipeline);
-
             SDL_GPUBufferBinding vtxBinding {};
             vtxBinding.buffer = m_VertexBuffer;
             vtxBinding.offset = 0;
             SDL_BindGPUVertexBuffers(rp, 0, &vtxBinding, 1);
 
             Uint32 baseVertex = 0;
+            SDL_GPUGraphicsPipeline* currentPipeline = nullptr;
             for (const auto& drawCmd : m_DrawCmds)
             {
-                // Set Camera
-                SDL_PushGPUVertexUniformData(cmd, 0, &drawCmd.mvp, sizeof(glm::mat4));
+                auto* pipeline = drawCmd.is3D ? m_Pipeline3D : m_Pipeline2D;
+                if (currentPipeline != pipeline)
+                {
+                    SDL_BindGPUGraphicsPipeline(rp, pipeline);
+                    currentPipeline = pipeline;
+                }
+
+                SDL_PushGPUVertexUniformData(cmd, 0, &drawCmd.ubo, sizeof(UniformBufferObject));
 
                 SDL_GPUTextureSamplerBinding texBinding {};
                 texBinding.texture = drawCmd.texture;
@@ -174,18 +183,24 @@ namespace azer
         const float c[4] = {color.r, color.g, color.b, color.a};
 
         // Triangle 1: v0, v1, v2
-        m_Vertices.push_back({{x,  y }, {0,0}, {c[0],c[1],c[2],c[3]}});
-        m_Vertices.push_back({{x2, y }, {1,0}, {c[0],c[1],c[2],c[3]}});
-        m_Vertices.push_back({{x2, y2}, {1,1}, {c[0],c[1],c[2],c[3]}});
+        m_Vertices.push_back({{x,  y, 0.0f }, {0,0}, {c[0],c[1],c[2],c[3]}});
+        m_Vertices.push_back({{x2, y, 0.0f}, {1,0}, {c[0],c[1],c[2],c[3]}});
+        m_Vertices.push_back({{x2, y2, 0.0f}, {1,1}, {c[0],c[1],c[2],c[3]}});
         // Triangle 2: v2, v3, v0
-        m_Vertices.push_back({{x2, y2}, {1,1}, {c[0],c[1],c[2],c[3]}});
-        m_Vertices.push_back({{x,  y2}, {0,1}, {c[0],c[1],c[2],c[3]}});
-        m_Vertices.push_back({{x,  y }, {0,0}, {c[0],c[1],c[2],c[3]}});
+        m_Vertices.push_back({{x2, y2, 0.0f}, {1,1}, {c[0],c[1],c[2],c[3]}});
+        m_Vertices.push_back({{x,  y2, 0.0f}, {0,1}, {c[0],c[1],c[2],c[3]}});
+        m_Vertices.push_back({{x,  y, 0.0f }, {0,0}, {c[0],c[1],c[2],c[3]}});
 
         BatchDrawCmd cmd {};
         cmd.texture = static_cast<SDL_GPUTexture*>(m_WhiteTexture->GetHandle());
         cmd.vertexCount = 6;
-        cmd.mvp = m_MVPMatrix;
+        cmd.is3D = false;
+
+        UniformBufferObject ubo {};
+        ubo.viewProjection = m_MVPMatrix;
+        ubo.transform = glm::mat4(1.0f);
+
+        cmd.ubo = ubo;
         m_DrawCmds.push_back(cmd);
     }
 
@@ -207,22 +222,28 @@ namespace azer
         const float y1 = dst.y + dst.h;
 
         // Triangle 1
-        m_Vertices.push_back({{x1, y0}, {u1, v0}, {1,1,1,1}});
-        m_Vertices.push_back({{x0, y0}, {u0, v0}, {1,1,1,1}});
-        m_Vertices.push_back({{x1, y1}, {u1, v1}, {1,1,1,1}});
+        m_Vertices.push_back({{x1, y0, 0.0f}, {u1, v0}, {1,1,1,1}});
+        m_Vertices.push_back({{x0, y0, 0.0f}, {u0, v0}, {1,1,1,1}});
+        m_Vertices.push_back({{x1, y1, 0.0f}, {u1, v1}, {1,1,1,1}});
         // Triangle 2
-        m_Vertices.push_back({{x1, y1}, {u1, v1}, {1,1,1,1}});
-        m_Vertices.push_back({{x0, y1}, {u0, v1}, {1,1,1,1}});
-        m_Vertices.push_back({{x0, y0}, {u0, v0}, {1,1,1,1}});
+        m_Vertices.push_back({{x1, y1, 0.0f}, {u1, v1}, {1,1,1,1}});
+        m_Vertices.push_back({{x0, y1, 0.0f}, {u0, v1}, {1,1,1,1}});
+        m_Vertices.push_back({{x0, y0, 0.0f}, {u0, v0}, {1,1,1,1}});
 
         BatchDrawCmd cmd {};
         cmd.texture = handle;
         cmd.vertexCount = 6;
-        cmd.mvp = m_MVPMatrix;
+        cmd.is3D = false;
+
+        UniformBufferObject ubo {};
+        ubo.viewProjection = m_MVPMatrix;
+        ubo.transform = glm::mat4(1.0f);
+
+        cmd.ubo = ubo;
         m_DrawCmds.push_back(cmd);
     }
 
-    Scope<Texture> SDL3GPURenderer::CreateTexture(const std::string& filePath)
+    Ref<Texture> SDL3GPURenderer::CreateTexture(const std::string& filePath)
     {
         SDL_Surface* loadedSurf = SDL_LoadPNG(filePath.c_str());
         if (!loadedSurf) return nullptr;
@@ -291,10 +312,10 @@ namespace azer
         SDL_DestroySurface(surf);
         SDL_ReleaseGPUTransferBuffer(m_Device, transfer_buffer);
 
-        return CreateScope<GPUTexture>(m_Device, gpuTex, info.format, w, h);
+        return CreateRef<GPUTexture>(m_Device, gpuTex, info.format, w, h);
     }
 
-    Scope<Texture> SDL3GPURenderer::CreateTexture(void* pixels, uint32_t width, uint32_t height)
+    Ref<Texture> SDL3GPURenderer::CreateTexture(void* pixels, uint32_t width, uint32_t height)
     {
         SDL_GPUTransferBuffer* transfer_buffer =
             SDL3GPURendererSupport::CreateTextureTransferBuffer(m_Device, width, height);
@@ -316,7 +337,6 @@ namespace azer
             return nullptr;
         }
 
-        // 把纹理数据复制到转移缓冲区
         const Uint32 pixelSize = width * height * 4;
         void* mapped = SDL_MapGPUTransferBuffer(m_Device, transfer_buffer, false);
         if (!mapped)
@@ -329,7 +349,6 @@ namespace azer
         memcpy(mapped, pixels, pixelSize);
         SDL_UnmapGPUTransferBuffer(m_Device, transfer_buffer);
 
-        // 把转移缓冲区的数据复制到GPU的纹理缓冲区
         SDL_GPUCommandBuffer* cmd = SDL_AcquireGPUCommandBuffer(m_Device);
         if (!cmd)
         {
@@ -355,7 +374,7 @@ namespace azer
         SDL_SubmitGPUCommandBuffer(cmd);
         SDL_ReleaseGPUTransferBuffer(m_Device, transfer_buffer);
 
-        return CreateScope<GPUTexture>(m_Device, gpuTex, info.format, width, height);
+        return CreateRef<GPUTexture>(m_Device, gpuTex, info.format, width, height);
     }
 
     void SDL3GPURenderer::DrawCube(const glm::vec3& position, const glm::vec3& rotation, const glm::vec3& scale)
@@ -367,11 +386,10 @@ namespace azer
         model = glm::rotate(model, glm::radians(rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
         model = glm::scale(model, scale);
 
-        const glm::mat4 mvp = m_MVPMatrix * model;
-
+        // CCW winding from outside for back-face culling
         const glm::vec3 cubeFaces[6][4] = {
-            {{ 1,-1, 1}, { 1, 1, 1}, { 1, 1,-1}, { 1,-1,-1}}, // +X
-            {{-1,-1,-1}, {-1, 1,-1}, {-1, 1, 1}, {-1,-1, 1}}, // -X
+            {{ 1,-1, 1}, { 1,-1,-1}, { 1, 1,-1}, { 1, 1, 1}}, // +X
+            {{-1,-1,-1}, {-1,-1, 1}, {-1, 1, 1}, {-1, 1,-1}}, // -X
             {{-1, 1, 1}, { 1, 1, 1}, { 1, 1,-1}, {-1, 1,-1}}, // +Y
             {{-1,-1,-1}, { 1,-1,-1}, { 1,-1, 1}, {-1,-1, 1}}, // -Y
             {{-1,-1, 1}, { 1,-1, 1}, { 1, 1, 1}, {-1, 1, 1}}, // +Z
@@ -389,31 +407,50 @@ namespace azer
 
         auto* whiteTex = static_cast<SDL_GPUTexture*>(m_WhiteTexture->GetHandle());
 
+        UniformBufferObject ubo {};
+        ubo.viewProjection = m_MVPMatrix;
+        ubo.transform = model;
+
         for (int f = 0; f < 6; ++f)
         {
-            glm::vec2 p[4];
-            for (int i = 0; i < 4; ++i)
-            {
-                glm::vec4 clip = mvp * glm::vec4(cubeFaces[f][i], 1.0f);
-                clip /= clip.w;
-                p[i] = {clip.x, clip.y};
-            }
-
             const float* c = faceColors[f];
 
-            m_Vertices.push_back({{p[0].x, p[0].y}, {0, 0}, {c[0], c[1], c[2], c[3]}});
-            m_Vertices.push_back({{p[1].x, p[1].y}, {0, 0}, {c[0], c[1], c[2], c[3]}});
-            m_Vertices.push_back({{p[2].x, p[2].y}, {0, 0}, {c[0], c[1], c[2], c[3]}});
-            m_Vertices.push_back({{p[2].x, p[2].y}, {0, 0}, {c[0], c[1], c[2], c[3]}});
-            m_Vertices.push_back({{p[3].x, p[3].y}, {0, 0}, {c[0], c[1], c[2], c[3]}});
-            m_Vertices.push_back({{p[0].x, p[0].y}, {0, 0}, {c[0], c[1], c[2], c[3]}});
+            m_Vertices.push_back({{cubeFaces[f][0].x, cubeFaces[f][0].y, cubeFaces[f][0].z}, {0, 0}, {c[0], c[1], c[2], c[3]}});
+            m_Vertices.push_back({{cubeFaces[f][1].x, cubeFaces[f][1].y, cubeFaces[f][1].z}, {0, 0}, {c[0], c[1], c[2], c[3]}});
+            m_Vertices.push_back({{cubeFaces[f][2].x, cubeFaces[f][2].y, cubeFaces[f][2].z}, {0, 0}, {c[0], c[1], c[2], c[3]}});
+            m_Vertices.push_back({{cubeFaces[f][2].x, cubeFaces[f][2].y, cubeFaces[f][2].z}, {0, 0}, {c[0], c[1], c[2], c[3]}});
+            m_Vertices.push_back({{cubeFaces[f][3].x, cubeFaces[f][3].y, cubeFaces[f][3].z}, {0, 0}, {c[0], c[1], c[2], c[3]}});
+            m_Vertices.push_back({{cubeFaces[f][0].x, cubeFaces[f][0].y, cubeFaces[f][0].z}, {0, 0}, {c[0], c[1], c[2], c[3]}});
 
             BatchDrawCmd cmd {};
             cmd.texture = whiteTex;
             cmd.vertexCount = 6;
-            cmd.mvp = glm::mat4(1.0f);
+            cmd.is3D = true;
+            cmd.ubo = ubo;
             m_DrawCmds.push_back(cmd);
         }
+    }
+
+    void SDL3GPURenderer::ImGuiInit(SDL_Window* window)
+    {
+        ImGui_ImplSDL3_InitForSDLGPU(window);
+        ImGui_ImplSDLGPU3_InitInfo init_info = {};
+        init_info.Device = m_Device;
+        init_info.ColorTargetFormat = SDL_GPU_TEXTUREFORMAT_B8G8R8A8_UNORM;
+        init_info.MSAASamples = SDL_GPU_SAMPLECOUNT_1;
+        ImGui_ImplSDLGPU3_Init(&init_info);
+    }
+
+    void SDL3GPURenderer::ImGuiShutdown()
+    {
+        ImGui_ImplSDLGPU3_Shutdown();
+        ImGui_ImplSDL3_Shutdown();
+    }
+
+    void SDL3GPURenderer::ImGuiNewFrame()
+    {
+        ImGui_ImplSDLGPU3_NewFrame();
+        ImGui_ImplSDL3_NewFrame();
     }
 
     void SDL3GPURenderer::SetImGuiDrawData(ImDrawData* drawData)

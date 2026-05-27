@@ -7,17 +7,16 @@
 #include "azpch.h"
 #include "SDL3GPURenderer.h"
 
-#include "vert_spv.h"
-#include "frag_spv.h"
+#include "batch3d_vert_spv.h"
+#include "batch3d_frag_spv.h"
 
 namespace azer
 {
-    void SDL3GPURendererSupport::CreateGraphicsPipeline(SDL3GPURenderer* renderer)
+    void SDL3GPURendererSupport::CreateShaders(SDL3GPURenderer* renderer)
     {
-        // 顶点着色器
         SDL_GPUShaderCreateInfo vertInfo {};
-        vertInfo.code        = vert_spv;
-        vertInfo.code_size   = vert_spv_len;
+        vertInfo.code        = batch3d_vert_spv;
+        vertInfo.code_size   = batch3d_vert_spv_len;
         vertInfo.format      = SDL_GPU_SHADERFORMAT_SPIRV;
         vertInfo.entrypoint  = "main";
         vertInfo.stage       = SDL_GPU_SHADERSTAGE_VERTEX;
@@ -25,18 +24,19 @@ namespace azer
         vertInfo.num_samplers        = 0;
         renderer->m_VertexShader = SDL_CreateGPUShader(renderer->m_Device, &vertInfo);
 
-        // 片段着色器
         SDL_GPUShaderCreateInfo fragInfo {};
-        fragInfo.code        = frag_spv;
-        fragInfo.code_size   = frag_spv_len;
+        fragInfo.code        = batch3d_frag_spv;
+        fragInfo.code_size   = batch3d_frag_spv_len;
         fragInfo.format      = SDL_GPU_SHADERFORMAT_SPIRV;
         fragInfo.entrypoint  = "main";
         fragInfo.stage       = SDL_GPU_SHADERSTAGE_FRAGMENT;
         fragInfo.num_uniform_buffers = 0;
         fragInfo.num_samplers        = 1;
         renderer->m_FragmentShader = SDL_CreateGPUShader(renderer->m_Device, &fragInfo);
+    }
 
-        // 顶点布局
+    void SDL3GPURendererSupport::CreateGraphicsPipeline2D(SDL3GPURenderer* renderer)
+    {
         SDL_GPUVertexBufferDescription vtxBufDesc {};
         vtxBufDesc.slot       = 0;
         vtxBufDesc.pitch      = sizeof(SDL3GPURenderer::BatchVertex);
@@ -44,17 +44,14 @@ namespace azer
         vtxBufDesc.instance_step_rate = 0;
 
         SDL_GPUVertexAttribute attribs[4] = {};
-        // location 0: aPos (vec2)
         attribs[0].location    = 0;
         attribs[0].buffer_slot = 0;
-        attribs[0].format      = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2;
+        attribs[0].format      = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
         attribs[0].offset      = offsetof(SDL3GPURenderer::BatchVertex, pos);
-        // location 1: aTexCoord (vec2)
         attribs[1].location    = 1;
         attribs[1].buffer_slot = 0;
         attribs[1].format      = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2;
         attribs[1].offset      = offsetof(SDL3GPURenderer::BatchVertex, texCoord);
-        // location 2: aColor (vec4)
         attribs[2].location    = 2;
         attribs[2].buffer_slot = 0;
         attribs[2].format      = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4;
@@ -66,7 +63,6 @@ namespace azer
         vtxInput.num_vertex_attributes = 3;
         vtxInput.vertex_attributes     = attribs;
 
-        // 混合
         SDL_GPUColorTargetBlendState blend {};
         blend.enable_blend           = true;
         blend.src_color_blendfactor  = SDL_GPU_BLENDFACTOR_SRC_ALPHA;
@@ -89,7 +85,60 @@ namespace azer
         pipeInfo.target_info.num_color_targets = 1;
         pipeInfo.target_info.color_target_descriptions = &colorTargetDesc;
 
-        renderer->m_Pipeline = SDL_CreateGPUGraphicsPipeline(renderer->m_Device, &pipeInfo);
+        renderer->m_Pipeline2D = SDL_CreateGPUGraphicsPipeline(renderer->m_Device, &pipeInfo);
+    }
+
+    void SDL3GPURendererSupport::CreateGraphicsPipeline3D(SDL3GPURenderer* renderer)
+    {
+        SDL_GPUVertexBufferDescription vtxBufDesc {};
+        vtxBufDesc.slot       = 0;
+        vtxBufDesc.pitch      = sizeof(SDL3GPURenderer::BatchVertex);
+        vtxBufDesc.input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
+        vtxBufDesc.instance_step_rate = 0;
+
+        SDL_GPUVertexAttribute attribs[4] = {};
+        attribs[0].location    = 0;
+        attribs[0].buffer_slot = 0;
+        attribs[0].format      = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
+        attribs[0].offset      = offsetof(SDL3GPURenderer::BatchVertex, pos);
+        attribs[1].location    = 1;
+        attribs[1].buffer_slot = 0;
+        attribs[1].format      = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2;
+        attribs[1].offset      = offsetof(SDL3GPURenderer::BatchVertex, texCoord);
+        attribs[2].location    = 2;
+        attribs[2].buffer_slot = 0;
+        attribs[2].format      = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4;
+        attribs[2].offset      = offsetof(SDL3GPURenderer::BatchVertex, color);
+
+        SDL_GPUVertexInputState vtxInput {};
+        vtxInput.num_vertex_buffers    = 1;
+        vtxInput.vertex_buffer_descriptions = &vtxBufDesc;
+        vtxInput.num_vertex_attributes = 3;
+        vtxInput.vertex_attributes     = attribs;
+
+        SDL_GPUColorTargetBlendState blend {};
+        blend.enable_blend           = true;
+        blend.src_color_blendfactor  = SDL_GPU_BLENDFACTOR_SRC_ALPHA;
+        blend.dst_color_blendfactor  = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+        blend.color_blend_op         = SDL_GPU_BLENDOP_ADD;
+        blend.src_alpha_blendfactor  = SDL_GPU_BLENDFACTOR_ONE;
+        blend.dst_alpha_blendfactor  = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+        blend.alpha_blend_op         = SDL_GPU_BLENDOP_ADD;
+
+        SDL_GPUColorTargetDescription colorTargetDesc {};
+        colorTargetDesc.format      = SDL_GetGPUSwapchainTextureFormat(renderer->m_Device, renderer->m_Window);
+        colorTargetDesc.blend_state = blend;
+
+        SDL_GPUGraphicsPipelineCreateInfo pipeInfo {};
+        pipeInfo.vertex_shader    = renderer->m_VertexShader;
+        pipeInfo.fragment_shader  = renderer->m_FragmentShader;
+        pipeInfo.vertex_input_state = vtxInput;
+        pipeInfo.primitive_type   = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
+        pipeInfo.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_BACK;
+        pipeInfo.target_info.num_color_targets = 1;
+        pipeInfo.target_info.color_target_descriptions = &colorTargetDesc;
+
+        renderer->m_Pipeline3D = SDL_CreateGPUGraphicsPipeline(renderer->m_Device, &pipeInfo);
     }
 
     void SDL3GPURendererSupport::CreateSampler(SDL3GPURenderer* renderer)

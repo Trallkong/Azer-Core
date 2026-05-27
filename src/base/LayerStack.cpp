@@ -5,6 +5,8 @@
 #include "azpch.h"
 #include "LayerStack.h"
 
+#include <algorithm>
+
 namespace azer
 {
     LayerStack::LayerStack()
@@ -23,13 +25,11 @@ namespace azer
         pos++;
     }
 
-    Layer* LayerStack::PopLayer()
+    void LayerStack::PopLayer()
     {
         assert(pos > 0);
-        Layer* layer = m_Layers[pos - 1];
         m_Layers.erase(m_Layers.begin() + pos - 1);
         pos--;
-        return layer;
     }
 
     void LayerStack::PushOverlay(Layer* overlay)
@@ -37,11 +37,31 @@ namespace azer
         m_Layers.push_back(overlay);
     }
 
-    Layer* LayerStack::PopOverlay()
+    void LayerStack::PopOverlay()
     {
         assert(pos < m_Layers.size());
-        Layer* layer = m_Layers.back();
         m_Layers.pop_back();
-        return layer;
+    }
+
+    Layer* LayerStack::PeekLayer() const
+    {
+        assert(pos > 0);
+        return m_Layers[pos - 1];
+    }
+
+    Layer* LayerStack::PeekOverlay() const
+    {
+        assert(pos < m_Layers.size());
+        return m_Layers.back();
+    }
+
+    void LayerStack::Erase(Layer* layer)
+    {
+        if (const auto it = std::ranges::find(m_Layers, layer); it != m_Layers.end())
+        {
+            if (it - m_Layers.begin() < pos)
+                pos--;
+            m_Layers.erase(it);
+        }
     }
 }

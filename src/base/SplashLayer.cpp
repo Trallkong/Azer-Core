@@ -1,25 +1,21 @@
-//
-// Created by Trallkong on 2026/5/2.
-//
-
 #include "azpch.h"
 #include "SplashLayer.h"
 
-#include "Application.h"
-#include "Renderer2D.h"
+#include "Renderer.h"
 
 namespace azer
 {
-    SplashLayer::SplashLayer(const float duration)
-        : Layer("SplashLayer") ,m_duration(duration)
+    SplashLayer::SplashLayer(Renderer& renderer, const float duration)
+        : Layer("SplashLayer"), m_duration(duration), m_Renderer(renderer)
     {
     }
 
-    void SplashLayer::OnAttach()
+    void SplashLayer::OnAttach(EngineContext& ctx)
     {
-        Layer::OnAttach();
+        Layer::OnAttach(ctx);
+        m_Window = &ctx.window;
         if (m_Logo == nullptr)
-            m_Logo = Renderer2D::CreateTexture("./assets/azer_logo.png");
+            m_Logo = m_Renderer.CreateTexture("./assets/azer_logo.png");
     }
 
     void SplashLayer::OnUpdate(const float delta)
@@ -27,7 +23,7 @@ namespace azer
         Layer::OnUpdate(delta);
         m_Elapsed += delta;
         if (m_Elapsed >= m_duration)
-            Application::Get().PopOverlay();
+            RequestRemove();
     }
 
     void SplashLayer::OnDraw()
@@ -39,10 +35,9 @@ namespace azer
     {
         Layer::OnEvent(event);
         EventDispatcher dispatcher(event);
-        dispatcher.Dispatch<KeyPressedEvent>([](const KeyPressedEvent& e)
+        dispatcher.Dispatch<KeyPressedEvent>([this](const KeyPressedEvent& e)
         {
-            // 按任意键跳过
-            Application::Get().PopOverlay();
+            RequestRemove();
             return true;
         });
     }
@@ -51,14 +46,16 @@ namespace azer
     {
         Layer::OnImGuiRender();
         auto* dl = ImGui::GetBackgroundDrawList();
-        dl->AddRectFilled(ImVec2(0 , 0), ImVec2(1280, 720), IM_COL32(0, 0, 0, 255));
+        const auto [ww, wh] = m_Window->GetWindowSize();
+        const ImVec2 winSize = ImVec2(static_cast<float>(ww), static_cast<float>(wh));
+        dl->AddRectFilled(ImVec2(0, 0), winSize, IM_COL32(0, 0, 0, 255));
         if (m_Logo)
-            dl->AddImage(m_Logo->GetHandle(), ImVec2(0, 0), ImVec2(1280, 720));
+            dl->AddImage(m_Logo->GetHandle(), ImVec2(0, 0), winSize);
     }
 
     void SplashLayer::SetLogo(const std::string& path)
     {
-        m_Logo = Renderer2D::CreateTexture(path);
+        m_Logo = m_Renderer.CreateTexture(path);
     }
 
     void SplashLayer::SetEngineName(const std::string& name)

@@ -1,32 +1,33 @@
-﻿//
-// Created by Trallkong on 2026/4/18.
-//
+﻿#ifndef AZER_IMGUILAYER_H
+#define AZER_IMGUILAYER_H
 
-#ifndef LEARNSDL_IMGUILAYER_H
-#define LEARNSDL_IMGUILAYER_H
-
+#include "Base.h"
 #include "Layer.h"
 
 namespace azer
 {
+    class Renderer;
+
     class ImGuiLayer : public Layer {
     public:
-        ImGuiLayer()
-            : Layer("ImGuiLayer")
+        ImGuiLayer(Renderer* renderer)
+            : Layer("ImGuiLayer"), m_Renderer(renderer)
         {
         }
         ~ImGuiLayer() override = default;
 
-        void OnAttach() override;
+        void OnAttach(EngineContext& ctx) override;
         void OnDetach() override;
         void OnUpdate(float deltaTime) override;
         void OnDraw() override;
         void OnEvent(Event& event) override;
         void OnImGuiRender() override;
 
-        static void Begin();
-        static void End();
+        void Begin();
+        void End();
+    private:
+        Renderer* m_Renderer;
     };
 }
 
-#endif //LEARNSDL_IMGUILAYER_H
+#endif //AZER_IMGUILAYER_H

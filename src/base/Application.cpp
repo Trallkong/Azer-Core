@@ -1,29 +1,20 @@
-﻿//
-// Created by Trallkong on 2026/4/18.
-//
-
-#include "azpch.h"
+﻿#include "azpch.h"
 #include "Application.h"
 
 #include "Renderer.h"
 
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
+#include "Input.h"
 #include "Logger.h"
-#include "RenderSettings.h"
-#include "SplashLayer.h"
 #include "SDL3GPURenderer.h"
 #include "SDL3Renderer.h"
 
 namespace azer
 {
-    Application* Application::s_Instance = nullptr;
-
     Application::Application(const AppMode& mode, const std::string& windowTitle)
         :m_Mode(mode), m_WindowTitle(windowTitle)
     {
-        s_Instance = this;
-
         if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS))
         {
             std::cerr << "Failed to initialize SDL: " << SDL_GetError() << std::endl;
@@ -42,17 +33,14 @@ namespace azer
         {
             assert(false && "Unsupported AppMode");
         }
-
         if (!m_Renderer->Initialize(m_Window.get()))
         {
             AZ_CORE_ERROR("Failed to initialize renderer");
             assert(false);
         }
 
-
-        m_ImGuiLayer = new ImGuiLayer();
+        m_ImGuiLayer = new ImGuiLayer(m_Renderer.get());
         PushLayer(m_ImGuiLayer);
-        PushOverlay(new SplashLayer(5));
     }
 
     Application::~Application()
@@ -63,17 +51,8 @@ namespace azer
             delete *i;
         }
 
-        if (m_Mode == AppMode::Simple2D)
-        {
-            SDL_DestroyRenderer(dynamic_cast<SDL3Renderer*>(m_Renderer.get())->GetRenderer());
-            m_Window.reset();
-        } else if (m_Mode == AppMode::ForwardPlus)
-        {
-            m_Renderer.reset();
-        } else
-        {
-            assert(false && "Unsupported AppMode");
-        }
+        m_Renderer.reset();
+        m_Window.reset();
 
         SDL_Quit();
     }
@@ -82,7 +61,7 @@ namespace azer
     {
         while (m_Running)
         {
-            std::vector<Layer*> layers = m_LayerStack.GetLayers();
+            const auto& layers = m_LayerStack.GetLayers();
 
             while (SDL_PollEvent((&m_Event)))
             {
@@ -99,27 +78,60 @@ namespace azer
                 for (auto i = layers.rbegin(); i != layers.rend(); ++i)
                 {
                     (*i)->OnEvent(*event);
-                    if (event->Handled)
+                    if (event->IsHandled())
                         break;
                 }
             }
 
             // OnUpdate
             const float dt = m_DeltaTime.GetDeltaTime();
+
+            // 固定时间步长（物理/确定性更新）
+            m_Accumulator += dt;
+            while (m_Accumulator >= m_FixedTimestep)
+            {
+                m_Accumulator -= m_FixedTimestep;
+                for (auto i = layers.begin(); i != layers.end(); ++i)
+                    (*i)->OnPhysicsUpdate(m_FixedTimestep);
+            }
+            // 防止螺旋死亡（掉帧太多时直接重置）
+            if (m_Accumulator > m_FixedTimestep * 3.0f)
+                m_Accumulator = 0.0f;
+
+            // 可变帧率更新（输入、相机等）
             for (auto i = layers.begin(); i != layers.end(); ++i)
                 (*i)->OnUpdate(dt);
 
+            // 物理插值（alpha = 当前帧在两次物理 tick 间的进度）
+            const float alpha = m_FixedTimestep > 0.0f
+                                    ? glm::clamp(m_Accumulator / m_FixedTimestep, 0.0f, 1.0f)
+                                    : 1.0f;
+            for (auto i = layers.begin(); i != layers.end(); ++i)
+                (*i)->OnInterpolate(alpha);
+
             // OnDraw
             m_Renderer->BeginFrame(glm::vec3(m_ClearColor[0], m_ClearColor[1], m_ClearColor[2]));
-            ImGuiLayer::Begin();
+            m_ImGuiLayer->Begin();
             OnImGuiRender();
             for (auto i = layers.begin(); i != layers.end(); ++i)
             {
                 (*i)->OnDraw();
                 (*i)->OnImGuiRender();
             }
-            ImGuiLayer::End();
+            m_ImGuiLayer->End();
             m_Renderer->EndFrame();
+
+            // 移除标记为待删的层
+            std::vector<Layer*> toDetach;
+            for (auto* layer : m_LayerStack)
+                if (layer->IsPendingRemove())
+                    toDetach.push_back(layer);
+            for (auto* layer : toDetach)
+            {
+                layer->OnDetach();
+                m_LayerStack.Erase(layer);
+                m_LayersToDelete.push_back(layer);
+            }
 
             // 垃圾回收
             for (const auto* layer : m_LayersToDelete)
@@ -131,47 +143,50 @@ namespace azer
     void Application::PushLayer(Layer* layer)
     {
         m_LayerStack.PushLayer(layer);
-        layer->OnAttach();
+        EngineContext ctx{*m_Renderer, *m_Window};
+        layer->OnAttach(ctx);
     }
 
     void Application::PushOverlay(Layer* overlay)
     {
         m_LayerStack.PushOverlay(overlay);
-        overlay->OnAttach();
+        EngineContext ctx{*m_Renderer, *m_Window};
+        overlay->OnAttach(ctx);
     }
 
-    Layer* Application::PopLayer()
+    void Application::PopLayer()
     {
-        Layer* layer = m_LayerStack.PopLayer();
+        Layer* layer = m_LayerStack.PeekLayer();
         layer->OnDetach();
         m_LayersToDelete.push_back(layer);
-        return layer;
+        m_LayerStack.PopLayer();
     }
 
-    Layer* Application::PopOverlay()
+    void Application::PopOverlay()
     {
-        Layer* layer = m_LayerStack.PopOverlay();
+        Layer* layer = m_LayerStack.PeekOverlay();
         layer->OnDetach();
         m_LayersToDelete.push_back(layer);
-        return layer;
-    }
-
-    void Application::print_available_graphic_api()
-    {
-        const int n = SDL_GetNumRenderDrivers();
-        std::cout << "Available graphic APIs: ";
-        for (int i = 0; i < n; ++i)
-        {
-            const char* driver = SDL_GetRenderDriver(i);
-            std::cout << driver << " ";
-        }
-        std::cout << std::endl;
+        m_LayerStack.PopOverlay();
     }
 
     void Application::OnEvent(Event& e)
     {
         EventDispatcher dispatcher(e);
-        dispatcher.Dispatch<WindowResizeEvent>(OnWindowResize);
+        dispatcher.Dispatch<WindowResizeEvent>([this](const WindowResizeEvent& e)
+        {
+            return OnWindowResize(e);
+        });
+        dispatcher.Dispatch<KeyPressedEvent>([](const KeyPressedEvent& e)
+        {
+            Input::KeyPressed(e.GetKeyCode());
+            return false;
+        });
+        dispatcher.Dispatch<KeyReleasedEvent>([](const KeyReleasedEvent& e)
+        {
+            Input::KeyReleased(e.GetKeyCode());
+            return false;
+        });
     }
 
     void Application::OnImGuiRender()
@@ -185,9 +200,7 @@ namespace azer
     bool Application::OnWindowResize(const WindowResizeEvent& event)
     {
         AZ_CORE_TRACE("Window Resize Event: {0} {1}", event.GetWidth(), event.GetHeight());
-        RenderSettings::SetViewport(event.GetWidth(), event.GetHeight(), 0, 0);
+        m_Renderer->SetViewport(event.GetWidth(), event.GetHeight(), 0, 0);
         return false;
     }
 }
-
-

@@ -2,12 +2,19 @@
 // Created by Trallkong on 2026/4/18.
 //
 
-#ifndef LEARNSDL_BASE_H
-#define LEARNSDL_BASE_H
+#ifndef AZER_BASE_H
+#define AZER_BASE_H
 #include <memory>
 
 namespace azer
 {
+    enum class AppMode
+    {
+        Simple2D,
+        ForwardPlus,
+    };
+
+
     template<typename T>
     using Ref = std::shared_ptr<T>;
 
@@ -27,4 +34,4 @@ namespace azer
     }
 }
 
-#endif //LEARNSDL_BASE_H
+#endif //AZER_BASE_H

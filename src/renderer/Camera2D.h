@@ -19,17 +19,26 @@ namespace azer
         {
             return glm::ortho(
                 0.0f,
-                viewportW / Zoom,
-                viewportH / Zoom,
+                viewportW / m_Zoom,
+                viewportH / m_Zoom,
                 0.0f, -1.0f, 1.0f);
         }
         glm::mat4 GetView() const override
         {
-            return glm::translate(glm::mat4(1.0f), glm::vec3(-X, -Y, 0.0f));
+            return glm::translate(glm::mat4(1.0f), glm::vec3(-m_X, -m_Y, 0.0f));
         }
 
-        float X = 0.0f, Y = 0.0f;
-        float Zoom = 1.0f;
+        float GetX() const { return m_X; }
+        void SetX(const float x) { m_X = x; }
+        float GetY() const { return m_Y; }
+        void SetY(const float y) { m_Y = y; }
+        float GetZoom() const { return m_Zoom; }
+        void SetZoom(const float zoom) { m_Zoom = zoom; }
+
+    private:
+        float m_X = 0.0f;
+        float m_Y = 0.0f;
+        float m_Zoom = 1.0f;
     };
 }
 

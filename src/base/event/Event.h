@@ -26,7 +26,11 @@ namespace azer
         virtual ~Event() = default;
         virtual EventType GetEventType() const = 0;
         virtual const char* GetName() const = 0;
-        bool Handled = false;
+
+        void SetHandled(const bool v) { m_Handled = v; }
+        bool IsHandled() const { return m_Handled; }
+    private:
+        bool m_Handled = false;
     };
 
     // --- Window Events ---
@@ -152,7 +156,7 @@ namespace azer
         {
             if (m_Event.GetEventType() == T::GetStaticType())
             {
-                m_Event.Handled |= func(static_cast<T&>(m_Event));
+                m_Event.SetHandled(m_Event.IsHandled() | func(static_cast<T&>(m_Event)));
                 return true;
             }
             return false;

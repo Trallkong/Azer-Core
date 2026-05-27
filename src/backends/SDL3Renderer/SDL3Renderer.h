@@ -26,10 +26,13 @@ namespace azer
         void DrawQuad(float x, float y, float w, float h) override;
         void DrawColorQuad(float x, float y, float w, float h, const glm::vec4& color) override;
         void DrawTexture(Texture* tex, const SDL_FRect& src, const SDL_FRect& dst, float angle) override;
-        Scope<Texture> CreateTexture(const std::string& filePath) override;
-        Scope<Texture> CreateTexture(void* pixels, uint32_t width, uint32_t height) override;
+        Ref<Texture> CreateTexture(const std::string& filePath) override;
+        Ref<Texture> CreateTexture(void* pixels, uint32_t width, uint32_t height) override;
 
         // ImGui
+        void ImGuiInit(SDL_Window* window) override;
+        void ImGuiShutdown() override;
+        void ImGuiNewFrame() override;
         void SetImGuiDrawData(ImDrawData* drawData) override;
 
         SDL_Renderer* GetRenderer() const { return m_Renderer; }

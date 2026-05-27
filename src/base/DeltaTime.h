@@ -2,8 +2,8 @@
 // Created by Trallkong on 2026/4/18.
 //
 
-#ifndef LEARNSDL_DELTATIME_H
-#define LEARNSDL_DELTATIME_H
+#ifndef AZER_DELTATIME_H
+#define AZER_DELTATIME_H
 
 #include <chrono>
 
@@ -22,4 +22,4 @@ private:
 
 } // azer
 
-#endif //LEARNSDL_DELTATIME_H
+#endif //AZER_DELTATIME_H

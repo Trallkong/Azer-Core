@@ -2,9 +2,10 @@
 // Created by Trallkong on 2026/4/18.
 //
 
-#ifndef LEARNSDL_LAYERSTACK_H
-#define LEARNSDL_LAYERSTACK_H
+#ifndef AZER_LAYERSTACK_H
+#define AZER_LAYERSTACK_H
 
+#include <algorithm>
 #include <vector>
 #include "Layer.h"
 
@@ -16,11 +17,14 @@ namespace azer
         ~LayerStack();
 
         void PushLayer(Layer* layer);
-        Layer* PopLayer();
+        void PopLayer();
         void PushOverlay(Layer* overlay);
-        Layer* PopOverlay();
+        void PopOverlay();
+        Layer* PeekLayer() const;
+        Layer* PeekOverlay() const;
+        void Erase(Layer* layer);
 
-        std::vector<Layer*> GetLayers() const { return m_Layers; }
+        const std::vector<Layer*>& GetLayers() const { return m_Layers; }
 
         std::vector<Layer*>::iterator begin() { return m_Layers.begin(); }
         std::vector<Layer*>::iterator end() { return m_Layers.end(); }
@@ -34,4 +38,4 @@ namespace azer
     };
 }
 
-#endif //LEARNSDL_LAYERSTACK_H
+#endif //AZER_LAYERSTACK_H

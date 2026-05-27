@@ -1,50 +1,51 @@
-# Azer Engine is a lightweight, cross-platform 2D/3D game engine framework written in modern C++23. Designed around the **engine-as-a-library** pattern, Azer provides a clean architecture with a layered event system, immediate-mode GUI debugging, and swappable rendering backends — all powered by SDL3.
+﻿# Azer Engine
+
+A lightweight, cross-platform 2D/3D game engine framework in C++23. Designed around the **engine-as-a-library** pattern: Azer builds as a static/shared library that user applications link against, with swappable rendering backends and a layered update architecture — all powered by SDL3.
 
 ## Features
 
 - **Cross-platform** — Windows, Linux, macOS via SDL3
+- **Engine-as-a-library** — not an executable; users define `CreateApplication()`, link `Azer`
 - **Swappable renderer backends**
-  - `Simple2D` — SDL_Renderer-based, ideal for simple 2D apps
+  - `Simple2D` — SDL_Renderer-based, ideal for 2D apps
   - `ForwardPlus` — SDL GPU API-based, suitable for complex 2D/3D rendering
-- **Layered architecture** — Layer/LayerStack system with attach/detach/update/draw/event/ImGui callbacks
-- **Event system** — Typed event hierarchy with SDL event conversion and dispatch
-- **Dear ImGui integration** — Built-in ImGui layer for debug UI and tools
-- **Dual logger** — spdlog-powered core and client loggers (AZ_CORE_*, AZ_*)
-- **Precompiled headers** — Faster compile times
-- **Modern C++** — C++23, smart pointers, RAII
+- **Layered architecture** — Layer base class with `OnAttach` → `OnPhysicsUpdate(fixedDt)` → `OnUpdate(dt)` → `OnInterpolate(alpha)` → `OnDraw` → `OnImGuiRender` → `OnDetach` lifecycle
+- **Fixed timestep physics** — configurable step rate (`SetPhysicsHz`), accumulator-driven, with interpolation for smooth rendering
+- **Dependency injection** — no global singletons; layers receive `EngineContext{ Renderer&, Window& }` on attach
+- **Typed event system** — SDL event → typed event conversion, dispatch via `EventDispatcher`
+- **Dear ImGui integration** — built-in `ImGuiLayer` with backend-agnostic init/shutdown/newframe
+- **Safe layer self-removal** — layers call `RequestRemove()`, cleaned up at frame end
+- **Dual logger** — spdlog-powered core and client loggers (`AZ_CORE_*`, `AZ_*`)
+- **Precompiled headers** — faster compile times
+- **Modern C++** — C++23, smart pointers (`Ref<T>`/`Scope<T>`), RAII
 
 ## Dependencies
 
-All dependencies are managed as git submodules under `vendor/`:
+All under `vendor/`:
 
-| Library | Purpose |
-|---------|---------|
-| [SDL3](https://github.com/libsdl-org/SDL) | Windowing, input, rendering, GPU API |
-| [Dear ImGui](https://github.com/ocornut/imgui) | Immediate-mode debug GUI |
-| [GLM](https://github.com/g-truc/glm) | Mathematics (vectors, matrices) |
-| [spdlog](https://github.com/gabime/spdlog) | Fast asynchronous logging |
+| Library | Status |
+|---------|--------|
+| [SDL3](https://github.com/libsdl-org/SDL) | git submodule |
+| [GLM](https://github.com/g-truc/glm) | git submodule |
+| [spdlog](https://github.com/gabime/spdlog) | git submodule |
+| [Dear ImGui](https://github.com/ocornut/imgui) | directly committed |
 
 ## Requirements
 
 - **CMake** 3.24+
-- **C++23** compatible compiler (GCC 13+, Clang 16+, MSVC 2022+)
+- **C++23** compiler (GCC 13+, Clang 16+, MSVC 2022+)
 - **Git** (for submodules)
 
 ## Building
 
 ```bash
-# Clone with submodules
 git clone --recurse-submodules https://github.com/Trallkong/Azer-Core.git
 cd Azer-Core
-
-# Configure and build
-cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake -B build -DCMAKE_BUILD_TYPE=Debug
 cmake --build build
 ```
 
 ## Quick Start
-
-Create your own application by defining `CreateApplication()`:
 
 ```cpp
 #include "EntryPoint.h"
@@ -54,9 +55,7 @@ class SandboxApp : public azer::Application {
 public:
     SandboxApp() : Application(azer::AppMode::ForwardPlus, "Sandbox") {}
 
-    void OnCreate() override {
-        AZ_INFO("Sandbox created!");
-    }
+    // Add layers in OnAttach-style via constructor or a dedicated method
 };
 
 azer::Application* azer::CreateApplication() {
@@ -64,7 +63,7 @@ azer::Application* azer::CreateApplication() {
 }
 ```
 
-Link against the `Azer` library in your CMake project:
+Link against the `Azer` library:
 
 ```cmake
 target_link_libraries(Sandbox PRIVATE Azer)
@@ -74,25 +73,32 @@ target_link_libraries(Sandbox PRIVATE Azer)
 
 ```
 Azer.h (umbrella header)
-├── base/           Core engine systems
-│   ├── Application     Central engine singleton
-│   ├── EntryPoint      Provides main() entry
-│   ├── Layer           Layer base class
-│   ├── LayerStack      Layer management (push/pop)
-│   ├── Event           Typed event system
-│   ├── ImGuiLayer      Dear ImGui integration
-│   ├── SplashLayer     Engine splash screen
-│   ├── Logger          spdlog dual-logger
-│   └── DeltaTime       Frame timing
-├── renderer/       Renderer abstractions
-│   ├── Renderer         Abstract renderer interface
-│   ├── Renderer2D       2D drawing facade
-│   └── Texture          Platform-agnostic texture
-└── backends/       Concrete renderer implementations
-    ├── SDL3Renderer     Simple 2D backend (SDL_Renderer)
-    └── SDL3GPURenderer  GPU backend (SDL_GPUDevice)
+├── base/             Core engine systems
+│   ├── Application       Engine orchestrator (no singleton)
+│   ├── EntryPoint        Provides main() entry
+│   ├── EngineContext     Renderer+Window dependency injection
+│   ├── Layer             Layer base class
+│   ├── LayerStack        Layer management (push/pop/peek)
+│   ├── event/Event       Typed event system
+│   ├── ImGuiLayer        Dear ImGui integration (as a Layer)
+│   ├── SplashLayer       Optional splash screen (not auto-pushed)
+│   ├── Logger            spdlog dual-logger
+│   ├── Window            Abstract window interface
+│   ├── Input             Static key state queries
+│   ├── Random            Shared Mersenne Twister utility
+│   └── DeltaTime         Frame timing
+├── renderer/         Renderer abstractions
+│   ├── Renderer          Abstract renderer interface
+│   ├── Camera            Abstract camera base
+│   ├── Camera2D          2D camera (X/Y/Zoom)
+│   ├── Camera3D          3D camera (Fov/Position/Target/Up)
+│   └── Texture           Platform-agnostic texture (Ref<T>)
+└── backends/         Concrete implementations
+    ├── SDL3Window        SDL3 window backend
+    ├── SDL3Renderer      Simple 2D backend (SDL_Renderer)
+    └── SDL3GPURenderer   GPU backend (SDL_GPUDevice)
 ```
 
 ## License
 
-This project is currently unlicensed. All rights reserved by the author.
+MIT License — see [LICENSE](LICENSE) for details.

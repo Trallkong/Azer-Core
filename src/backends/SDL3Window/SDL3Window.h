@@ -23,6 +23,8 @@ namespace azer
         void SetTitle(const std::string& title) override;
         void SetResizable(bool resizable) override;
 
+        WindowSize GetWindowSize() const override;
+
     private:
         SDL_Window* m_Window;
     };

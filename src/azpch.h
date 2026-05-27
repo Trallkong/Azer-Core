@@ -2,8 +2,8 @@
 // Created by Trallkong on 2026/4/18.
 //
 
-#ifndef LEARNSDL_AZPCH_H
-#define LEARNSDL_AZPCH_H
+#ifndef AZER_AZPCH_H
+#define AZER_AZPCH_H
 
 #include <iostream>
 #include <fstream>
@@ -25,4 +25,4 @@
 
 #include "Logger.h"
 
-#endif //LEARNSDL_AZPCH_H
+#endif //AZER_AZPCH_H

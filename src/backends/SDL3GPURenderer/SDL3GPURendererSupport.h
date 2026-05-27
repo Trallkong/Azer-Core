@@ -16,7 +16,10 @@ namespace azer
     {
         friend class SDL3GPURenderer;
 
-        static void CreateGraphicsPipeline(SDL3GPURenderer* renderer);
+        static void CreateShaders(SDL3GPURenderer* renderer);
+        static void CreateGraphicsPipeline2D(SDL3GPURenderer* renderer);
+        static void CreateGraphicsPipeline3D(SDL3GPURenderer* renderer);
+
         static void CreateSampler(SDL3GPURenderer* renderer);
         static void CreateVerticesTransferBuffer(SDL3GPURenderer* renderer);
         static void CreateWhiteTexture(SDL3GPURenderer* renderer);

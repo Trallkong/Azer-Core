@@ -8,22 +8,13 @@
 #include "Base.h"
 #include "DeltaTime.h"
 #include "ImGuiLayer.h"
-#include "SDL3/SDL.h"
 #include "LayerStack.h"
 #include "Renderer.h"
+#include "SDL3/SDL.h"
 #include "Window.h"
 
 namespace azer
 {
-    /* App的模式，决定使用渲染器的类型
-     * Simple2D: 使用SDL3的默认Renderer，只支持简单的2D图形绘制，适合制作简单应用
-     * Forward+: 使用SDL3的GPU封装，支持复杂的3D/2D图形渲染，适合制作大型游戏或图形应用
-     */
-    enum class AppMode
-    {
-        Simple2D,
-        ForwardPlus,
-    };
 
     class Application {
     public:
@@ -34,25 +25,21 @@ namespace azer
 
         void PushLayer(Layer* layer);
         void PushOverlay(Layer* overlay);
-        Layer* PopLayer();
-        Layer* PopOverlay();
+        void PopLayer();
+        void PopOverlay();
 
-        const Window& GetWindow() const { return *m_Window.get(); }
+        Window& GetWindow() const { return *m_Window.get(); }
         const AppMode& GetMode() const { return m_Mode; }
         Renderer* GetRenderer() const { return m_Renderer.get(); }
 
         void SetSettingShow(const bool show) { m_ShowSettings = show; }
         const std::string& GetWindowTitle() const { return m_WindowTitle; }
-
-        static Application& Get() { return *s_Instance; }
+        void SetPhysicsHz(float hz) { m_PhysicsHz = hz; m_FixedTimestep = 1.0f / hz; }
+        float GetPhysicsHz() const { return m_PhysicsHz; }
     private:
-        // 打印可用图形API
-        static void print_available_graphic_api();
-
         void OnEvent(Event& e);
-
         void OnImGuiRender();
-        static bool OnWindowResize(const WindowResizeEvent& event);
+        bool OnWindowResize(const WindowResizeEvent& event);
 
         AppMode m_Mode;
         Scope<Window> m_Window = nullptr;
@@ -63,8 +50,10 @@ namespace azer
 
         LayerStack m_LayerStack {};
         DeltaTime m_DeltaTime {};
+        float m_Accumulator = 0.0f;
+        float m_FixedTimestep = 1.0f / 60.0f;
+        float m_PhysicsHz = 60.0f;
 
-        static Application* s_Instance;
         ImGuiLayer* m_ImGuiLayer = nullptr;
 
         float m_ClearColor[3] = { 0.0f, 0.0f, 0.0f};

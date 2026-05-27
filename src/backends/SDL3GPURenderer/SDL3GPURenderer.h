@@ -30,31 +30,40 @@ namespace azer
         void DrawQuad(float x, float y, float w, float h) override;
         void DrawColorQuad(float x, float y, float w, float h, const glm::vec4& color) override;
         void DrawTexture(Texture* tex, const SDL_FRect& src, const SDL_FRect& dst, float angle) override;
-        Scope<Texture> CreateTexture(const std::string& filePath) override;
-        Scope<Texture> CreateTexture(void* pixels, uint32_t width, uint32_t height) override;
+        Ref<Texture> CreateTexture(const std::string& filePath) override;
+        Ref<Texture> CreateTexture(void* pixels, uint32_t width, uint32_t height) override;
 
         // Renderer3D
         void DrawCube(const glm::vec3& position, const glm::vec3& rotation, const glm::vec3& scale) override;
 
         // ImGui
+        void ImGuiInit(SDL_Window* window) override;
+        void ImGuiShutdown() override;
+        void ImGuiNewFrame() override;
         void SetImGuiDrawData(ImDrawData* drawData) override;
 
         SDL_GPUDevice* GetDevice() const { return m_Device; }
 
         struct BatchVertex
         {
-            float pos[2];
+            float pos[3];
             float texCoord[2];
             float color[4];
+        };
+
+        struct UniformBufferObject
+        {
+            glm::mat4 viewProjection;
+            glm::mat4 transform;
         };
 
         struct BatchDrawCmd
         {
             SDL_GPUTexture* texture = nullptr;
             uint32_t vertexCount = 0;
-            glm::mat4 mvp;
+            UniformBufferObject ubo;
+            bool is3D = false;
         };
-
     private:
         SDL_GPUDevice* m_Device = nullptr;
         SDL_Window* m_Window = nullptr;
@@ -68,10 +77,13 @@ namespace azer
 
         SDL_GPUShader*           m_VertexShader = nullptr;
         SDL_GPUShader*           m_FragmentShader = nullptr;
-        SDL_GPUGraphicsPipeline* m_Pipeline = nullptr;
+
+        SDL_GPUGraphicsPipeline* m_Pipeline2D = nullptr;
+        SDL_GPUGraphicsPipeline* m_Pipeline3D = nullptr;
+
         SDL_GPUBuffer*           m_VertexBuffer = nullptr;
         SDL_GPUSampler*          m_Sampler = nullptr;
-        Scope<Texture>           m_WhiteTexture;
+        Ref<Texture>           m_WhiteTexture;
         uint32_t                 m_MaxVertices = 0;
 
         // For Vertices

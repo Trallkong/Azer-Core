@@ -33,11 +33,16 @@ namespace azer
         // Renderer3D
         virtual void DrawCube(const glm::vec3& position, const glm::vec3& rotation, const glm::vec3& scale) = 0;
 
+        // ImGui 生命周期（各后端自行初始化对应 ImGui_Impl_*）
+        virtual void ImGuiInit(SDL_Window* window) = 0;
+        virtual void ImGuiShutdown() = 0;
+        virtual void ImGuiNewFrame() = 0;
+
         // 这一步本质上是把绘制数据传给GPU，发生在ImGui渲染End时，真正的提交在渲染器End时
         virtual void SetImGuiDrawData(ImDrawData* drawData) = 0;
 
-        virtual Scope<Texture> CreateTexture(const std::string& filePath) = 0;
-        virtual Scope<Texture> CreateTexture(void* pixels, uint32_t width, uint32_t height) = 0;
+        virtual Ref<Texture> CreateTexture(const std::string& filePath) = 0;
+        virtual Ref<Texture> CreateTexture(void* pixels, uint32_t width, uint32_t height) = 0;
     };
 }
 

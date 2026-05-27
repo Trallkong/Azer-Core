@@ -36,4 +36,11 @@ namespace azer
     {
         SDL_SetWindowResizable(m_Window, resizable);
     }
+
+    WindowSize SDL3Window::GetWindowSize() const
+    {
+        int width, height;
+        SDL_GetWindowSize(m_Window, &width, &height);
+        return { static_cast<uint32_t>(width), static_cast<uint32_t>(height) };
+    }
 } // azer

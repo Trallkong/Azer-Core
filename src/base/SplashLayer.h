@@ -1,7 +1,3 @@
-//
-// Created by Trallkong on 2026/5/2.
-//
-
 #ifndef AZER_DEV_SPLASHLAYER_H
 #define AZER_DEV_SPLASHLAYER_H
 
@@ -13,11 +9,14 @@
 
 namespace azer
 {
+    class Renderer;
+    class Window;
+
     class SplashLayer : public Layer
     {
     public:
-        explicit SplashLayer(float duration = 2.0f);
-        void OnAttach() override;
+        explicit SplashLayer(Renderer& renderer, float duration = 2.0f);
+        void OnAttach(EngineContext& ctx) override;
         void OnUpdate(float delta) override;
         void OnDraw() override;
         void OnEvent(Event& event) override;
@@ -28,8 +27,10 @@ namespace azer
     private:
         float m_duration;
         float m_Elapsed = 0.0f;
-        Scope<Texture> m_Logo;
+        Ref<Texture> m_Logo;
         std::string m_EngineName = "Azer Engine";
+        Renderer& m_Renderer;
+        Window* m_Window = nullptr;
     };
 }
 
