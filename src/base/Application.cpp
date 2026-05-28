@@ -10,6 +10,8 @@
 #include "SDL3GPURenderer.h"
 #include "SDL3Renderer.h"
 
+#include "SplashLayer.h"
+
 namespace azer
 {
     Application::Application(const AppMode& mode, const std::string& windowTitle)
@@ -41,6 +43,8 @@ namespace azer
 
         m_ImGuiLayer = new ImGuiLayer(m_Renderer.get());
         PushLayer(m_ImGuiLayer);
+
+        PushOverlay(new SplashLayer(*m_Renderer.get(),5));
     }
 
     Application::~Application()

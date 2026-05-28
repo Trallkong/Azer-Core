@@ -21,5 +21,8 @@
 #include "renderer/Camera.h"
 #include "renderer/Camera2D.h"
 #include "renderer/Camera3D.h"
+#include "renderer/Mesh.h"
+#include "renderer/Material.h"
+#include "renderer/Model.h"
 
 #endif //AZER_AZER_H

@@ -2,6 +2,13 @@
 
 A lightweight, cross-platform 2D/3D game engine framework in C++23. Designed around the **engine-as-a-library** pattern: Azer builds as a static/shared library that user applications link against, with swappable rendering backends and a layered update architecture — all powered by SDL3.
 
+## Showcase
+
+Applications built with Azer-Core:
+
+![3D Viewer](assets/showcase/3d_viewer_show.png)
+*3D Model Viewer — built with `Azer` engine using the `ForwardPlus` GPU backend*
+
 ## Features
 
 - **Cross-platform** — Windows, Linux, macOS via SDL3
@@ -18,6 +25,21 @@ A lightweight, cross-platform 2D/3D game engine framework in C++23. Designed aro
 - **Dual logger** — spdlog-powered core and client loggers (`AZ_CORE_*`, `AZ_*`)
 - **Precompiled headers** — faster compile times
 - **Modern C++** — C++23, smart pointers (`Ref<T>`/`Scope<T>`), RAII
+
+### 3D Rendering (ForwardPlus Backend)
+
+- **GLTF Model Loading** — `Model::LoadGLTF(filepath)` loads meshes, materials, and textures from `.gltf`/`.glb` files
+- **Skybox Rendering** — `DrawSkybox(hdrTexture)` renders HDR environment maps as skyboxes
+- **PBR Material System** — `Material` struct with `BaseColorFactor`, `MetallicFactor`, `RoughnessFactor`, and texture indices
+- **Mesh System** — `Vertex` (Position, Normal, TexCoord), `Mesh` with indexed drawing
+- **3D Camera** — `Camera3D` with perspective projection, position/target/up vectors, configurable FOV
+
+### Utilities
+
+- **Input System** — `Input::IsKeyPressed(key)` for polling keyboard state
+- **Random Engine** — `Random::RandBetween(min, max)` shared Mersenne Twister, seeded once
+- **Texture Factory** — `Texture::Create()` / `Texture::CreateHDR()` with shared ownership via `Ref<Texture>`
+- **Camera System** — `Camera2D` (ortho, X/Y/Zoom) and `Camera3D` (perspective, FOV/Position/Target/Up) with encapsulated state
 
 ## Dependencies
 
@@ -48,25 +70,45 @@ cmake --build build
 ## Quick Start
 
 ```cpp
-#include "EntryPoint.h"
-#include <Azer.h>
+#include "Azer.h"
 
-class SandboxApp : public azer::Application {
+class MyApp : public azer::Application {
 public:
-    SandboxApp() : Application(azer::AppMode::ForwardPlus, "Sandbox") {}
-
-    // Add layers in OnAttach-style via constructor or a dedicated method
+    MyApp() : Application(azer::AppMode::ForwardPlus, "My 3D App") {}
 };
 
 azer::Application* azer::CreateApplication() {
-    return new SandboxApp();
+    return new MyApp();
 }
 ```
 
-Link against the `Azer` library:
+Create a layer:
+
+```cpp
+class MyLayer : public azer::Layer {
+public:
+    void OnAttach(azer::EngineContext& ctx) override {
+        // Access renderer and window via ctx
+        m_Model = azer::Model::LoadGLTF("assets/model.gltf", ctx.renderer);
+    }
+
+    void OnUpdate(float dt) override {
+        // Per-frame logic
+    }
+
+    void OnDraw() override {
+        // Render calls
+    }
+
+private:
+    azer::Scope<azer::Model> m_Model;
+};
+```
+
+Link against `Azer` and `vendor`:
 
 ```cmake
-target_link_libraries(Sandbox PRIVATE Azer)
+target_link_libraries(MyApp Azer vendor)
 ```
 
 ## Architecture
@@ -92,7 +134,10 @@ Azer.h (umbrella header)
 │   ├── Camera            Abstract camera base
 │   ├── Camera2D          2D camera (X/Y/Zoom)
 │   ├── Camera3D          3D camera (Fov/Position/Target/Up)
-│   └── Texture           Platform-agnostic texture (Ref<T>)
+│   ├── Texture           Platform-agnostic texture (Ref<T>)
+│   ├── Model             GLTF model loader
+│   ├── Mesh              Vertex/Index data structures
+│   └── Material          PBR material properties
 └── backends/         Concrete implementations
     ├── SDL3Window        SDL3 window backend
     ├── SDL3Renderer      Simple 2D backend (SDL_Renderer)

@@ -10,8 +10,14 @@ add_library(Azer
         base/SplashLayer.cpp
         base/Input.cpp
 
+        renderer/Model.cpp
+        renderer/Texture.cpp
+        renderer/StbImage.cpp
+
         backends/SDL3Renderer/SDL3Renderer.cpp
+        backends/SDL3Renderer/SDL3Texture.cpp
         backends/SDL3GPURenderer/SDL3GPURenderer.cpp
+        backends/SDL3GPURenderer/GPUTexture.cpp
 
         backends/SDL3Window/SDL3Window.cpp
         backends/SDL3GPURenderer/SDL3GPURendererSupport.cpp
@@ -32,4 +38,3 @@ target_include_directories(Azer PRIVATE
 )
 
 target_link_libraries(Azer PRIVATE vendor)
-

@@ -16,20 +16,36 @@ namespace azer
     SDL3GPURenderer::SDL3GPURenderer()
     = default;
 
+    static void DestroyGPUMeshData(SDL_GPUDevice* device, const SDL3GPURenderer::GPUMeshData& data)
+    {
+        if (data.VertexBuffer) SDL_ReleaseGPUBuffer(device, data.VertexBuffer);
+        if (data.IndexBuffer) SDL_ReleaseGPUBuffer(device, data.IndexBuffer);
+    }
+
     SDL3GPURenderer::~SDL3GPURenderer()
     {
         m_Vertices.clear();
         m_DrawCmds.clear();
 
+        for (auto& [model, meshes] : m_ModelCache)
+            for (auto& mesh : meshes)
+                DestroyGPUMeshData(m_Device, mesh);
+        m_ModelCache.clear();
+
         m_WhiteTexture.reset();
 
         if (m_VerticesTransferBuffer) SDL_ReleaseGPUTransferBuffer(m_Device, m_VerticesTransferBuffer);
         if (m_Sampler)         SDL_ReleaseGPUSampler(m_Device, m_Sampler);
+        if (m_SkyboxSampler)   SDL_ReleaseGPUSampler(m_Device, m_SkyboxSampler);
         if (m_VertexBuffer)    SDL_ReleaseGPUBuffer(m_Device, m_VertexBuffer);
+        ReleaseDepthTexture();
         if (m_Pipeline2D)        SDL_ReleaseGPUGraphicsPipeline(m_Device, m_Pipeline2D);
         if (m_Pipeline3D)        SDL_ReleaseGPUGraphicsPipeline(m_Device, m_Pipeline3D);
+        if (m_PipelineSkybox)    SDL_ReleaseGPUGraphicsPipeline(m_Device, m_PipelineSkybox);
         if (m_FragmentShader)  SDL_ReleaseGPUShader(m_Device, m_FragmentShader);
         if (m_VertexShader)    SDL_ReleaseGPUShader(m_Device, m_VertexShader);
+        if (m_SkyboxFragmentShader) SDL_ReleaseGPUShader(m_Device, m_SkyboxFragmentShader);
+        if (m_SkyboxVertexShader)   SDL_ReleaseGPUShader(m_Device, m_SkyboxVertexShader);
         if (m_Window)          SDL_ReleaseWindowFromGPUDevice(m_Device, m_Window);
         if (m_Device)          SDL_DestroyGPUDevice(m_Device);
     }
@@ -55,10 +71,12 @@ namespace azer
 
         SDL3GPURendererSupport::CreateVerticesTransferBuffer(this);
         SDL3GPURendererSupport::CreateSampler(this);
+        SDL3GPURendererSupport::CreateSkyboxSampler(this);
         SDL3GPURendererSupport::CreateWhiteTexture(this);
         SDL3GPURendererSupport::CreateShaders(this);
         SDL3GPURendererSupport::CreateGraphicsPipeline2D(this);
         SDL3GPURendererSupport::CreateGraphicsPipeline3D(this);
+        SDL3GPURendererSupport::CreateGraphicsPipelineSkybox(this);
         SDL3GPURendererSupport::CreateBuffers(this);
 
         int winW = 1280, winH = 720;
@@ -107,6 +125,14 @@ namespace azer
             SDL_SubmitGPUCommandBuffer(cmd);
             return;
         }
+        if (!EnsureDepthTexture(w, h))
+        {
+            m_Vertices.clear();
+            m_DrawCmds.clear();
+            m_ImGuiDrawData = nullptr;
+            SDL_SubmitGPUCommandBuffer(cmd);
+            return;
+        }
 
         SDL_GPUColorTargetInfo colorTarget {};
         colorTarget.texture = swapchain;
@@ -114,22 +140,35 @@ namespace azer
         colorTarget.load_op = SDL_GPU_LOADOP_CLEAR;
         colorTarget.store_op = SDL_GPU_STOREOP_STORE;
 
-        SDL_GPURenderPass* rp = SDL_BeginGPURenderPass(cmd, &colorTarget, 1, nullptr);
+        SDL_GPUDepthStencilTargetInfo depthTarget {};
+        depthTarget.texture = m_DepthTexture;
+        depthTarget.clear_depth = 1.0f;
+        depthTarget.load_op = SDL_GPU_LOADOP_CLEAR;
+        depthTarget.store_op = SDL_GPU_STOREOP_DONT_CARE;
+        depthTarget.stencil_load_op = SDL_GPU_LOADOP_DONT_CARE;
+        depthTarget.stencil_store_op = SDL_GPU_STOREOP_DONT_CARE;
+
+        SDL_GPURenderPass* rp = SDL_BeginGPURenderPass(cmd, &colorTarget, 1, &depthTarget);
 
         SDL_SetGPUViewport(rp, &m_Viewport);
 
-        if (!m_Vertices.empty())
+        if (!m_Vertices.empty() || !m_DrawCmds.empty())
         {
-            SDL_GPUBufferBinding vtxBinding {};
-            vtxBinding.buffer = m_VertexBuffer;
-            vtxBinding.offset = 0;
-            SDL_BindGPUVertexBuffers(rp, 0, &vtxBinding, 1);
+            SDL_GPUVertexBufferDescription vtxBufDesc {};
+            vtxBufDesc.slot       = 0;
+            vtxBufDesc.pitch      = sizeof(SDL3GPURenderer::BatchVertex);
+            vtxBufDesc.input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
+            vtxBufDesc.instance_step_rate = 0;
 
             Uint32 baseVertex = 0;
             SDL_GPUGraphicsPipeline* currentPipeline = nullptr;
             for (const auto& drawCmd : m_DrawCmds)
             {
-                auto* pipeline = drawCmd.is3D ? m_Pipeline3D : m_Pipeline2D;
+                SDL_GPUGraphicsPipeline* pipeline = m_Pipeline2D;
+                if (drawCmd.pipeline == PipelineType::Renderer3D)
+                    pipeline = m_Pipeline3D;
+                else if (drawCmd.pipeline == PipelineType::Skybox)
+                    pipeline = m_PipelineSkybox;
                 if (currentPipeline != pipeline)
                 {
                     SDL_BindGPUGraphicsPipeline(rp, pipeline);
@@ -140,18 +179,44 @@ namespace azer
 
                 SDL_GPUTextureSamplerBinding texBinding {};
                 texBinding.texture = drawCmd.texture;
-                texBinding.sampler = m_Sampler;
+                texBinding.sampler = drawCmd.sampler ? drawCmd.sampler : m_Sampler;
                 SDL_BindGPUFragmentSamplers(rp, 0, &texBinding, 1);
 
-                SDL_DrawGPUPrimitives(rp, drawCmd.vertexCount, 1, baseVertex, 0);
-                baseVertex += drawCmd.vertexCount;
+                SDL_GPUBufferBinding vtxBinding {};
+                vtxBinding.buffer = drawCmd.vertexBufferOverride ? drawCmd.vertexBufferOverride : m_VertexBuffer;
+                vtxBinding.offset = 0;
+                SDL_BindGPUVertexBuffers(rp, 0, &vtxBinding, 1);
+
+                if (drawCmd.indexBuffer)
+                {
+                    SDL_GPUBufferBinding idxBinding {};
+                    idxBinding.buffer = drawCmd.indexBuffer;
+                    idxBinding.offset = 0;
+                    SDL_BindGPUIndexBuffer(rp, &idxBinding, SDL_GPU_INDEXELEMENTSIZE_32BIT);
+                    SDL_DrawGPUIndexedPrimitives(rp, drawCmd.vertexCount, 1, 0, 0, 0);
+                }
+                else
+                {
+                    SDL_DrawGPUPrimitives(rp, drawCmd.vertexCount, 1, baseVertex, 0);
+                    baseVertex += drawCmd.vertexCount;
+                }
             }
         }
 
-        if (m_ImGuiDrawData)
-            ImGui_ImplSDLGPU3_RenderDrawData(m_ImGuiDrawData, cmd, rp, nullptr);
-
         SDL_EndGPURenderPass(rp);
+
+        if (m_ImGuiDrawData)
+        {
+            SDL_GPUColorTargetInfo imguiColorTarget {};
+            imguiColorTarget.texture = swapchain;
+            imguiColorTarget.load_op = SDL_GPU_LOADOP_LOAD;
+            imguiColorTarget.store_op = SDL_GPU_STOREOP_STORE;
+
+            SDL_GPURenderPass* imguiRenderPass = SDL_BeginGPURenderPass(cmd, &imguiColorTarget, 1, nullptr);
+            ImGui_ImplSDLGPU3_RenderDrawData(m_ImGuiDrawData, cmd, imguiRenderPass, nullptr);
+            SDL_EndGPURenderPass(imguiRenderPass);
+        }
+
         SDL_SubmitGPUCommandBuffer(cmd);
 
         m_Vertices.clear();
@@ -162,6 +227,7 @@ namespace azer
     void SDL3GPURenderer::SetCamera(const Camera& camera)
     {
         m_MVPMatrix = camera.GetViewProjection(m_Viewport.w, m_Viewport.h);
+        m_SkyboxViewProjection = camera.GetProjection(m_Viewport.w, m_Viewport.h) * glm::mat4(glm::mat3(camera.GetView()));
     }
 
     void SDL3GPURenderer::SetViewport(const uint32_t width, const uint32_t height, const uint32_t offsetX, const uint32_t offsetY)
@@ -170,6 +236,46 @@ namespace azer
         m_Viewport.h = static_cast<float>(height);
         m_Viewport.x = static_cast<float>(offsetX);
         m_Viewport.y = static_cast<float>(offsetY);
+        ReleaseDepthTexture();
+    }
+
+    bool SDL3GPURenderer::EnsureDepthTexture(uint32_t width, uint32_t height)
+    {
+        if (m_DepthTexture && m_DepthTextureWidth == width && m_DepthTextureHeight == height)
+            return true;
+
+        ReleaseDepthTexture();
+
+        SDL_GPUTextureCreateInfo info {};
+        info.type = SDL_GPU_TEXTURETYPE_2D;
+        info.format = m_DepthTextureFormat;
+        info.width = width;
+        info.height = height;
+        info.layer_count_or_depth = 1;
+        info.num_levels = 1;
+        info.usage = SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET;
+
+        m_DepthTexture = SDL_CreateGPUTexture(m_Device, &info);
+        if (!m_DepthTexture)
+        {
+            AZ_CORE_ERROR("Failed to create depth texture: {0}", SDL_GetError());
+            return false;
+        }
+
+        m_DepthTextureWidth = width;
+        m_DepthTextureHeight = height;
+        return true;
+    }
+
+    void SDL3GPURenderer::ReleaseDepthTexture()
+    {
+        if (m_DepthTexture)
+        {
+            SDL_ReleaseGPUTexture(m_Device, m_DepthTexture);
+            m_DepthTexture = nullptr;
+        }
+        m_DepthTextureWidth = 0;
+        m_DepthTextureHeight = 0;
     }
 
     void SDL3GPURenderer::DrawQuad(float x, float y, float w, float h)
@@ -181,20 +287,21 @@ namespace azer
     {
         const float x2 = x + w, y2 = y + h;
         const float c[4] = {color.r, color.g, color.b, color.a};
+        const float n[3] = {0, 0, 1};
 
         // Triangle 1: v0, v1, v2
-        m_Vertices.push_back({{x,  y, 0.0f }, {0,0}, {c[0],c[1],c[2],c[3]}});
-        m_Vertices.push_back({{x2, y, 0.0f}, {1,0}, {c[0],c[1],c[2],c[3]}});
-        m_Vertices.push_back({{x2, y2, 0.0f}, {1,1}, {c[0],c[1],c[2],c[3]}});
+        m_Vertices.push_back({{x,  y, 0.0f }, {n[0],n[1],n[2]}, {0,0}, {c[0],c[1],c[2],c[3]}});
+        m_Vertices.push_back({{x2, y, 0.0f}, {n[0],n[1],n[2]}, {1,0}, {c[0],c[1],c[2],c[3]}});
+        m_Vertices.push_back({{x2, y2, 0.0f}, {n[0],n[1],n[2]}, {1,1}, {c[0],c[1],c[2],c[3]}});
         // Triangle 2: v2, v3, v0
-        m_Vertices.push_back({{x2, y2, 0.0f}, {1,1}, {c[0],c[1],c[2],c[3]}});
-        m_Vertices.push_back({{x,  y2, 0.0f}, {0,1}, {c[0],c[1],c[2],c[3]}});
-        m_Vertices.push_back({{x,  y, 0.0f }, {0,0}, {c[0],c[1],c[2],c[3]}});
+        m_Vertices.push_back({{x2, y2, 0.0f}, {n[0],n[1],n[2]}, {1,1}, {c[0],c[1],c[2],c[3]}});
+        m_Vertices.push_back({{x,  y2, 0.0f}, {n[0],n[1],n[2]}, {0,1}, {c[0],c[1],c[2],c[3]}});
+        m_Vertices.push_back({{x,  y, 0.0f }, {n[0],n[1],n[2]}, {0,0}, {c[0],c[1],c[2],c[3]}});
 
         BatchDrawCmd cmd {};
         cmd.texture = static_cast<SDL_GPUTexture*>(m_WhiteTexture->GetHandle());
         cmd.vertexCount = 6;
-        cmd.is3D = false;
+        cmd.pipeline = PipelineType::Renderer2D;
 
         UniformBufferObject ubo {};
         ubo.viewProjection = m_MVPMatrix;
@@ -221,19 +328,21 @@ namespace azer
         const float x1 = dst.x + dst.w;
         const float y1 = dst.y + dst.h;
 
+        const float n[3] = {0, 0, 1};
+
         // Triangle 1
-        m_Vertices.push_back({{x1, y0, 0.0f}, {u1, v0}, {1,1,1,1}});
-        m_Vertices.push_back({{x0, y0, 0.0f}, {u0, v0}, {1,1,1,1}});
-        m_Vertices.push_back({{x1, y1, 0.0f}, {u1, v1}, {1,1,1,1}});
+        m_Vertices.push_back({{x1, y0, 0.0f}, {n[0],n[1],n[2]}, {u1, v0}, {1,1,1,1}});
+        m_Vertices.push_back({{x0, y0, 0.0f}, {n[0],n[1],n[2]}, {u0, v0}, {1,1,1,1}});
+        m_Vertices.push_back({{x1, y1, 0.0f}, {n[0],n[1],n[2]}, {u1, v1}, {1,1,1,1}});
         // Triangle 2
-        m_Vertices.push_back({{x1, y1, 0.0f}, {u1, v1}, {1,1,1,1}});
-        m_Vertices.push_back({{x0, y1, 0.0f}, {u0, v1}, {1,1,1,1}});
-        m_Vertices.push_back({{x0, y0, 0.0f}, {u0, v0}, {1,1,1,1}});
+        m_Vertices.push_back({{x1, y1, 0.0f}, {n[0],n[1],n[2]}, {u1, v1}, {1,1,1,1}});
+        m_Vertices.push_back({{x0, y1, 0.0f}, {n[0],n[1],n[2]}, {u0, v1}, {1,1,1,1}});
+        m_Vertices.push_back({{x0, y0, 0.0f}, {n[0],n[1],n[2]}, {u0, v0}, {1,1,1,1}});
 
         BatchDrawCmd cmd {};
         cmd.texture = handle;
         cmd.vertexCount = 6;
-        cmd.is3D = false;
+        cmd.pipeline = PipelineType::Renderer2D;
 
         UniformBufferObject ubo {};
         ubo.viewProjection = m_MVPMatrix;
@@ -245,136 +354,17 @@ namespace azer
 
     Ref<Texture> SDL3GPURenderer::CreateTexture(const std::string& filePath)
     {
-        SDL_Surface* loadedSurf = SDL_LoadPNG(filePath.c_str());
-        if (!loadedSurf) return nullptr;
-
-        SDL_Surface* surf = SDL_ConvertSurface(loadedSurf, SDL_PIXELFORMAT_RGBA32);
-        SDL_DestroySurface(loadedSurf);
-        if (!surf) return nullptr;
-
-        SDL_GPUTransferBuffer* transfer_buffer =
-            SDL3GPURendererSupport::CreateTextureTransferBuffer(m_Device, surf->w, surf->h);
-
-        SDL_GPUTextureCreateInfo info {};
-        info.type        = SDL_GPU_TEXTURETYPE_2D;
-        info.format      = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
-        info.width       = static_cast<Uint32>(surf->w);
-        info.height      = static_cast<Uint32>(surf->h);
-        info.num_levels  = 1;
-        info.usage       = SDL_GPU_TEXTUREUSAGE_SAMPLER;
-        info.layer_count_or_depth = 1;
-
-        SDL_GPUTexture* gpuTex = SDL_CreateGPUTexture(m_Device, &info);
-        if (!gpuTex)
-        {
-            SDL_ReleaseGPUTransferBuffer(m_Device, transfer_buffer);
-            SDL_DestroySurface(surf);
-            return nullptr;
-        }
-
-        Uint32 pixelSize = surf->w * surf->h * 4;
-        void* mapped = SDL_MapGPUTransferBuffer(m_Device, transfer_buffer, false);
-        if (!mapped)
-        {
-            AZ_CORE_ERROR("Failed to map gpu transfer buffer: {0}", SDL_GetError());
-            SDL_ReleaseGPUTransferBuffer(m_Device, transfer_buffer);
-            SDL_DestroySurface(surf);
-            return nullptr;
-        }
-        memcpy(mapped, surf->pixels, pixelSize);
-        SDL_UnmapGPUTransferBuffer(m_Device, transfer_buffer);
-
-        SDL_GPUCommandBuffer* cmd = SDL_AcquireGPUCommandBuffer(m_Device);
-        if (!cmd)
-        {
-            AZ_CORE_ERROR("Failed to acquire gpu command buffer: {0}", SDL_GetError());
-            SDL_ReleaseGPUTransferBuffer(m_Device, transfer_buffer);
-            SDL_DestroySurface(surf);
-            return nullptr;
-        }
-        SDL_GPUCopyPass* copyPass = SDL_BeginGPUCopyPass(cmd);
-
-        SDL_GPUTextureTransferInfo transferInfo {};
-        transferInfo.transfer_buffer = transfer_buffer;
-        transferInfo.offset = 0;
-
-        SDL_GPUTextureRegion region {};
-        region.texture = gpuTex;
-        region.w = surf->w;
-        region.h = surf->h;
-        region.d = 1;
-
-        SDL_UploadToGPUTexture(copyPass, &transferInfo, &region, false);
-        SDL_EndGPUCopyPass(copyPass);
-        SDL_SubmitGPUCommandBuffer(cmd);
-
-        uint32_t w = surf->w, h = surf->h;
-        SDL_DestroySurface(surf);
-        SDL_ReleaseGPUTransferBuffer(m_Device, transfer_buffer);
-
-        return CreateRef<GPUTexture>(m_Device, gpuTex, info.format, w, h);
+        return GPUTexture::Create(m_Device, filePath);
     }
 
     Ref<Texture> SDL3GPURenderer::CreateTexture(void* pixels, uint32_t width, uint32_t height)
     {
-        SDL_GPUTransferBuffer* transfer_buffer =
-            SDL3GPURendererSupport::CreateTextureTransferBuffer(m_Device, width, height);
+        return GPUTexture::Create(m_Device, pixels, width, height);
+    }
 
-        SDL_GPUTextureCreateInfo info {};
-        info.type        = SDL_GPU_TEXTURETYPE_2D;
-        info.format      = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
-        info.width       = width;
-        info.height      = height;
-        info.num_levels  = 1;
-        info.usage       = SDL_GPU_TEXTUREUSAGE_SAMPLER;
-        info.layer_count_or_depth = 1;
-
-        SDL_GPUTexture* gpuTex = SDL_CreateGPUTexture(m_Device, &info);
-        if (!gpuTex)
-        {
-            SDL_ReleaseGPUTransferBuffer(m_Device, transfer_buffer);
-            AZ_CORE_ERROR("Failed to create GPU texture: {0}", SDL_GetError());
-            return nullptr;
-        }
-
-        const Uint32 pixelSize = width * height * 4;
-        void* mapped = SDL_MapGPUTransferBuffer(m_Device, transfer_buffer, false);
-        if (!mapped)
-        {
-            AZ_CORE_ERROR("Failed to map GPU texture: {0}", SDL_GetError());
-            SDL_ReleaseGPUTransferBuffer(m_Device, transfer_buffer);
-            SDL_ReleaseGPUTexture(m_Device, gpuTex);
-            return nullptr;
-        }
-        memcpy(mapped, pixels, pixelSize);
-        SDL_UnmapGPUTransferBuffer(m_Device, transfer_buffer);
-
-        SDL_GPUCommandBuffer* cmd = SDL_AcquireGPUCommandBuffer(m_Device);
-        if (!cmd)
-        {
-            AZ_CORE_ERROR("Failed to create GPU command buffer: {0}", SDL_GetError());
-            SDL_ReleaseGPUTransferBuffer(m_Device, transfer_buffer);
-            SDL_ReleaseGPUTexture(m_Device, gpuTex);
-            return nullptr;
-        }
-        SDL_GPUCopyPass* copyPass = SDL_BeginGPUCopyPass(cmd);
-
-        SDL_GPUTextureTransferInfo transferInfo {};
-        transferInfo.transfer_buffer = transfer_buffer;
-        transferInfo.offset = 0;
-
-        SDL_GPUTextureRegion region {};
-        region.texture = gpuTex;
-        region.w = width;
-        region.h = height;
-        region.d = 1;
-
-        SDL_UploadToGPUTexture(copyPass, &transferInfo, &region, false);
-        SDL_EndGPUCopyPass(copyPass);
-        SDL_SubmitGPUCommandBuffer(cmd);
-        SDL_ReleaseGPUTransferBuffer(m_Device, transfer_buffer);
-
-        return CreateRef<GPUTexture>(m_Device, gpuTex, info.format, width, height);
+    Ref<Texture> SDL3GPURenderer::CreateHDRTexture(const std::string& filePath)
+    {
+        return GPUTexture::CreateHDR(m_Device, filePath);
     }
 
     void SDL3GPURenderer::DrawCube(const glm::vec3& position, const glm::vec3& rotation, const glm::vec3& scale)
@@ -405,6 +395,15 @@ namespace azer
             {0.0f, 1.0f, 1.0f, 1.0f}, // -Z cyan
         };
 
+        const float faceNormals[6][3] = {
+            { 1, 0, 0}, // +X
+            {-1, 0, 0}, // -X
+            { 0, 1, 0}, // +Y
+            { 0,-1, 0}, // -Y
+            { 0, 0, 1}, // +Z
+            { 0, 0,-1}, // -Z
+        };
+
         auto* whiteTex = static_cast<SDL_GPUTexture*>(m_WhiteTexture->GetHandle());
 
         UniformBufferObject ubo {};
@@ -414,21 +413,197 @@ namespace azer
         for (int f = 0; f < 6; ++f)
         {
             const float* c = faceColors[f];
+            const float* n = faceNormals[f];
 
-            m_Vertices.push_back({{cubeFaces[f][0].x, cubeFaces[f][0].y, cubeFaces[f][0].z}, {0, 0}, {c[0], c[1], c[2], c[3]}});
-            m_Vertices.push_back({{cubeFaces[f][1].x, cubeFaces[f][1].y, cubeFaces[f][1].z}, {0, 0}, {c[0], c[1], c[2], c[3]}});
-            m_Vertices.push_back({{cubeFaces[f][2].x, cubeFaces[f][2].y, cubeFaces[f][2].z}, {0, 0}, {c[0], c[1], c[2], c[3]}});
-            m_Vertices.push_back({{cubeFaces[f][2].x, cubeFaces[f][2].y, cubeFaces[f][2].z}, {0, 0}, {c[0], c[1], c[2], c[3]}});
-            m_Vertices.push_back({{cubeFaces[f][3].x, cubeFaces[f][3].y, cubeFaces[f][3].z}, {0, 0}, {c[0], c[1], c[2], c[3]}});
-            m_Vertices.push_back({{cubeFaces[f][0].x, cubeFaces[f][0].y, cubeFaces[f][0].z}, {0, 0}, {c[0], c[1], c[2], c[3]}});
+            m_Vertices.push_back({{cubeFaces[f][0].x, cubeFaces[f][0].y, cubeFaces[f][0].z}, {n[0],n[1],n[2]}, {0, 0}, {c[0], c[1], c[2], c[3]}});
+            m_Vertices.push_back({{cubeFaces[f][1].x, cubeFaces[f][1].y, cubeFaces[f][1].z}, {n[0],n[1],n[2]}, {0, 0}, {c[0], c[1], c[2], c[3]}});
+            m_Vertices.push_back({{cubeFaces[f][2].x, cubeFaces[f][2].y, cubeFaces[f][2].z}, {n[0],n[1],n[2]}, {0, 0}, {c[0], c[1], c[2], c[3]}});
+            m_Vertices.push_back({{cubeFaces[f][2].x, cubeFaces[f][2].y, cubeFaces[f][2].z}, {n[0],n[1],n[2]}, {0, 0}, {c[0], c[1], c[2], c[3]}});
+            m_Vertices.push_back({{cubeFaces[f][3].x, cubeFaces[f][3].y, cubeFaces[f][3].z}, {n[0],n[1],n[2]}, {0, 0}, {c[0], c[1], c[2], c[3]}});
+            m_Vertices.push_back({{cubeFaces[f][0].x, cubeFaces[f][0].y, cubeFaces[f][0].z}, {n[0],n[1],n[2]}, {0, 0}, {c[0], c[1], c[2], c[3]}});
 
             BatchDrawCmd cmd {};
             cmd.texture = whiteTex;
             cmd.vertexCount = 6;
-            cmd.is3D = true;
+            cmd.pipeline = PipelineType::Renderer3D;
             cmd.ubo = ubo;
             m_DrawCmds.push_back(cmd);
         }
+    }
+
+    void SDL3GPURenderer::DrawSkybox(const Ref<Texture>& hdrTexture)
+    {
+        if (!hdrTexture)
+            return;
+
+        auto* texture = static_cast<SDL_GPUTexture*>(hdrTexture->GetHandle());
+        const float c[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+        const float n[3] = {0.0f, 0.0f, 0.0f};
+
+        const glm::vec3 cubeFaces[6][4] = {
+            {{ 1,-1, 1}, { 1,-1,-1}, { 1, 1,-1}, { 1, 1, 1}}, // +X
+            {{-1,-1,-1}, {-1,-1, 1}, {-1, 1, 1}, {-1, 1,-1}}, // -X
+            {{-1, 1, 1}, { 1, 1, 1}, { 1, 1,-1}, {-1, 1,-1}}, // +Y
+            {{-1,-1,-1}, { 1,-1,-1}, { 1,-1, 1}, {-1,-1, 1}}, // -Y
+            {{-1,-1, 1}, { 1,-1, 1}, { 1, 1, 1}, {-1, 1, 1}}, // +Z
+            {{ 1,-1,-1}, {-1,-1,-1}, {-1, 1,-1}, { 1, 1,-1}}, // -Z
+        };
+
+        for (int f = 0; f < 6; ++f)
+        {
+            m_Vertices.push_back({{cubeFaces[f][0].x, cubeFaces[f][0].y, cubeFaces[f][0].z}, {n[0],n[1],n[2]}, {0, 0}, {c[0], c[1], c[2], c[3]}});
+            m_Vertices.push_back({{cubeFaces[f][1].x, cubeFaces[f][1].y, cubeFaces[f][1].z}, {n[0],n[1],n[2]}, {0, 0}, {c[0], c[1], c[2], c[3]}});
+            m_Vertices.push_back({{cubeFaces[f][2].x, cubeFaces[f][2].y, cubeFaces[f][2].z}, {n[0],n[1],n[2]}, {0, 0}, {c[0], c[1], c[2], c[3]}});
+            m_Vertices.push_back({{cubeFaces[f][2].x, cubeFaces[f][2].y, cubeFaces[f][2].z}, {n[0],n[1],n[2]}, {0, 0}, {c[0], c[1], c[2], c[3]}});
+            m_Vertices.push_back({{cubeFaces[f][3].x, cubeFaces[f][3].y, cubeFaces[f][3].z}, {n[0],n[1],n[2]}, {0, 0}, {c[0], c[1], c[2], c[3]}});
+            m_Vertices.push_back({{cubeFaces[f][0].x, cubeFaces[f][0].y, cubeFaces[f][0].z}, {n[0],n[1],n[2]}, {0, 0}, {c[0], c[1], c[2], c[3]}});
+
+            BatchDrawCmd cmd {};
+            cmd.texture = texture;
+            cmd.sampler = m_SkyboxSampler;
+            cmd.vertexCount = 6;
+            cmd.pipeline = PipelineType::Skybox;
+
+            UniformBufferObject ubo {};
+            ubo.viewProjection = m_SkyboxViewProjection;
+            ubo.transform = glm::mat4(1.0f);
+            cmd.ubo = ubo;
+
+            m_DrawCmds.push_back(cmd);
+        }
+    }
+
+    static SDL3GPURenderer::GPUMeshData CreateGPUMesh(SDL_GPUDevice* device,
+                                                       const std::vector<SDL3GPURenderer::BatchVertex>& vertices,
+                                                       const std::vector<uint32_t>& indices)
+    {
+        SDL3GPURenderer::GPUMeshData data{};
+
+        SDL_GPUBufferCreateInfo vtxInfo {};
+        vtxInfo.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
+        vtxInfo.size  = static_cast<Uint32>(vertices.size() * sizeof(SDL3GPURenderer::BatchVertex));
+        data.VertexBuffer = SDL_CreateGPUBuffer(device, &vtxInfo);
+
+        SDL_GPUBufferCreateInfo idxInfo {};
+        if (!indices.empty())
+        {
+            idxInfo.usage = SDL_GPU_BUFFERUSAGE_INDEX;
+            idxInfo.size  = static_cast<Uint32>(indices.size() * sizeof(uint32_t));
+            data.IndexBuffer = SDL_CreateGPUBuffer(device, &idxInfo);
+            data.IndexCount = static_cast<uint32_t>(indices.size());
+            data.UseIndexBuffer = true;
+        }
+
+        SDL_GPUTransferBufferCreateInfo uploadInfo {};
+        uploadInfo.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
+        uploadInfo.size = vtxInfo.size;
+        if (data.IndexBuffer)
+            uploadInfo.size += idxInfo.size;
+
+        SDL_GPUTransferBuffer* uploadBuf = SDL_CreateGPUTransferBuffer(device, &uploadInfo);
+        if (!uploadBuf) return data;
+
+        void* mapped = SDL_MapGPUTransferBuffer(device, uploadBuf, false);
+        if (!mapped) { SDL_ReleaseGPUTransferBuffer(device, uploadBuf); return data; }
+
+        Uint8* ptr = static_cast<Uint8*>(mapped);
+        memcpy(ptr, vertices.data(), vtxInfo.size);
+        ptr += vtxInfo.size;
+        if (data.IndexBuffer)
+            memcpy(ptr, indices.data(), idxInfo.size);
+
+        SDL_UnmapGPUTransferBuffer(device, uploadBuf);
+
+        SDL_GPUCommandBuffer* cmd = SDL_AcquireGPUCommandBuffer(device);
+        if (!cmd) { SDL_ReleaseGPUTransferBuffer(device, uploadBuf); return data; }
+
+        SDL_GPUCopyPass* copyPass = SDL_BeginGPUCopyPass(cmd);
+
+        SDL_GPUTransferBufferLocation srcVtx {};
+        srcVtx.transfer_buffer = uploadBuf;
+        srcVtx.offset = 0;
+        SDL_GPUBufferRegion dstVtx {};
+        dstVtx.buffer = data.VertexBuffer;
+        dstVtx.offset = 0;
+        dstVtx.size = vtxInfo.size;
+        SDL_UploadToGPUBuffer(copyPass, &srcVtx, &dstVtx, false);
+
+        if (data.IndexBuffer)
+        {
+            SDL_GPUTransferBufferLocation srcIdx {};
+            srcIdx.transfer_buffer = uploadBuf;
+            srcIdx.offset = vtxInfo.size;
+            SDL_GPUBufferRegion dstIdx {};
+            dstIdx.buffer = data.IndexBuffer;
+            dstIdx.offset = 0;
+            dstIdx.size = idxInfo.size;
+            SDL_UploadToGPUBuffer(copyPass, &srcIdx, &dstIdx, false);
+        }
+
+        SDL_EndGPUCopyPass(copyPass);
+        SDL_SubmitGPUCommandBuffer(cmd);
+        SDL_ReleaseGPUTransferBuffer(device, uploadBuf);
+
+        return data;
+    }
+
+    void SDL3GPURenderer::DrawModel(Model& model, const glm::mat4& worldTransform)
+    {
+        auto it = m_ModelCache.find(&model);
+        if (it == m_ModelCache.end())
+        {
+            std::vector<GPUMeshData> meshes;
+            for (const auto& mesh : model.GetMeshes())
+            {
+                std::vector<BatchVertex> batchVerts;
+                batchVerts.reserve(mesh.Vertices.size());
+                for (const auto& v : mesh.Vertices)
+                {
+                    BatchVertex bv{};
+                    bv.pos[0] = v.Position.x; bv.pos[1] = v.Position.y; bv.pos[2] = v.Position.z;
+                    bv.normal[0] = v.Normal.x; bv.normal[1] = v.Normal.y; bv.normal[2] = v.Normal.z;
+                    bv.texCoord[0] = v.TexCoord.x; bv.texCoord[1] = v.TexCoord.y;
+                    bv.color[0] = 1.0f; bv.color[1] = 1.0f; bv.color[2] = 1.0f; bv.color[3] = 1.0f;
+                    batchVerts.push_back(bv);
+                }
+                meshes.push_back(CreateGPUMesh(m_Device, batchVerts, mesh.Indices));
+            }
+            it = m_ModelCache.emplace(&model, std::move(meshes)).first;
+        }
+
+        const auto& gpuMeshes = it->second;
+
+        const auto& materials = model.GetMaterials();
+        const auto& textures = model.GetTextures();
+
+        model.Traverse([&](const ModelNode& node, uint32_t meshIdx, const Mesh& mesh, const glm::mat4& nodeTransform)
+        {
+            if (meshIdx >= gpuMeshes.size()) return;
+            const auto& gpuData = gpuMeshes[meshIdx];
+
+            SDL_GPUTexture* texHandle = static_cast<SDL_GPUTexture*>(m_WhiteTexture->GetHandle());
+            if (mesh.MaterialIndex < materials.size())
+            {
+                const auto& mat = materials[mesh.MaterialIndex];
+                int32_t texIdx = mat.BaseColorTexIndex;
+                if (texIdx >= 0 && static_cast<size_t>(texIdx) < textures.size() && textures[texIdx])
+                    texHandle = static_cast<SDL_GPUTexture*>(textures[texIdx]->GetHandle());
+            }
+
+            BatchDrawCmd cmd {};
+            cmd.texture = texHandle;
+            cmd.vertexCount = gpuData.IndexCount > 0 ? gpuData.IndexCount : static_cast<uint32_t>(mesh.Vertices.size());
+            cmd.pipeline = PipelineType::Renderer3D;
+            cmd.vertexBufferOverride = gpuData.VertexBuffer;
+            cmd.indexBuffer = gpuData.UseIndexBuffer ? gpuData.IndexBuffer : nullptr;
+
+            UniformBufferObject ubo {};
+            ubo.viewProjection = m_MVPMatrix;
+            ubo.transform = worldTransform * nodeTransform;
+            cmd.ubo = ubo;
+
+            m_DrawCmds.push_back(cmd);
+        });
     }
 
     void SDL3GPURenderer::ImGuiInit(SDL_Window* window)

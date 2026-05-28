@@ -77,19 +77,17 @@ void azer::SDL3Renderer::DrawTexture(Texture* tex, const SDL_FRect& src, const S
 
 azer::Ref<azer::Texture> azer::SDL3Renderer::CreateTexture(const std::string& filePath)
 {
-    SDL_Surface* surf = SDL_LoadPNG(filePath.c_str());
-    SDL_Texture* tex = SDL_CreateTextureFromSurface(m_Renderer, surf);
-    uint32_t w = surf->w, h = surf->h;
-    SDL_DestroySurface(surf);
-    return CreateRef<SDL3Texture>(tex, w, h);
+    return SDL3Texture::Create(m_Renderer, filePath);
 }
 
 azer::Ref<azer::Texture> azer::SDL3Renderer::CreateTexture(void* pixels, uint32_t width, uint32_t height)
 {
-    SDL_Surface* surf = SDL_CreateSurfaceFrom(width, height, SDL_PIXELFORMAT_RGBA8888, pixels, 0);
-    SDL_Texture* tex = SDL_CreateTextureFromSurface(m_Renderer, surf);
-    SDL_DestroySurface(surf);
-    return CreateRef<SDL3Texture>(tex, width, height);
+    return SDL3Texture::Create(m_Renderer, pixels, width, height);
+}
+
+azer::Ref<azer::Texture> azer::SDL3Renderer::CreateHDRTexture(const std::string& filePath)
+{
+    return SDL3Texture::CreateHDR(m_Renderer, filePath);
 }
 
 void azer::SDL3Renderer::ImGuiInit(SDL_Window* window)

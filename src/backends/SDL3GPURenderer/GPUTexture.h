@@ -19,6 +19,10 @@ namespace azer
             : m_Device(device), m_Texture(tex), m_Format(fmt), m_Width(width), m_Height(height) {}
         ~GPUTexture() override { SDL_ReleaseGPUTexture(m_Device, m_Texture); }
 
+        static Ref<Texture> Create(SDL_GPUDevice* device, const std::string& filePath);
+        static Ref<Texture> Create(SDL_GPUDevice* device, void* pixels, uint32_t width, uint32_t height);
+        static Ref<Texture> CreateHDR(SDL_GPUDevice* device, const std::string& filePath);
+
         uint32_t GetWidth() const override  { return m_Width; }
         uint32_t GetHeight() const override { return m_Height; }
         void* GetHandle() const override    { return m_Texture; }

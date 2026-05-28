@@ -28,6 +28,7 @@ namespace azer
         void DrawTexture(Texture* tex, const SDL_FRect& src, const SDL_FRect& dst, float angle) override;
         Ref<Texture> CreateTexture(const std::string& filePath) override;
         Ref<Texture> CreateTexture(void* pixels, uint32_t width, uint32_t height) override;
+        Ref<Texture> CreateHDRTexture(const std::string& filePath) override;
 
         // ImGui
         void ImGuiInit(SDL_Window* window) override;
@@ -39,6 +40,8 @@ namespace azer
 
         // No Implement
         void DrawCube(const glm::vec3& position, const glm::vec3& rotation, const glm::vec3& scale) override { assert(false); }
+        void DrawModel(Model& model, const glm::mat4& worldTransform) override { assert(false); }
+        void DrawSkybox(const Ref<Texture>& hdrTexture) override { assert(false); }
 
     private:
         SDL_Renderer* m_Renderer = nullptr;

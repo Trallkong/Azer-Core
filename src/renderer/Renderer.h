@@ -9,6 +9,7 @@
 #include "Texture.h"
 #include "Window.h"
 #include "Camera.h"
+#include "Model.h"
 
 #include "glm/glm.hpp"
 #include "imgui.h"
@@ -32,6 +33,8 @@ namespace azer
 
         // Renderer3D
         virtual void DrawCube(const glm::vec3& position, const glm::vec3& rotation, const glm::vec3& scale) = 0;
+        virtual void DrawModel(Model& model, const glm::mat4& worldTransform) = 0;
+        virtual void DrawSkybox(const Ref<Texture>& hdrTexture) = 0;
 
         // ImGui 生命周期（各后端自行初始化对应 ImGui_Impl_*）
         virtual void ImGuiInit(SDL_Window* window) = 0;
@@ -43,6 +46,7 @@ namespace azer
 
         virtual Ref<Texture> CreateTexture(const std::string& filePath) = 0;
         virtual Ref<Texture> CreateTexture(void* pixels, uint32_t width, uint32_t height) = 0;
+        virtual Ref<Texture> CreateHDRTexture(const std::string& filePath) = 0;
     };
 }
 
