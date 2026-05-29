@@ -52,25 +52,26 @@ void azer::SDL3Renderer::SetCamera(const Camera& camera)
     SDL_SetRenderScale(m_Renderer, zoom, zoom);
 }
 
-void azer::SDL3Renderer::DrawQuad(const float x, const float y, const float w, const float h)
+void azer::SDL3Renderer::DrawQuad(const float x, const float y, const float w, const float h, const float alpha)
 {
-    DrawColorQuad(x, y, w, h, {1.0f, 1.0f, 1.0f, 1.0f});
+    DrawColorQuad(x, y, w, h, {1.0f, 1.0f, 1.0f, 1.0f}, alpha);
 }
 
-void azer::SDL3Renderer::DrawColorQuad(const float x, const float y, const float w, const float h, const glm::vec4& color)
+void azer::SDL3Renderer::DrawColorQuad(const float x, const float y, const float w, const float h, const glm::vec4& color, const float alpha)
 {
     const SDL_FRect rect = { x - offsetX, y - offsetY, w, h };
     SDL_SetRenderDrawColor(m_Renderer,
         static_cast<Uint8>(color.r * 255),
         static_cast<Uint8>(color.g * 255),
         static_cast<Uint8>(color.b * 255),
-        static_cast<Uint8>(color.a * 255)
+        static_cast<Uint8>(color.a * alpha * 255)
     );
     SDL_RenderFillRect(m_Renderer, &rect);
 }
 
-void azer::SDL3Renderer::DrawTexture(Texture* tex, const SDL_FRect& src, const SDL_FRect& dst, const float angle)
+void azer::SDL3Renderer::DrawTexture(Texture* tex, const SDL_FRect& src, const SDL_FRect& dst, const float angle, const float alpha)
 {
+    SDL_SetTextureAlphaModFloat(static_cast<SDL_Texture*>(tex->GetHandle()), alpha);
     const SDL_FRect offsetDst = { dst.x - offsetX, dst.y - offsetY, dst.w, dst.h };
     SDL_RenderTextureRotated(m_Renderer, static_cast<SDL_Texture*>(tex->GetHandle()), &src, &offsetDst, angle, nullptr, SDL_FLIP_NONE);
 }

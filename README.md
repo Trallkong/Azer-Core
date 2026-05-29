@@ -34,6 +34,13 @@ Applications built with Azer-Core:
 - **Mesh System** — `Vertex` (Position, Normal, TexCoord), `Mesh` with indexed drawing
 - **3D Camera** — `Camera3D` with perspective projection, position/target/up vectors, configurable FOV
 
+### Animation System
+
+- **Variant Type Container** — runtime-typed value holder (`Float`, `Vec2`, `Vec3`, `Quat`) with zero-heap inline storage and `Interpolate()` support
+- **Property Accessor** — type-erased property binding (`void*` + `VariantType` + optional `SetterFn`) for runtime attribute modification
+- **Keyframe Animation** — `Animation` → `AnimationChannel` → `KeyFrame` data hierarchy, matching glTF animation structure
+- **Animation Player** — playback controller with `Play`/`Stop`/`Pause`/`Resume`, configurable speed and looping, per-frame sampling with linear interpolation
+
 ### Utilities
 
 - **Input System** — `Input::IsKeyPressed(key)` for polling keyboard state
@@ -128,7 +135,13 @@ Azer.h (umbrella header)
 │   ├── Window            Abstract window interface
 │   ├── Input             Static key state queries
 │   ├── Random            Shared Mersenne Twister utility
-│   └── DeltaTime         Frame timing
+│   ├── DeltaTime         Frame timing
+│   ├── Variant           Runtime-typed value container (Float/Vec2/Vec3/Quat)
+│   ├── animation/
+│   │   ├── Animation         Animation data (channels + keyframes)
+│   │   └── AnimationPlayer   Playback controller (play/stop/pause/loop)
+│   └── reflection/
+│       └── PropertyAccessor  Type-erased property binding
 ├── renderer/         Renderer abstractions
 │   ├── Renderer          Abstract renderer interface
 │   ├── Camera            Abstract camera base

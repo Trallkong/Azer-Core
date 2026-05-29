@@ -27,13 +27,13 @@ namespace azer
         virtual void SetViewport(uint32_t width, uint32_t height, uint32_t offsetX, uint32_t offsetY) = 0;
 
         // Renderer2D
-        virtual void DrawQuad(float x, float y, float w, float h) = 0;
-        virtual void DrawColorQuad(float x, float y, float w, float h, const glm::vec4& color) = 0;
-        virtual void DrawTexture(Texture* tex, const SDL_FRect& src, const SDL_FRect& dst, float angle = 0.0f) = 0;
+        virtual void DrawQuad(float x, float y, float w, float h, float alpha = 1.0f) = 0;
+        virtual void DrawColorQuad(float x, float y, float w, float h, const glm::vec4& color, float alpha = 1.0f) = 0;
+        virtual void DrawTexture(Texture* tex, const SDL_FRect& src, const SDL_FRect& dst, float angle = 0.0f, float alpha = 1.0f) = 0;
 
         // Renderer3D
         virtual void DrawCube(const glm::vec3& position, const glm::vec3& rotation, const glm::vec3& scale) = 0;
-        virtual void DrawModel(Model& model, const glm::mat4& worldTransform) = 0;
+        virtual void DrawModel(Model& model, const glm::mat4& worldTransform, float alpha = 1.0f) = 0;
         virtual void DrawSkybox(const Ref<Texture>& hdrTexture) = 0;
 
         // ImGui 生命周期（各后端自行初始化对应 ImGui_Impl_*）

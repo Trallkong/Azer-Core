@@ -2,11 +2,11 @@
 // Created by Trallkong on 2026/5/1.
 //
 
-#ifndef AZER_AZER_H
-#define AZER_AZER_H
+#pragma once
 
 // Base
 #include "base/Base.h"
+#include "base/Variant.h"
 #include "base/Application.h"
 #include "base/Logger.h"
 #include "base/event/Event.h"
@@ -14,6 +14,12 @@
 #include "base/Input.h"
 #include "base/Random.h"
 #include "base/Window.h"
+
+// Animation
+#include "base/animation/AnimationPlayer.h"
+
+// Reflection
+#include "base/reflection/PropertyAccessor.h"
 
 // Renderer
 #include "renderer/Texture.h"
@@ -24,5 +30,3 @@
 #include "renderer/Mesh.h"
 #include "renderer/Material.h"
 #include "renderer/Model.h"
-
-#endif //AZER_AZER_H

@@ -8,6 +8,7 @@ layout(location = 3) in vec4 aColor;
 layout(set = 1, binding = 0) uniform UniformBufferObject {
     mat4 viewProjection;
     mat4 transform;
+    float alpha;
 } ubo;
 
 layout(location = 0) out vec2 vTexCoord;
@@ -17,7 +18,7 @@ layout(location = 3) out vec3 vWorldPos;
 
 void main() {
     vTexCoord = aTexCoord;
-    vColor = aColor;
+    vColor = vec4(aColor.rgb, aColor.a * ubo.alpha);
     vec4 worldPos = ubo.transform * vec4(aPos, 1.0);
     vWorldPos = worldPos.xyz;
     vNormal = normalize(mat3(ubo.transform) * aNormal);

@@ -278,12 +278,12 @@ namespace azer
         m_DepthTextureHeight = 0;
     }
 
-    void SDL3GPURenderer::DrawQuad(float x, float y, float w, float h)
+    void SDL3GPURenderer::DrawQuad(float x, float y, float w, float h, float alpha)
     {
-        DrawColorQuad(x, y, w, h, {1.0f, 1.0f, 1.0f, 1.0f});
+        DrawColorQuad(x, y, w, h, {1.0f, 1.0f, 1.0f, 1.0f}, alpha);
     }
 
-    void SDL3GPURenderer::DrawColorQuad(float x, float y, float w, float h, const glm::vec4& color)
+    void SDL3GPURenderer::DrawColorQuad(float x, float y, float w, float h, const glm::vec4& color, float alpha)
     {
         const float x2 = x + w, y2 = y + h;
         const float c[4] = {color.r, color.g, color.b, color.a};
@@ -306,12 +306,13 @@ namespace azer
         UniformBufferObject ubo {};
         ubo.viewProjection = m_MVPMatrix;
         ubo.transform = glm::mat4(1.0f);
+        ubo.alpha = alpha;
 
         cmd.ubo = ubo;
         m_DrawCmds.push_back(cmd);
     }
 
-    void SDL3GPURenderer::DrawTexture(Texture* tex, const SDL_FRect& src, const SDL_FRect& dst, float angle)
+    void SDL3GPURenderer::DrawTexture(Texture* tex, const SDL_FRect& src, const SDL_FRect& dst, float angle, float alpha)
     {
         const auto* gpuTex = dynamic_cast<GPUTexture*>(tex);
         const auto handle = static_cast<SDL_GPUTexture*>(gpuTex->GetHandle());
@@ -347,6 +348,7 @@ namespace azer
         UniformBufferObject ubo {};
         ubo.viewProjection = m_MVPMatrix;
         ubo.transform = glm::mat4(1.0f);
+        ubo.alpha = alpha;
 
         cmd.ubo = ubo;
         m_DrawCmds.push_back(cmd);
@@ -547,7 +549,7 @@ namespace azer
         return data;
     }
 
-    void SDL3GPURenderer::DrawModel(Model& model, const glm::mat4& worldTransform)
+    void SDL3GPURenderer::DrawModel(Model& model, const glm::mat4& worldTransform, float alpha)
     {
         auto it = m_ModelCache.find(&model);
         if (it == m_ModelCache.end())
@@ -600,6 +602,7 @@ namespace azer
             UniformBufferObject ubo {};
             ubo.viewProjection = m_MVPMatrix;
             ubo.transform = worldTransform * nodeTransform;
+            ubo.alpha = alpha;
             cmd.ubo = ubo;
 
             m_DrawCmds.push_back(cmd);

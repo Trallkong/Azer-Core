@@ -2,8 +2,8 @@
 // Created by Trallkong on 2026/4/18.
 //
 
-#ifndef AZER_BASE_H
-#define AZER_BASE_H
+#pragma once
+
 #include <memory>
 
 namespace azer
@@ -33,5 +33,3 @@ namespace azer
         return std::make_unique<T>(std::forward<Args>(args)...);
     }
 }
-
-#endif //AZER_BASE_H
