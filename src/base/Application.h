@@ -1,10 +1,8 @@
-﻿//
+//
 // Created by Trallkong on 2026/4/18.
 //
 
-#ifndef AZER_APPLICATION_H
-#define AZER_APPLICATION_H
-
+#pragma once
 #include "Base.h"
 #include "DeltaTime.h"
 #include "ImGuiLayer.h"
@@ -18,7 +16,10 @@ namespace azer
 
     class Application {
     public:
-        explicit Application(const AppMode& mode = AppMode::Simple2D, const std::string& windowTitle = "Azer");
+        explicit Application(
+            const std::string& rootPath,
+            const AppMode& mode = AppMode::Simple2D,
+            const std::string& windowTitle = "Azer");
         ~Application();
 
         void Run();
@@ -32,10 +33,12 @@ namespace azer
         const AppMode& GetMode() const { return m_Mode; }
         Renderer* GetRenderer() const { return m_Renderer.get(); }
 
-        void SetSettingShow(const bool show) { m_ShowSettings = show; }
+
+        void SetCoreMenuVisibility(const bool show) { m_ShowSettings = show; }
         const std::string& GetWindowTitle() const { return m_WindowTitle; }
         void SetPhysicsHz(float hz) { m_PhysicsHz = hz; m_FixedTimestep = 1.0f / hz; }
         float GetPhysicsHz() const { return m_PhysicsHz; }
+
     private:
         void OnEvent(Event& e);
         void OnImGuiRender();
@@ -66,4 +69,3 @@ namespace azer
     Application* CreateApplication();
 }
 
-#endif //AZER_APPLICATION_H

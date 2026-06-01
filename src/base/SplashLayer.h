@@ -1,5 +1,4 @@
-#ifndef AZER_DEV_SPLASHLAYER_H
-#define AZER_DEV_SPLASHLAYER_H
+#pragma once
 
 #include <string>
 
@@ -33,5 +32,3 @@ namespace azer
         Window* m_Window = nullptr;
     };
 }
-
-#endif //AZER_DEV_SPLASHLAYER_H

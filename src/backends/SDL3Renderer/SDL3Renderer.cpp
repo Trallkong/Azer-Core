@@ -9,6 +9,7 @@
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_sdlrenderer3.h"
 #include "SDL3Texture.h"
+#include "SDL3Framebuffer.h"
 
 azer::SDL3Renderer::SDL3Renderer()
 {
@@ -42,14 +43,38 @@ void azer::SDL3Renderer::EndFrame()
     SDL_RenderPresent(m_Renderer);
 }
 
-void azer::SDL3Renderer::SetCamera(const Camera& camera)
+void azer::SDL3Renderer::SetCamera(Camera& camera)
 {
-    // 在 2D 中，相机向右移动，物体就要向左绘图
-    const auto& cam = dynamic_cast<const Camera2D&>(camera);
-    offsetX = cam.GetX();
-    offsetY = cam.GetY();
+    const auto& cam = dynamic_cast<Camera2D&>(camera);
     zoom = cam.GetZoom();
     SDL_SetRenderScale(m_Renderer, zoom, zoom);
+
+    // 居中相机：屏幕中心 = 相机位置
+    // SDL 渲染：pixelX = (worldX - offsetX) * zoom
+    // 需要：    pixelX = (worldX - camX) * zoom + viewportCenterX
+    // 解得：    offsetX = camX - viewportCenterX / zoom
+    int w, h;
+    SDL_GetCurrentRenderOutputSize(m_Renderer, &w, &h);
+    float vcx = static_cast<float>(w) / 2.0f;
+    float vcy = static_cast<float>(h) / 2.0f;
+    offsetX = cam.GetTransform().Position.x - vcx / zoom;
+    offsetY = cam.GetTransform().Position.y - vcy / zoom;
+}
+
+void azer::SDL3Renderer::ResetRenderState()
+{
+    offsetX = 0.0f;
+    offsetY = 0.0f;
+    zoom = 1.0f;
+    SDL_SetRenderScale(m_Renderer, 1.0f, 1.0f);
+}
+
+void azer::SDL3Renderer::SetRenderTarget(Framebuffer* target)
+{
+    if (target)
+        SDL_SetRenderTarget(m_Renderer, static_cast<SDL_Texture*>(target->GetColorTextureHandle()));
+    else
+        SDL_SetRenderTarget(m_Renderer, nullptr);
 }
 
 void azer::SDL3Renderer::DrawQuad(const float x, const float y, const float w, const float h, const float alpha)
@@ -89,6 +114,11 @@ azer::Ref<azer::Texture> azer::SDL3Renderer::CreateTexture(void* pixels, uint32_
 azer::Ref<azer::Texture> azer::SDL3Renderer::CreateHDRTexture(const std::string& filePath)
 {
     return SDL3Texture::CreateHDR(m_Renderer, filePath);
+}
+
+azer::Ref<azer::Framebuffer> azer::SDL3Renderer::CreateFramebuffer(const FramebufferSpec& spec)
+{
+    return CreateRef<SDL3Framebuffer>(this, spec);
 }
 
 void azer::SDL3Renderer::ImGuiInit(SDL_Window* window)

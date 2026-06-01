@@ -1,15 +1,18 @@
-﻿//
+//
 // Created by Trallkong on 2026/5/1.
 //
 
-#ifndef AZER_LOGGER_H
-#define AZER_LOGGER_H
+#pragma once
 
 #include "Base.h"
 #include "spdlog/spdlog.h"
+#include "ConsoleSink.h"
 
 namespace azer
 {
+    // Returns the shared console sink (available after Logger::Init)
+    Ref<ConsoleSink> GetConsoleSink();
+
     class Logger
     {
     public:
@@ -40,4 +43,3 @@ namespace azer
 #define AZ_CRITICAL(...) ::azer::Logger::GetClientLogger()->critical(__VA_ARGS__)
 
 
-#endif //AZER_LOGGER_H

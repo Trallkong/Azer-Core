@@ -2,9 +2,7 @@
 // Created by Trallkong on 2026/5/1.
 //
 
-#ifndef AZER_DEV_GPUTEXTURE_H
-#define AZER_DEV_GPUTEXTURE_H
-
+#pragma once
 #include "Base.h"
 #include "Texture.h"
 
@@ -35,4 +33,3 @@ namespace azer
     };
 }
 
-#endif //AZER_DEV_GPUTEXTURE_H

@@ -1,5 +1,4 @@
-#ifndef AZER_DEV_RANDOM_H
-#define AZER_DEV_RANDOM_H
+#pragma once
 
 #include "Base.h"
 #include <random>
@@ -25,4 +24,3 @@ namespace azer
     };
 }
 
-#endif //AZER_DEV_RANDOM_H

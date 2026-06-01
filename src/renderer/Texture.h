@@ -2,9 +2,7 @@
 // Created by Trallkong on 2026/5/1.
 //
 
-#ifndef AZER_DEV_TEXTURE_H
-#define AZER_DEV_TEXTURE_H
-
+#pragma once
 #include "Base.h"
 #include <string>
 
@@ -32,4 +30,3 @@ namespace azer
     };
 }
 
-#endif //AZER_DEV_TEXTURE_H

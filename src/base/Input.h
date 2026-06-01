@@ -2,9 +2,7 @@
 // Created by Trallkong on 2026/5/5.
 //
 
-#ifndef AZER_DEV_INPUT_H
-#define AZER_DEV_INPUT_H
-
+#pragma once
 #include <unordered_set>
 
 #include "Base.h"
@@ -36,4 +34,3 @@ namespace azer
     };
 } // azer
 
-#endif //AZER_DEV_INPUT_H

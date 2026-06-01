@@ -2,44 +2,68 @@
 // Created by Trallkong on 2026/5/5.
 //
 
-#ifndef AZER_DEV_CAMERA2D_H
-#define AZER_DEV_CAMERA2D_H
-
-#include "Base.h"
+#pragma once
 #include "Camera.h"
 #include "glm/ext/matrix_clip_space.hpp"
-#include "glm/ext/matrix_transform.hpp"
+
+#include "Transform2D.h"
 
 namespace azer
 {
     class Camera2D : public Camera
     {
     public:
-        glm::mat4 GetProjection(const float viewportW, const float viewportH) const override
+        Camera2D() = default;
+
+        Camera2D(const Transform2D& transform, const uint32_t width, const uint32_t height, const float zNear = -1.0, const float zFar = 1.0)
+            : m_Transform(transform), m_Width(width), m_Height(height), zNear(zNear), zFar(zFar)
         {
-            return glm::ortho(
-                0.0f,
-                viewportW / m_Zoom,
-                viewportH / m_Zoom,
-                0.0f, -1.0f, 1.0f);
-        }
-        glm::mat4 GetView() const override
-        {
-            return glm::translate(glm::mat4(1.0f), glm::vec3(-m_X, -m_Y, 0.0f));
+            UpdateProjection();
         }
 
-        float GetX() const { return m_X; }
-        void SetX(const float x) { m_X = x; }
-        float GetY() const { return m_Y; }
-        void SetY(const float y) { m_Y = y; }
+        glm::mat4 GetProjectionMatrix() override
+        {
+            UpdateProjection();
+            return m_Projection;
+        }
+
+        glm::mat4 GetViewMatrix() const override
+        {
+            return glm::inverse(m_Transform.GetMatrix());
+        }
+
         float GetZoom() const { return m_Zoom; }
         void SetZoom(const float zoom) { m_Zoom = zoom; }
 
+        const Transform2D& GetTransform() const { return m_Transform; }
+        void SetTransform(const Transform2D& transform) { m_Transform = transform; }
+
+        static glm::mat4 GetOrthoMatrixFromTransform(
+            const Transform2D& transform,
+            const float width, const float height, const float zNear, const float zFar)
+        {
+            const float left = transform.Position.x - width / 2.0f;
+            const float right = transform.Position.x + width / 2.0f;
+            const float top = transform.Position.y - height / 2.0f;
+            const float bottom = transform.Position.y + height / 2.0f;
+            return glm::ortho(left, right, bottom, top, zNear, zFar);
+        }
+
     private:
-        float m_X = 0.0f;
-        float m_Y = 0.0f;
+        void UpdateProjection()
+        {
+            m_Projection = GetOrthoMatrixFromTransform(m_Transform, m_Width / m_Zoom, m_Height / m_Zoom, zNear, zFar);
+        }
+
+    private:
+        glm::mat4 m_Projection;
+
+        Transform2D m_Transform;
+        uint32_t m_Width = 1280;
+        uint32_t m_Height = 720;
+        float zNear = -1.0f;
+        float zFar = 1.0f;
+
         float m_Zoom = 1.0f;
     };
 }
-
-#endif //AZER_DEV_CAMERA2D_H

@@ -2,8 +2,7 @@
 // Created by Trallkong on 2026/4/18.
 //
 
-#ifndef AZER_LAYERSTACK_H
-#define AZER_LAYERSTACK_H
+#pragma once
 
 #include <algorithm>
 #include <vector>
@@ -38,4 +37,3 @@ namespace azer
     };
 }
 
-#endif //AZER_LAYERSTACK_H

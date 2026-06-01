@@ -14,6 +14,12 @@
 #include "base/Input.h"
 #include "base/Random.h"
 #include "base/Window.h"
+#include "base/Transform2D.h"
+#include "base/Transform3D.h"
+#include "base/GameObject.h"
+#include "base/Scene.h"
+#include "base/Collision.h"
+#include "base/file_system/FileSystem.h"
 
 // Animation
 #include "base/animation/AnimationPlayer.h"
@@ -23,6 +29,7 @@
 
 // Renderer
 #include "renderer/Texture.h"
+#include "renderer/Framebuffer.h"
 #include "renderer/Renderer.h"
 #include "renderer/Camera.h"
 #include "renderer/Camera2D.h"

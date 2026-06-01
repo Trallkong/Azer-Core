@@ -1,5 +1,4 @@
-#ifndef AZER_ENGINECONTEXT_H
-#define AZER_ENGINECONTEXT_H
+#pragma once
 
 namespace azer
 {
@@ -13,4 +12,3 @@ namespace azer
     };
 }
 
-#endif

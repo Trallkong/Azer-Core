@@ -1,10 +1,8 @@
-﻿//
+//
 // Created by Trallkong on 2026/4/18.
 //
 
-#ifndef AZER_LAYER_H
-#define AZER_LAYER_H
-
+#pragma once
 #include <string>
 
 #include "EngineContext.h"
@@ -74,4 +72,3 @@ namespace azer
     };
 }
 
-#endif //AZER_LAYER_H

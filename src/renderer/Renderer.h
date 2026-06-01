@@ -1,12 +1,11 @@
-﻿//
+//
 // Created by Trallkong on 2026/4/18.
 //
 
-#ifndef AZER_RENDERER_H
-#define AZER_RENDERER_H
-
+#pragma once
 #include "Base.h"
 #include "Texture.h"
+#include "Framebuffer.h"
 #include "Window.h"
 #include "Camera.h"
 #include "Model.h"
@@ -23,7 +22,9 @@ namespace azer
         virtual bool Initialize(Window* window) = 0;
         virtual void BeginFrame(const glm::vec3& clearColor) = 0;
         virtual void EndFrame() = 0;
-        virtual void SetCamera(const Camera& camera) = 0;
+        virtual void SetCamera(Camera& camera) = 0;
+        virtual void ResetRenderState() = 0;  // 重置渲染状态（缩放等），在切换渲染目标后调用
+        virtual void SetRenderTarget(Framebuffer* target) = 0;  // nullptr = swapchain
         virtual void SetViewport(uint32_t width, uint32_t height, uint32_t offsetX, uint32_t offsetY) = 0;
 
         // Renderer2D
@@ -47,7 +48,10 @@ namespace azer
         virtual Ref<Texture> CreateTexture(const std::string& filePath) = 0;
         virtual Ref<Texture> CreateTexture(void* pixels, uint32_t width, uint32_t height) = 0;
         virtual Ref<Texture> CreateHDRTexture(const std::string& filePath) = 0;
+
+        virtual Ref<Framebuffer> CreateFramebuffer(const FramebufferSpec& spec) = 0;
+
+        static Scope<Renderer> CreateRendererFromAppMode(const AppMode& mode);
     };
 }
 
-#endif //AZER_RENDERER_H

@@ -1,4 +1,4 @@
-﻿//
+//
 // Created by Trallkong on 2026/4/18.
 //
 
@@ -7,6 +7,7 @@
 #include "SDL3GPURendererSupport.h"
 
 #include "GPUTexture.h"
+#include "SDL3GPUFramebuffer.h"
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_sdlgpu3.h"
 
@@ -81,12 +82,9 @@ namespace azer
 
         int winW = 1280, winH = 720;
         SDL_GetWindowSize(m_Window, &winW, &winH);
-        m_MVPMatrix = glm::ortho(0.0f, static_cast<float>(winW),
-                                 static_cast<float>(winH), 0.0f,
-                                 -1.0f, 1.0f);
 
-        m_Viewport.w = 1280;
-        m_Viewport.h = 720;
+        m_Viewport.w = static_cast<float>(winW);
+        m_Viewport.h = static_cast<float>(winH);
         m_Viewport.x = 0;
         m_Viewport.y = 0;
         m_Viewport.min_depth = 0;
@@ -107,17 +105,17 @@ namespace azer
         SDL_GPUCommandBuffer* cmd = SDL_AcquireGPUCommandBuffer(m_Device);
         if (!cmd) return;
 
-        // My prepare include camera set
+        // Prepare draw data
         if (!SDL3GPURendererSupport::PrepareDrawData(this, cmd)) return;
 
         // ImGui prepare
         if (m_ImGuiDrawData)
             ImGui_ImplSDLGPU3_PrepareDrawData(m_ImGuiDrawData, cmd);
 
-        // === Render Pass ===
+        // Acquire swapchain
         SDL_GPUTexture* swapchain = nullptr;
-        Uint32 w, h;
-        SDL_AcquireGPUSwapchainTexture(cmd, m_Window, &swapchain, &w, &h);
+        Uint32 scW, scH;
+        SDL_AcquireGPUSwapchainTexture(cmd, m_Window, &swapchain, &scW, &scH);
         if (!swapchain) {
             m_Vertices.clear();
             m_DrawCmds.clear();
@@ -125,7 +123,7 @@ namespace azer
             SDL_SubmitGPUCommandBuffer(cmd);
             return;
         }
-        if (!EnsureDepthTexture(w, h))
+        if (!EnsureDepthTexture(scW, scH))
         {
             m_Vertices.clear();
             m_DrawCmds.clear();
@@ -134,35 +132,109 @@ namespace azer
             return;
         }
 
-        SDL_GPUColorTargetInfo colorTarget {};
-        colorTarget.texture = swapchain;
+        // 按 render target 分组 draw cmds
+        std::unordered_map<Framebuffer*, std::vector<BatchDrawCmd>> grouped;
+        for (const auto& dc : m_DrawCmds)
+            grouped[dc.target].push_back(dc);
+
+        // 预计算每组的 baseVertex 偏移（顶点缓冲按 cmd 顺序排列）
+        std::unordered_map<Framebuffer*, Uint32> groupBaseVertex;
+        {
+            Uint32 offset = 0;
+            for (const auto& dc : m_DrawCmds)
+            {
+                if (!groupBaseVertex.count(dc.target))
+                    groupBaseVertex[dc.target] = offset;
+                if (!dc.vertexBufferOverride)
+                    offset += dc.vertexCount;
+            }
+        }
+
+        // 渲染所有 framebuffer 目标
+        for (auto& [target, cmds] : grouped)
+        {
+            if (!target) continue;  // swapchain 在后面单独处理
+
+            auto* colorTex = static_cast<SDL_GPUTexture*>(target->GetColorTextureHandle());
+            auto* depthTex = static_cast<SDL_GPUTexture*>(target->GetDepthTextureHandle());
+            Uint32 bv = groupBaseVertex[target];
+
+            RenderBatch(cmd, colorTex, depthTex, target->GetWidth(), target->GetHeight(), cmds, bv, true);
+        }
+
+        // 渲染 swapchain 目标（包括 default target 的 draw cmds）
+        auto it = grouped.find(nullptr);
+        if (it != grouped.end() && !it->second.empty())
+        {
+            Uint32 bv = groupBaseVertex[nullptr];
+            RenderBatch(cmd, swapchain, m_DepthTexture, scW, scH, it->second, bv, true);
+        }
+        else
+        {
+            // 没有 swapchain 的 draw cmds，但需要清屏
+            SDL_GPUColorTargetInfo ct{};
+            ct.texture = swapchain;
+            ct.clear_color = {m_ClearColor.r, m_ClearColor.g, m_ClearColor.b, 1.0f};
+            ct.load_op = SDL_GPU_LOADOP_CLEAR;
+            ct.store_op = SDL_GPU_STOREOP_STORE;
+            SDL_GPURenderPass* rp = SDL_BeginGPURenderPass(cmd, &ct, 1, nullptr);
+            SDL_EndGPURenderPass(rp);
+        }
+
+        // ImGui pass (always on swapchain)
+        if (m_ImGuiDrawData)
+        {
+            SDL_GPUColorTargetInfo imguiCt{};
+            imguiCt.texture = swapchain;
+            imguiCt.load_op = SDL_GPU_LOADOP_LOAD;
+            imguiCt.store_op = SDL_GPU_STOREOP_STORE;
+            SDL_GPURenderPass* rp = SDL_BeginGPURenderPass(cmd, &imguiCt, 1, nullptr);
+            ImGui_ImplSDLGPU3_RenderDrawData(m_ImGuiDrawData, cmd, rp, nullptr);
+            SDL_EndGPURenderPass(rp);
+        }
+
+        SDL_SubmitGPUCommandBuffer(cmd);
+
+        m_Vertices.clear();
+        m_DrawCmds.clear();
+        m_ImGuiDrawData = nullptr;
+    }
+
+    void SDL3GPURenderer::RenderBatch(SDL_GPUCommandBuffer* cmd, SDL_GPUTexture* colorTex, void* depthTex,
+        uint32_t w, uint32_t h, const std::vector<BatchDrawCmd>& cmds, Uint32& baseVertex, bool clear)
+    {
+        SDL_GPUColorTargetInfo colorTarget{};
+        colorTarget.texture = colorTex;
         colorTarget.clear_color = {m_ClearColor.r, m_ClearColor.g, m_ClearColor.b, 1.0f};
-        colorTarget.load_op = SDL_GPU_LOADOP_CLEAR;
+        colorTarget.load_op = clear ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
         colorTarget.store_op = SDL_GPU_STOREOP_STORE;
 
-        SDL_GPUDepthStencilTargetInfo depthTarget {};
-        depthTarget.texture = m_DepthTexture;
-        depthTarget.clear_depth = 1.0f;
-        depthTarget.load_op = SDL_GPU_LOADOP_CLEAR;
-        depthTarget.store_op = SDL_GPU_STOREOP_DONT_CARE;
-        depthTarget.stencil_load_op = SDL_GPU_LOADOP_DONT_CARE;
-        depthTarget.stencil_store_op = SDL_GPU_STOREOP_DONT_CARE;
-
-        SDL_GPURenderPass* rp = SDL_BeginGPURenderPass(cmd, &colorTarget, 1, &depthTarget);
-
-        SDL_SetGPUViewport(rp, &m_Viewport);
-
-        if (!m_Vertices.empty() || !m_DrawCmds.empty())
+        SDL_GPUDepthStencilTargetInfo depthTarget{};
+        if (depthTex)
         {
-            SDL_GPUVertexBufferDescription vtxBufDesc {};
-            vtxBufDesc.slot       = 0;
-            vtxBufDesc.pitch      = sizeof(SDL3GPURenderer::BatchVertex);
-            vtxBufDesc.input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
-            vtxBufDesc.instance_step_rate = 0;
+            depthTarget.texture = static_cast<SDL_GPUTexture*>(depthTex);
+            depthTarget.clear_depth = 1.0f;
+            depthTarget.load_op = SDL_GPU_LOADOP_CLEAR;
+            depthTarget.store_op = SDL_GPU_STOREOP_DONT_CARE;
+            depthTarget.stencil_load_op = SDL_GPU_LOADOP_DONT_CARE;
+            depthTarget.stencil_store_op = SDL_GPU_STOREOP_DONT_CARE;
+        }
 
-            Uint32 baseVertex = 0;
+        SDL_GPURenderPass* rp = SDL_BeginGPURenderPass(cmd, &colorTarget, 1, depthTex ? &depthTarget : nullptr);
+
+        SDL_GPUViewport viewport{};
+        viewport.x = 0;
+        viewport.y = 0;
+        viewport.w = static_cast<float>(w);
+        viewport.h = static_cast<float>(h);
+        viewport.min_depth = 0.0f;
+        viewport.max_depth = 1.0f;
+        SDL_SetGPUViewport(rp, &viewport);
+
+        if (!cmds.empty())
+        {
             SDL_GPUGraphicsPipeline* currentPipeline = nullptr;
-            for (const auto& drawCmd : m_DrawCmds)
+            for (const auto& drawCmd : cmds)
             {
                 SDL_GPUGraphicsPipeline* pipeline = m_Pipeline2D;
                 if (drawCmd.pipeline == PipelineType::Renderer3D)
@@ -177,19 +249,19 @@ namespace azer
 
                 SDL_PushGPUVertexUniformData(cmd, 0, &drawCmd.ubo, sizeof(UniformBufferObject));
 
-                SDL_GPUTextureSamplerBinding texBinding {};
+                SDL_GPUTextureSamplerBinding texBinding{};
                 texBinding.texture = drawCmd.texture;
                 texBinding.sampler = drawCmd.sampler ? drawCmd.sampler : m_Sampler;
                 SDL_BindGPUFragmentSamplers(rp, 0, &texBinding, 1);
 
-                SDL_GPUBufferBinding vtxBinding {};
+                SDL_GPUBufferBinding vtxBinding{};
                 vtxBinding.buffer = drawCmd.vertexBufferOverride ? drawCmd.vertexBufferOverride : m_VertexBuffer;
                 vtxBinding.offset = 0;
                 SDL_BindGPUVertexBuffers(rp, 0, &vtxBinding, 1);
 
                 if (drawCmd.indexBuffer)
                 {
-                    SDL_GPUBufferBinding idxBinding {};
+                    SDL_GPUBufferBinding idxBinding{};
                     idxBinding.buffer = drawCmd.indexBuffer;
                     idxBinding.offset = 0;
                     SDL_BindGPUIndexBuffer(rp, &idxBinding, SDL_GPU_INDEXELEMENTSIZE_32BIT);
@@ -204,30 +276,23 @@ namespace azer
         }
 
         SDL_EndGPURenderPass(rp);
-
-        if (m_ImGuiDrawData)
-        {
-            SDL_GPUColorTargetInfo imguiColorTarget {};
-            imguiColorTarget.texture = swapchain;
-            imguiColorTarget.load_op = SDL_GPU_LOADOP_LOAD;
-            imguiColorTarget.store_op = SDL_GPU_STOREOP_STORE;
-
-            SDL_GPURenderPass* imguiRenderPass = SDL_BeginGPURenderPass(cmd, &imguiColorTarget, 1, nullptr);
-            ImGui_ImplSDLGPU3_RenderDrawData(m_ImGuiDrawData, cmd, imguiRenderPass, nullptr);
-            SDL_EndGPURenderPass(imguiRenderPass);
-        }
-
-        SDL_SubmitGPUCommandBuffer(cmd);
-
-        m_Vertices.clear();
-        m_DrawCmds.clear();
-        m_ImGuiDrawData = nullptr;
     }
 
-    void SDL3GPURenderer::SetCamera(const Camera& camera)
+    void SDL3GPURenderer::SetCamera(Camera& camera)
     {
-        m_MVPMatrix = camera.GetViewProjection(m_Viewport.w, m_Viewport.h);
-        m_SkyboxViewProjection = camera.GetProjection(m_Viewport.w, m_Viewport.h) * glm::mat4(glm::mat3(camera.GetView()));
+        m_ViewProjectionMatrix = camera.GetViewProjectionMatrix();
+        m_SkyboxViewProjection = camera.GetProjectionMatrix() * glm::mat4(glm::mat3(camera.GetViewMatrix()));
+    }
+
+    void SDL3GPURenderer::ResetRenderState()
+    {
+        m_ViewProjectionMatrix = glm::mat4(1.0f);
+        m_CurrentTarget = nullptr;
+    }
+
+    void SDL3GPURenderer::SetRenderTarget(Framebuffer* target)
+    {
+        m_CurrentTarget = target;
     }
 
     void SDL3GPURenderer::SetViewport(const uint32_t width, const uint32_t height, const uint32_t offsetX, const uint32_t offsetY)
@@ -299,12 +364,12 @@ namespace azer
         m_Vertices.push_back({{x,  y, 0.0f }, {n[0],n[1],n[2]}, {0,0}, {c[0],c[1],c[2],c[3]}});
 
         BatchDrawCmd cmd {};
-        cmd.texture = static_cast<SDL_GPUTexture*>(m_WhiteTexture->GetHandle());
+        cmd.target = m_CurrentTarget;        cmd.texture = static_cast<SDL_GPUTexture*>(m_WhiteTexture->GetHandle());
         cmd.vertexCount = 6;
         cmd.pipeline = PipelineType::Renderer2D;
 
         UniformBufferObject ubo {};
-        ubo.viewProjection = m_MVPMatrix;
+        ubo.viewProjection = m_ViewProjectionMatrix;
         ubo.transform = glm::mat4(1.0f);
         ubo.alpha = alpha;
 
@@ -341,12 +406,12 @@ namespace azer
         m_Vertices.push_back({{x0, y0, 0.0f}, {n[0],n[1],n[2]}, {u0, v0}, {1,1,1,1}});
 
         BatchDrawCmd cmd {};
-        cmd.texture = handle;
+        cmd.target = m_CurrentTarget;        cmd.texture = handle;
         cmd.vertexCount = 6;
         cmd.pipeline = PipelineType::Renderer2D;
 
         UniformBufferObject ubo {};
-        ubo.viewProjection = m_MVPMatrix;
+        ubo.viewProjection = m_ViewProjectionMatrix;
         ubo.transform = glm::mat4(1.0f);
         ubo.alpha = alpha;
 
@@ -367,6 +432,11 @@ namespace azer
     Ref<Texture> SDL3GPURenderer::CreateHDRTexture(const std::string& filePath)
     {
         return GPUTexture::CreateHDR(m_Device, filePath);
+    }
+
+    Ref<Framebuffer> SDL3GPURenderer::CreateFramebuffer(const FramebufferSpec& spec)
+    {
+        return CreateRef<SDL3GPUFramebuffer>(m_Device, spec);
     }
 
     void SDL3GPURenderer::DrawCube(const glm::vec3& position, const glm::vec3& rotation, const glm::vec3& scale)
@@ -409,7 +479,7 @@ namespace azer
         auto* whiteTex = static_cast<SDL_GPUTexture*>(m_WhiteTexture->GetHandle());
 
         UniformBufferObject ubo {};
-        ubo.viewProjection = m_MVPMatrix;
+        ubo.viewProjection = m_ViewProjectionMatrix;
         ubo.transform = model;
 
         for (int f = 0; f < 6; ++f)
@@ -425,7 +495,7 @@ namespace azer
             m_Vertices.push_back({{cubeFaces[f][0].x, cubeFaces[f][0].y, cubeFaces[f][0].z}, {n[0],n[1],n[2]}, {0, 0}, {c[0], c[1], c[2], c[3]}});
 
             BatchDrawCmd cmd {};
-            cmd.texture = whiteTex;
+        cmd.target = m_CurrentTarget;            cmd.texture = whiteTex;
             cmd.vertexCount = 6;
             cmd.pipeline = PipelineType::Renderer3D;
             cmd.ubo = ubo;
@@ -461,7 +531,7 @@ namespace azer
             m_Vertices.push_back({{cubeFaces[f][0].x, cubeFaces[f][0].y, cubeFaces[f][0].z}, {n[0],n[1],n[2]}, {0, 0}, {c[0], c[1], c[2], c[3]}});
 
             BatchDrawCmd cmd {};
-            cmd.texture = texture;
+        cmd.target = m_CurrentTarget;            cmd.texture = texture;
             cmd.sampler = m_SkyboxSampler;
             cmd.vertexCount = 6;
             cmd.pipeline = PipelineType::Skybox;
@@ -593,14 +663,14 @@ namespace azer
             }
 
             BatchDrawCmd cmd {};
-            cmd.texture = texHandle;
+        cmd.target = m_CurrentTarget;            cmd.texture = texHandle;
             cmd.vertexCount = gpuData.IndexCount > 0 ? gpuData.IndexCount : static_cast<uint32_t>(mesh.Vertices.size());
             cmd.pipeline = PipelineType::Renderer3D;
             cmd.vertexBufferOverride = gpuData.VertexBuffer;
             cmd.indexBuffer = gpuData.UseIndexBuffer ? gpuData.IndexBuffer : nullptr;
 
             UniformBufferObject ubo {};
-            ubo.viewProjection = m_MVPMatrix;
+            ubo.viewProjection = m_ViewProjectionMatrix;
             ubo.transform = worldTransform * nodeTransform;
             ubo.alpha = alpha;
             cmd.ubo = ubo;

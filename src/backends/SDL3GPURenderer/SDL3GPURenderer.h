@@ -1,10 +1,8 @@
-﻿//
+//
 // Created by Trallkong on 2026/4/18.
 //
 
-#ifndef AZER_SDL3GPURENDERER_H
-#define AZER_SDL3GPURENDERER_H
-
+#pragma once
 #include "Base.h"
 #include "Renderer.h"
 #include "glm/glm.hpp"
@@ -24,7 +22,9 @@ namespace azer
         bool Initialize(Window* window) override;
         void BeginFrame(const glm::vec3& clearColor) override;
         void EndFrame() override;
-        void SetCamera(const Camera& camera) override;
+        void SetCamera(Camera& camera) override;
+        void ResetRenderState() override;
+        void SetRenderTarget(Framebuffer* target) override;
         void SetViewport(uint32_t width, uint32_t height, uint32_t offsetX, uint32_t offsetY) override;
 
         // Renderer2D
@@ -34,6 +34,7 @@ namespace azer
         Ref<Texture> CreateTexture(const std::string& filePath) override;
         Ref<Texture> CreateTexture(void* pixels, uint32_t width, uint32_t height) override;
         Ref<Texture> CreateHDRTexture(const std::string& filePath) override;
+        Ref<Framebuffer> CreateFramebuffer(const FramebufferSpec& spec) override;
 
         // Renderer3D
         void DrawCube(const glm::vec3& position, const glm::vec3& rotation, const glm::vec3& scale) override;
@@ -73,6 +74,7 @@ namespace azer
 
         struct BatchDrawCmd
         {
+            Framebuffer* target = nullptr;  // 渲染目标（nullptr = swapchain）
             SDL_GPUTexture* texture = nullptr;
             SDL_GPUSampler* sampler = nullptr;
             uint32_t vertexCount = 0;
@@ -95,7 +97,7 @@ namespace azer
     private:
         SDL_GPUDevice* m_Device = nullptr;
         SDL_Window* m_Window = nullptr;
-        glm::mat4 m_MVPMatrix{};
+        glm::mat4 m_ViewProjectionMatrix{};
         glm::mat4 m_SkyboxViewProjection{};
         ImDrawData* m_ImGuiDrawData = nullptr;
         glm::vec3 m_ClearColor{};
@@ -103,6 +105,7 @@ namespace azer
 
         std::vector<BatchVertex> m_Vertices;
         std::vector<BatchDrawCmd> m_DrawCmds;
+        Framebuffer* m_CurrentTarget = nullptr;  // 当前渲染目标
 
         SDL_GPUShader*           m_VertexShader = nullptr;
         SDL_GPUShader*           m_FragmentShader = nullptr;
@@ -130,7 +133,8 @@ namespace azer
 
         bool EnsureDepthTexture(uint32_t width, uint32_t height);
         void ReleaseDepthTexture();
+        void RenderBatch(SDL_GPUCommandBuffer* cmd, SDL_GPUTexture* colorTex, void* depthTex, uint32_t w, uint32_t h,
+            const std::vector<BatchDrawCmd>& cmds, Uint32& baseVertex, bool clear);
     };
 }
 
-#endif //AZER_SDL3GPURENDERER_H

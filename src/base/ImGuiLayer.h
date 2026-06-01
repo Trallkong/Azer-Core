@@ -1,5 +1,4 @@
-﻿#ifndef AZER_IMGUILAYER_H
-#define AZER_IMGUILAYER_H
+﻿#pragma once
 
 #include "Base.h"
 #include "Layer.h"
@@ -30,4 +29,3 @@ namespace azer
     };
 }
 
-#endif //AZER_IMGUILAYER_H

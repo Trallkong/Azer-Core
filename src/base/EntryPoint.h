@@ -2,8 +2,7 @@
 // Created by Trallkong on 2026/5/1.
 //
 
-#ifndef AZER_ENTRYPOINT_H
-#define AZER_ENTRYPOINT_H
+#pragma once
 
 #include "Application.h"
 #include "Logger.h"
@@ -21,4 +20,3 @@ int main(int argc, char* argv[])
     return 0;
 }
 
-#endif //AZER_ENTRYPOINT_H

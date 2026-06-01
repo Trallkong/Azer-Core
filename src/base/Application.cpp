@@ -8,15 +8,21 @@
 #include "Input.h"
 #include "Logger.h"
 #include "SDL3GPURenderer.h"
-#include "SDL3Renderer.h"
 
 #include "SplashLayer.h"
 
+#include "FileSystem.h"
+
 namespace azer
 {
-    Application::Application(const AppMode& mode, const std::string& windowTitle)
+    Application::Application(
+        const std::string& rootPath,
+        const AppMode& mode,
+        const std::string& windowTitle)
         :m_Mode(mode), m_WindowTitle(windowTitle)
     {
+        FileSystem::Init(rootPath);
+
         if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS))
         {
             std::cerr << "Failed to initialize SDL: " << SDL_GetError() << std::endl;
@@ -25,16 +31,8 @@ namespace azer
 
         m_Window = Window::Create(1280, 720, m_WindowTitle);
 
-        if (mode == AppMode::Simple2D)
-        {
-            m_Renderer = CreateScope<SDL3Renderer>();
-        } else if (mode == AppMode::ForwardPlus)
-        {
-            m_Renderer = CreateScope<SDL3GPURenderer>();
-        } else
-        {
-            assert(false && "Unsupported AppMode");
-        }
+        m_Renderer = Renderer::CreateRendererFromAppMode(m_Mode);
+
         if (!m_Renderer->Initialize(m_Window.get()))
         {
             AZ_CORE_ERROR("Failed to initialize renderer");

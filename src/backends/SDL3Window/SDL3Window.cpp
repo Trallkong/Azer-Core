@@ -37,6 +37,18 @@ namespace azer
         SDL_SetWindowResizable(m_Window, resizable);
     }
 
+    void SDL3Window::SetWindowIcon(const std::string& path)
+    {
+        SDL_Surface* iconSurface = SDL_LoadPNG(path.c_str());
+        if (!iconSurface)
+        {
+            AZ_CORE_ERROR("Failed to load window icon: {0}", path);
+            return;
+        }
+        SDL_SetWindowIcon(m_Window, iconSurface);
+        SDL_DestroySurface(iconSurface);
+    }
+
     WindowSize SDL3Window::GetWindowSize() const
     {
         int width, height;

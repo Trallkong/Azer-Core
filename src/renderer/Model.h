@@ -1,6 +1,4 @@
-#ifndef AZER_MODEL_H
-#define AZER_MODEL_H
-
+#pragma once
 #include "Base.h"
 #include "Mesh.h"
 #include "Material.h"
@@ -58,4 +56,3 @@ namespace azer
     };
 }
 
-#endif

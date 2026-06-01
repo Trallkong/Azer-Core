@@ -1,6 +1,7 @@
 #include "azpch.h"
 #include "SplashLayer.h"
 
+#include "FileSystem.h"
 #include "Renderer.h"
 
 namespace azer
@@ -15,7 +16,7 @@ namespace azer
         Layer::OnAttach(ctx);
         m_Window = &ctx.window;
         if (m_Logo == nullptr)
-            m_Logo = Texture::Create(m_Renderer, "./assets/azer_logo.png");
+            m_Logo = Texture::Create(m_Renderer, FileSystem::ResolvePath("./assets/azer_logo.png"));
     }
 
     void SplashLayer::OnUpdate(const float delta)
@@ -45,7 +46,7 @@ namespace azer
     void SplashLayer::OnImGuiRender()
     {
         Layer::OnImGuiRender();
-        auto* dl = ImGui::GetBackgroundDrawList();
+        auto* dl = ImGui::GetForegroundDrawList(ImGui::GetMainViewport());
         const auto [ww, wh] = m_Window->GetWindowSize();
         const ImVec2 winSize = ImVec2(static_cast<float>(ww), static_cast<float>(wh));
         dl->AddRectFilled(ImVec2(0, 0), winSize, IM_COL32(0, 0, 0, 255));

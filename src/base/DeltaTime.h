@@ -2,8 +2,7 @@
 // Created by Trallkong on 2026/4/18.
 //
 
-#ifndef AZER_DELTATIME_H
-#define AZER_DELTATIME_H
+#pragma once
 
 #include <chrono>
 
@@ -22,4 +21,3 @@ private:
 
 } // azer
 
-#endif //AZER_DELTATIME_H

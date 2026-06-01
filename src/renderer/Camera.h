@@ -2,9 +2,7 @@
 // Created by Trallkong on 2026/5/5.
 //
 
-#ifndef AZER_DEV_CAMERA_H
-#define AZER_DEV_CAMERA_H
-
+#pragma once
 #include "Base.h"
 #include <glm/glm.hpp>
 
@@ -14,14 +12,13 @@ namespace azer
     {
     public:
         virtual ~Camera() = default;
-        virtual glm::mat4 GetProjection(float viewportW, float viewportH) const = 0;
-        virtual glm::mat4 GetView() const = 0;
+        virtual glm::mat4 GetProjectionMatrix() = 0;
+        virtual glm::mat4 GetViewMatrix() const = 0;
 
-        glm::mat4 GetViewProjection(const float vpW, const float vpH) const
+        glm::mat4 GetViewProjectionMatrix()
         {
-            return GetProjection(vpW, vpH) * GetView();
+            return GetProjectionMatrix() * GetViewMatrix();
         }
     };
 }
 
-#endif //AZER_DEV_CAMERA_H

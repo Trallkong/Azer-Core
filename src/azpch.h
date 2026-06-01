@@ -1,10 +1,8 @@
-﻿//
+//
 // Created by Trallkong on 2026/4/18.
 //
 
-#ifndef AZER_AZPCH_H
-#define AZER_AZPCH_H
-
+#pragma once
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -25,4 +23,3 @@
 
 #include "Logger.h"
 
-#endif //AZER_AZPCH_H

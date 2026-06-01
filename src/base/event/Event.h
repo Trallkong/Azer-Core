@@ -1,10 +1,8 @@
-﻿//
+//
 // Created by Trallkong on 2026/5/1.
 //
 
-#ifndef AZER_EVENT_H
-#define AZER_EVENT_H
-
+#pragma once
 #include "Base.h"
 #include "SDL3/SDL.h"
 
@@ -166,4 +164,3 @@ namespace azer
     };
 }
 
-#endif //AZER_EVENT_H

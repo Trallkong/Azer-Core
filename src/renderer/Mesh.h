@@ -1,6 +1,4 @@
-#ifndef AZER_MESH_H
-#define AZER_MESH_H
-
+#pragma once
 #include "Base.h"
 #include "glm/glm.hpp"
 
@@ -21,4 +19,3 @@ namespace azer
     };
 }
 
-#endif

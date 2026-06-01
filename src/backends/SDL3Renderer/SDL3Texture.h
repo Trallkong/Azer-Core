@@ -2,9 +2,7 @@
 // Created by Trallkong on 2026/5/1.
 //
 
-#ifndef AZER_DEV_SDL3TEXTURE_H
-#define AZER_DEV_SDL3TEXTURE_H
-
+#pragma once
 #include "Base.h"
 #include "Texture.h"
 
@@ -33,4 +31,3 @@ namespace azer
     };
 } // azer
 
-#endif //AZER_DEV_SDL3TEXTURE_H

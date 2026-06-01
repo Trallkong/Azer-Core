@@ -2,9 +2,7 @@
 // Created by Trallkong on 2026/5/5.
 //
 
-#ifndef AZER_DEV_SDL3GPURENDERERSUPPORT_H
-#define AZER_DEV_SDL3GPURENDERERSUPPORT_H
-
+#pragma once
 #include "Base.h"
 #include "SDL3/SDL.h"
 
@@ -30,4 +28,3 @@ namespace azer
     };
 } // azer
 
-#endif //AZER_DEV_SDL3GPURENDERERSUPPORT_H
