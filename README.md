@@ -15,6 +15,14 @@ Azer-Core is a modern C++23 game engine framework that provides:
 - **Dependency injection** — no global singletons; layers receive `EngineContext{ Renderer&, Window& }`
 - **Cross-platform** — Windows, Linux, macOS via SDL3
 
+## Example Applications
+
+For complete example applications built with Azer-Core, see [Azer_App_Examples](https://github.com/Trallkong/Azer_App_Examples).
+
+Includes:
+- **Scene Editor** — 2D editor with ImGui, undo/redo, scene serialization
+- **ECS Example** — Entity Component System demo with physics and rendering
+
 ## Architecture Overview
 
 ```

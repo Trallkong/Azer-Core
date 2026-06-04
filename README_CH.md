@@ -15,6 +15,14 @@ Azer-Core 是一个现代 C++23 游戏引擎框架，提供：
 - **依赖注入** — 无全局单例；Layer 通过 `OnAttach` 接收 `EngineContext{ Renderer&, Window& }`
 - **跨平台** — 通过 SDL3 支持 Windows、Linux、macOS
 
+## 示例应用
+
+完整的示例应用程序请访问 [Azer_App_Examples](https://github.com/Trallkong/Azer_App_Examples)。
+
+包含：
+- **场景编辑器** — 带 ImGui 的 2D 编辑器，支持撤销/重做、场景序列化
+- **ECS 示例** — 实体组件系统演示，包含物理和渲染
+
 ## 架构概览
 
 ```
