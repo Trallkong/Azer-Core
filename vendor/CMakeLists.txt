@@ -10,4 +10,8 @@ set(JSON_Install OFF CACHE BOOL "" FORCE)
 add_subdirectory(nlohmann_json)
 
 add_library(vendor INTERFACE)
-target_link_libraries(vendor INTERFACE SDL3::SDL3 imgui glm::glm spdlog::spdlog cgltf stb nlohmann_json::nlohmann_json)
+target_link_libraries(vendor INTERFACE SDL3::SDL3 imgui glm::glm spdlog::spdlog cgltf stb nlohmann_json::nlohmann_json entt)
+
+# entt (header-only)
+add_library(entt INTERFACE)
+target_include_directories(entt INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/entt/single_include)

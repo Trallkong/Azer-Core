@@ -38,3 +38,15 @@
 #include "renderer/Mesh.h"
 #include "renderer/Material.h"
 #include "renderer/Model.h"
+
+// ECS
+#include "ecs/Components.h"
+#include "ecs/World.h"
+#include "ecs/System.h"
+#include "ecs/SystemManager.h"
+#include "ecs/ECSLayer.h"
+#include "ecs/ECSScene.h"
+#include "ecs/ECSSceneSerializer.h"
+#include "ecs/GameObjectWrapper.h"
+#include "ecs/RenderSystem.h"
+#include "ecs/PhysicsSystem.h"

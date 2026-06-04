@@ -33,6 +33,16 @@ add_library(Azer
         # --- Reflection ---
         base/reflection/PropertyAccessor.cpp
 
+        # --- ECS ---
+        ecs/World.cpp
+        ecs/SystemManager.cpp
+        ecs/RenderSystem.cpp
+        ecs/PhysicsSystem.cpp
+        ecs/ECSLayer.cpp
+        ecs/GameObjectWrapper.cpp
+        ecs/ECSScene.cpp
+        ecs/ECSSceneSerializer.cpp
+
         # --- Renderer (abstract) ---
         renderer/Framebuffer.cpp
         renderer/Model.cpp
@@ -67,10 +77,12 @@ target_include_directories(Azer PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/base/reflection
         ${CMAKE_CURRENT_SOURCE_DIR}/base/file_system
         ${CMAKE_CURRENT_SOURCE_DIR}/renderer
+        ${CMAKE_CURRENT_SOURCE_DIR}/ecs
         ${CMAKE_CURRENT_SOURCE_DIR}/backends/SDL3GPURenderer
         ${CMAKE_CURRENT_SOURCE_DIR}/backends/SDL3Renderer
         ${CMAKE_CURRENT_SOURCE_DIR}/backends/SDL3Window
         ${CMAKE_CURRENT_SOURCE_DIR}/../assets/shaders
+        ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/entt/single_include
 )
 
 target_link_libraries(Azer PRIVATE vendor)
