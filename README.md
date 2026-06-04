@@ -1,5 +1,7 @@
 ﻿# Azer Engine
 
+[English](README.md) | [中文](README_CH.md)
+
 A lightweight, cross-platform 2D/3D game engine framework in C++23. Designed around the **engine-as-a-library** pattern: Azer builds as a static/shared library that user applications link against, with swappable rendering backends and a layered update architecture — all powered by SDL3.
 
 ## Showcase
@@ -41,12 +43,29 @@ Applications built with Azer-Core:
 - **Keyframe Animation** — `Animation` → `AnimationChannel` → `KeyFrame` data hierarchy, matching glTF animation structure
 - **Animation Player** — playback controller with `Play`/`Stop`/`Pause`/`Resume`, configurable speed and looping, per-frame sampling with linear interpolation
 
+### Scene & GameObject
+
+- **GameObject** — entity with unique ID, name, `Transform3D`, size, color, texture, and visibility
+- **Scene** — owns a collection of `Scope<GameObject>`; supports `CreateObject`, `AddObject`, `RemoveObject`, `TakeObject` (for undo), and `FindObject`
+- **Transform2D / Transform3D** — position, rotation (euler angles in degrees), scale with `GetMatrix()`; `Transform3D` adds `GetForward()`/`GetRight()`/`GetUp()` direction vectors
+- **Scene Serializer** — `SceneSerializer::Save`/`Load` to/from JSON files with relative asset path resolution
+
+### Collision Detection
+
+- **AABB2D / AABB3D** — axis-aligned bounding boxes with `Contains`, `Intersects`, `Union`, `ExpandToInclude`, `Offset`
+- **Collision namespace** — `Intersects`, `PointInAABB`, `CircleVsCircle`, `CircleVsAABB` (2D); `SphereVsSphere`, `SphereVsAABB` (3D); `RayVsAABB` / `RayVsAABB2D` for 3D/2D picking
+
+### Framebuffer
+
+- **Framebuffer** — abstract render-to-texture target with `Resize`, color/depth texture access; concrete backends in `SDL3Framebuffer` and `SDL3GPUFramebuffer`
+
 ### Utilities
 
 - **Input System** — `Input::IsKeyPressed(key)` for polling keyboard state
 - **Random Engine** — `Random::RandBetween(min, max)` shared Mersenne Twister, seeded once
 - **Texture Factory** — `Texture::Create()` / `Texture::CreateHDR()` with shared ownership via `Ref<Texture>`
 - **Camera System** — `Camera2D` (ortho, X/Y/Zoom) and `Camera3D` (perspective, FOV/Position/Target/Up) with encapsulated state
+- **File System** — `FileSystem` with root-path-based resolution, text/binary read/write, directory listing, and path utilities
 
 ## Dependencies
 
@@ -58,6 +77,9 @@ All under `vendor/`:
 | [GLM](https://github.com/g-truc/glm) | git submodule |
 | [spdlog](https://github.com/gabime/spdlog) | git submodule |
 | [Dear ImGui](https://github.com/ocornut/imgui) | directly committed |
+| [cgltf](https://github.com/jkuhlmann/cgltf) | vendored |
+| [stb](https://github.com/nothings/stb) | vendored |
+| [nlohmann_json](https://github.com/nlohmann/json) | vendored |
 
 ## Requirements
 
@@ -136,7 +158,15 @@ Azer.h (umbrella header)
 │   ├── Input             Static key state queries
 │   ├── Random            Shared Mersenne Twister utility
 │   ├── DeltaTime         Frame timing
+│   ├── GameObject        Entity with ID, transform, color, texture
+│   ├── Scene             GameObject collection manager
+│   ├── SceneSerializer   JSON scene save/load
+│   ├── Collision         AABB2D/3D + ray/sphere/circle intersection tests
+│   ├── Transform2D       2D transform (Position, Rotation, Scale)
+│   ├── Transform3D       3D transform with euler angles + direction vectors
 │   ├── Variant           Runtime-typed value container (Float/Vec2/Vec3/Quat)
+│   ├── file_system/
+│   │   └── FileSystem    Root-path-based file I/O + directory listing
 │   ├── animation/
 │   │   ├── Animation         Animation data (channels + keyframes)
 │   │   └── AnimationPlayer   Playback controller (play/stop/pause/loop)
@@ -148,6 +178,7 @@ Azer.h (umbrella header)
 │   ├── Camera2D          2D camera (X/Y/Zoom)
 │   ├── Camera3D          3D camera (Fov/Position/Target/Up)
 │   ├── Texture           Platform-agnostic texture (Ref<T>)
+│   ├── Framebuffer       Abstract render-to-texture target
 │   ├── Model             GLTF model loader
 │   ├── Mesh              Vertex/Index data structures
 │   └── Material          PBR material properties

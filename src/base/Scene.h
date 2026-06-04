@@ -25,6 +25,9 @@ namespace azer
         // 删除对象
         void RemoveObject(GameObjectID id);
 
+        // 取出对象（不销毁，用于 undo）
+        Scope<GameObject> TakeObject(GameObjectID id);
+
         // 查找
         GameObject* FindObject(GameObjectID id);
 

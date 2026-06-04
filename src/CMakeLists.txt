@@ -27,6 +27,9 @@ add_library(Azer
         # --- Animation ---
         base/animation/AnimationPlayer.cpp
 
+        # --- Serialization ---
+        base/SceneSerializer.cpp
+
         # --- Reflection ---
         base/reflection/PropertyAccessor.cpp
 

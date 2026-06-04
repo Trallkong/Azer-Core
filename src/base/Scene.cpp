@@ -28,6 +28,20 @@ namespace azer
         });
     }
 
+    Scope<GameObject> Scene::TakeObject(GameObjectID id)
+    {
+        for (auto it = m_Objects.begin(); it != m_Objects.end(); ++it)
+        {
+            if ((*it)->GetID() == id)
+            {
+                Scope<GameObject> obj = std::move(*it);
+                m_Objects.erase(it);
+                return obj;
+            }
+        }
+        return nullptr;
+    }
+
     GameObject* Scene::FindObject(GameObjectID id)
     {
         for (auto& obj : m_Objects)

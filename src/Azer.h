@@ -18,6 +18,7 @@
 #include "base/Transform3D.h"
 #include "base/GameObject.h"
 #include "base/Scene.h"
+#include "base/SceneSerializer.h"
 #include "base/Collision.h"
 #include "base/file_system/FileSystem.h"
 
