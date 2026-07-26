@@ -1,27 +1,19 @@
-﻿# Azer-Core
+﻿# Azer
 
 [English](README.md) | [中文](README_CH.md)
 
-A lightweight, cross-platform 2D/3D game engine framework in C++23. Designed around the **engine-as-a-library** pattern: Azer builds as a static/shared library that user applications link against, with swappable rendering backends and a layered update architecture — all powered by SDL3.
+A lightweight, cross-platform 2D/3D game engine framework in C++23. Designed around the **engine-as-a-library** pattern: Azer builds as a static/shared library that user applications link against, with swappable rendering backends (SDL_Renderer, SDL_GPU, Vulkan) and a layered update architecture — all powered by SDL3.
 
-## What is Azer-Core
+## What is Azer
 
-Azer-Core is a modern C++23 game engine framework that provides:
+Azer is a modern C++23 game engine framework that provides:
 
 - **Engine-as-a-library** architecture — not an executable; users define `CreateApplication()`, link `Azer`
-- **Swappable renderer backends** — `Simple2D` (SDL_Renderer) and `ForwardPlus` (SDL GPU API)
+- **Swappable renderer backends** — `SDL_2D` (SDL_Renderer), `SDL_GPU` (SDL GPU API), and `Vulkan` — selected via `RendererAPI::s_API`
 - **Entity Component System (ECS)** — powered by entt for flexible entity management
 - **Layered update architecture** — deterministic game loop with fixed timestep physics
 - **Dependency injection** — no global singletons; layers receive `EngineContext{ Renderer&, Window& }`
 - **Cross-platform** — Windows, Linux, macOS via SDL3
-
-## Example Applications
-
-For complete example applications built with Azer-Core, see [Azer_App_Examples](https://github.com/Trallkong/Azer_App_Examples).
-
-Includes:
-- **Scene Editor** — 2D editor with ImGui, undo/redo, scene serialization
-- **ECS Example** — Entity Component System demo with physics and rendering
 
 ## Architecture Overview
 
@@ -35,7 +27,7 @@ Includes:
 │         └────────────────┼────────────────┘                     │
 │                          │                                      │
 │  ┌───────────────────────▼───────────────────────┐             │
-│  │              Azer Engine Core                  │             │
+│  │                 Azer Engine                    │             │
 │  │  ┌─────────────┐  ┌─────────────┐  ┌────────┐ │             │
 │  │  │   Layer     │  │   ECS       │  │ Event  │ │             │
 │  │  │  System     │  │  System     │  │ System │ │             │
@@ -47,21 +39,21 @@ Includes:
 │  │  └───────────────────┬──────────────────────┘ │             │
 │  │                      │                        │             │
 │  │  ┌───────────────────▼──────────────────────┐ │             │
-│  │  │           Renderer Abstraction           │ │             │
-│  │  │  ┌─────────────┐      ┌─────────────┐   │ │             │
-│  │  │  │ SDL3Renderer│      │SDL3GPURender│   │ │             │
-│  │  │  │   (2D)      │      │   (3D)      │   │ │             │
-│  │  │  └─────────────┘      └─────────────┘   │ │             │
+│  │  │           Renderer Abstraction            │ │             │
+│  │  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ │ │             │
+│  │  │  │SDL3Render│ │SDL3GPU   │ │ Vulkan   │ │ │             │
+│  │  │  │  (2D)    │ │Render(3D)│ │Render(3D)│ │ │             │
+│  │  │  └──────────┘ └──────────┘ └──────────┘ │ │             │
 │  │  └─────────────────────────────────────────┘ │             │
 │  └──────────────────────────────────────────────┘             │
 │                          │                                      │
 │  ┌───────────────────────▼───────────────────────┐             │
 │  │              Platform Layer                    │             │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌────────┐ │             │
-│  │  │   SDL3      │  │   GLM       │  │ spdlog │ │             │
-│  │  │  (Window/   │  │  (Math)     │  │(Log)   │ │             │
-│  │  │   Input)    │  │             │  │        │ │             │
-│  │  └─────────────┘  └─────────────┘  └────────┘ │             │
+│  │  ┌──────────┐ ┌──────────┐ ┌────────┐ ┌─────┐│             │
+│  │  │  SDL3    │ │   GLM    │ │ spdlog │ │entt ││             │
+│  │  │(Window/  │ │  (Math)  │ │ (Log)  │ │(ECS)││             │
+│  │  │ Input)   │ │          │ │        │ │     ││             │
+│  │  └──────────┘ └──────────┘ └────────┘ └─────┘│             │
 │  └───────────────────────────────────────────────┘             │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -106,17 +98,22 @@ Azer/
 │   ├── azpch.h                   # Precompiled header
 │   ├── base/                     # Core engine systems
 │   │   ├── Application.h/cpp     # Main app loop, layer management
-│   │   ├── Base.h                # AppMode, Ref/Scope/Weak aliases
+│   │   ├── Base.h                # Ref/Scope/Weak aliases
+│   │   ├── DeltaTime.h/cpp       # Frame timing (chrono-based)
 │   │   ├── EngineContext.h       # Dependency injection context
 │   │   ├── EntryPoint.h          # main() entry point
 │   │   ├── Layer.h               # Layer base class
 │   │   ├── LayerStack.h/cpp      # Layer container
+│   │   ├── ImGuiLayer.h/cpp      # Internal ImGui lifecycle
 │   │   ├── Logger.h/cpp          # spdlog-based dual logger
-│   │   ├── Input.h/cpp           # Static keyboard input
-│   │   ├── Window.h              # Abstract window interface
+│   │   ├── Input.h/cpp           # Keyboard input (singleton)
+│   │   ├── Random.h              # Random number utility
+│   │   ├── ConsoleSink.h         # In-memory log ring buffer
+│   │   ├── Window.h/cpp          # Abstract window interface
 │   │   ├── GameObject.h/cpp      # Traditional entity (legacy)
 │   │   ├── Scene.h/cpp           # GameObject collection
 │   │   ├── SceneSerializer.h/cpp # JSON scene serialization
+│   │   ├── SplashLayer.h/cpp     # Optional splash screen layer
 │   │   ├── Transform2D.h         # 2D transform
 │   │   ├── Transform3D.h         # 3D transform
 │   │   ├── Collision.h           # AABB/sphere collision
@@ -124,7 +121,7 @@ Azer/
 │   │   ├── event/                # Event system
 │   │   ├── animation/            # Animation system
 │   │   ├── reflection/           # Property reflection
-│   │   └── file_system/          # File I/O
+│   │   └── file_system/          # File I/O (root-relative paths)
 │   ├── ecs/                      # Entity Component System
 │   │   ├── Components.h          # Component definitions
 │   │   ├── World.h/cpp           # Entity/component manager
@@ -137,7 +134,8 @@ Azer/
 │   │   ├── ECSSceneSerializer.h/cpp # ECS serialization
 │   │   └── GameObjectWrapper.h/cpp  # Legacy bridge
 │   ├── renderer/                 # Abstract renderer types
-│   │   ├── Renderer.h/cpp        # Pure virtual renderer
+│   │   ├── Renderer.h/cpp        # Pure virtual renderer + factory
+│   │   ├── RendererAPI.h/cpp     # Backend selection enum (SDL_2D/SDL_GPU/Vulkan)
 │   │   ├── Camera.h              # Abstract camera
 │   │   ├── Camera2D.h            # 2D camera
 │   │   ├── Camera3D.h            # 3D camera
@@ -145,21 +143,30 @@ Azer/
 │   │   ├── Framebuffer.h/cpp     # Abstract framebuffer
 │   │   ├── Model.h/cpp           # GLTF model loader
 │   │   ├── Mesh.h                # Vertex/mesh data
-│   │   └── Material.h            # PBR material
+│   │   ├── Material.h            # PBR material
+│   │   └── StbImage.cpp          # Image loading (stb_image wrapper)
 │   └── backends/                 # Concrete implementations
-│       ├── SDL3Renderer/         # SDL_Renderer backend
-│       ├── SDL3GPURenderer/      # SDL_GPU backend
-│       └── SDL3Window/           # SDL3 window backend
+│       ├── SDL3Renderer/         # SDL_Renderer backend (2D)
+│       ├── SDL3GPURenderer/      # SDL_GPU backend (3D)
+│       ├── SDL3Window/           # SDL3 window backend
+│       └── Vulkan/               # Vulkan backend (3D)
+│           ├── VulkanRenderer.h/cpp
+│           ├── VulkanRendererContext.h/cpp
+│           ├── VulkanFrameBuffer.h/cpp
+│           ├── VulkanCommandBuffer.h/cpp
+│           ├── VulkanGraphicPipeline.h/cpp
+│           ├── VulkanShader.h/cpp
+│           └── vk_mem_alloc.h/cpp
 ├── vendor/                       # Third-party dependencies
 │   ├── SDL/                      # SDL3 (git submodule)
 │   ├── glm/                      # GLM math (git submodule)
 │   ├── spdlog/                   # spdlog logging (git submodule)
 │   ├── imgui/                    # Dear ImGui (directly committed)
-│   ├── entt/                     # entt ECS (git clone)
+│   ├── entt/                     # entt ECS (cloned)
 │   ├── cgltf/                    # glTF loader (vendored)
 │   ├── stb/                      # stb_image (vendored)
 │   └── nlohmann_json/            # JSON library (vendored)
-└── assets/                       # Engine assets
+└── assets/
     └── shaders/                  # GLSL shaders + SPIR-V
 ```
 
@@ -186,17 +193,18 @@ Azer/
 │  │                          │                        │         │
 │  │  ┌───────────────────────▼──────────────────┐    │         │
 │  │  │           backends/ (Implementations)     │    │         │
-│  │  │  ┌─────────────┐  ┌─────────────┐        │    │         │
-│  │  │  │SDL3Renderer │  │SDL3GPURender│        │    │         │
-│  │  │  └─────────────┘  └─────────────┘        │    │         │
+│  │  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ │    │         │
+│  │  │  │SDL3Render│ │SDL3GPU   │ │ Vulkan   │ │    │         │
+│  │  │  │          │ │Render    │ │ Render   │ │    │         │
+│  │  │  └──────────┘ └──────────┘ └──────────┘ │    │         │
 │  │  └─────────────────────────────────────────┘    │         │
 │  └──────────────────────────────────────────────────┘         │
 │                            │                                    │
 │  ┌─────────────────────────▼─────────────────────────┐         │
 │  │              vendor/ (Dependencies)                │         │
-│  │  ┌─────┐ ┌─────┐ ┌───────┐ ┌─────┐ ┌─────┐      │         │
-│  │  │ SDL │ │ GLM │ │spdlog │ │ImGui│ │entt │      │         │
-│  │  └─────┘ └─────┘ └───────┘ └─────┘ └─────┘      │         │
+│  │  ┌──────┐ ┌──────┐ ┌───────┐ ┌──────┐ ┌──────┐  │         │
+│  │  │ SDL3 │ │ GLM  │ │spdlog │ │ImGui │ │ entt │  │         │
+│  │  └──────┘ └──────┘ └───────┘ └──────┘ └──────┘  │         │
 │  └──────────────────────────────────────────────────┘         │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -238,11 +246,17 @@ Azer/
 │  │  └─────────────────────────────────────────────────────┘   ││
 │  │  ┌─────────────────────────────────────────────────────┐   ││
 │  │  │ 5. Render                                           │   ││
+│  │  │    └─▶ ImGui::NewFrame (via internal ImGuiLayer)    │   ││
+│  │  │    └─▶ OnImGuiRender() for each layer               │   ││
+│  │  │    └─▶ ImGui::Render                                │   ││
 │  │  │    └─▶ BeginFrame()                                 │   ││
 │  │  │    └─▶ OnDraw() for each layer                      │   ││
 │  │  │    └─▶ ECS RenderSystem                             │   ││
-│  │  │    └─▶ OnImGuiRender() for ImGui layers             │   ││
 │  │  │    └─▶ EndFrame()                                   │   ││
+│  │  └─────────────────────────────────────────────────────┘   ││
+│  │  ┌─────────────────────────────────────────────────────┐   ││
+│  │  │ 6. Garbage Collection                               │   ││
+│  │  │    └─▶ Remove pending layers (RequestRemove)        │   ││
 │  │  └─────────────────────────────────────────────────────┘   ││
 │  └─────────────────────────────────────────────────────────────┘│
 └─────────────────────────────────────────────────────────────────┘
@@ -343,21 +357,18 @@ for (auto entity : view) {
 
 ### 3. Renderer Abstraction
 
-Abstract renderer interface with swappable backends:
+Abstract renderer interface with swappable backends, selected via `RendererAPI::s_API`:
 
 ```cpp
-class Renderer {
-public:
-    virtual void DrawQuad(float x, float y, float w, float h) = 0;
-    virtual void DrawTexture(Texture* tex, const SDL_FRect& src, const SDL_FRect& dst) = 0;
-    virtual void DrawModel(Model& model, const glm::mat4& transform) = 0;
-    // ... more virtual methods
-};
+RendererAPI::API::SDL_2D   // SDL_Renderer (2D)
+RendererAPI::API::SDL_GPU  // SDL GPU API (3D)
+RendererAPI::API::Vulkan   // Vulkan (3D)
 ```
 
 **Backends**:
 - `SDL3Renderer` — SDL_Renderer-based 2D rendering
 - `SDL3GPURenderer` — SDL_GPU-based 3D rendering
+- `VulkanRenderer` — Vulkan-based 3D rendering
 
 ### 4. Event System
 
@@ -426,9 +437,12 @@ player.Update(deltaTime);
 ```cpp
 #include "Azer.h"
 
+// Select backend before app creation
+Azer::RendererAPI::s_API = Azer::RendererAPI::API::SDL_2D;
+
 class MyApp : public Azer::Application {
 public:
-    MyApp() : Application("path/to/root", Azer::AppMode::Simple2D, "My Game") {
+    MyApp() : Application("path/to/root", "My Game") {
         PushLayer(new GameLayer());
     }
 };
@@ -462,7 +476,6 @@ public:
     }
 
     void OnDraw() override {
-        // Render all entities
         auto view = m_Scene.GetWorld().GetAllEntitiesWith<Azer::TransformComponent, Azer::RenderComponent>();
         for (auto entity : view) {
             auto& transform = view.get<Azer::TransformComponent>(entity);
@@ -493,10 +506,7 @@ public:
             auto& transform = view.get<Azer::TransformComponent>(entity);
             auto& physics = view.get<Azer::PhysicsComponent>(entity);
             
-            // Update position based on velocity
             transform.Transform.Position += physics.Velocity * delta;
-            
-            // Apply acceleration
             physics.Velocity += physics.Acceleration * delta;
         }
     }
@@ -504,7 +514,6 @@ public:
     const char* GetName() const override { return "MovementSystem"; }
 };
 
-// Register system
 ecsLayer.GetSystemManager().RegisterSystem<MovementSystem>();
 ```
 
@@ -518,7 +527,7 @@ All under `vendor/`:
 | [GLM](https://github.com/g-truc/glm) | git submodule | Math (vectors, matrices) |
 | [spdlog](https://github.com/gabime/spdlog) | git submodule | Logging |
 | [Dear ImGui](https://github.com/ocornut/imgui) | directly committed | UI (editor, debug) |
-| [entt](https://github.com/skypjack/entt) | git clone | Entity Component System |
+| [entt](https://github.com/skypjack/entt) | cloned | Entity Component System |
 | [cgltf](https://github.com/jkuhlmann/cgltf) | vendored | glTF model loading |
 | [stb](https://github.com/nothings/stb) | vendored | Image loading |
 | [nlohmann_json](https://github.com/nlohmann/json) | vendored | JSON serialization |

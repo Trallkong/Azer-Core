@@ -1,27 +1,19 @@
-# Azer-Core
+# Azer
 
 [English](README.md) | [中文](README_CH.md)
 
-一款轻量级、跨平台的 C++23 2D/3D 游戏引擎框架。基于**引擎即库**（engine-as-a-library）模式设计：Azer 编译为静态/动态库，用户应用程序链接该库，支持可切换的渲染后端和分层更新架构——全部基于 SDL3 驱动。
+一款轻量级、跨平台的 C++23 2D/3D 游戏引擎框架。基于**引擎即库**（engine-as-a-library）模式设计：Azer 编译为静态/动态库，用户应用程序链接该库，支持可切换的渲染后端（SDL_Renderer、SDL_GPU、Vulkan）和分层更新架构——全部基于 SDL3 驱动。
 
-## 什么是 Azer-Core
+## 什么是 Azer
 
-Azer-Core 是一个现代 C++23 游戏引擎框架，提供：
+Azer 是一个现代 C++23 游戏引擎框架，提供：
 
 - **引擎即库**架构 — 非可执行文件；用户定义 `CreateApplication()`，链接 `Azer`
-- **可切换的渲染后端** — `Simple2D`（SDL_Renderer）和 `ForwardPlus`（SDL GPU API）
+- **可切换的渲染后端** — `SDL_2D`（SDL_Renderer）、`SDL_GPU`（SDL GPU API）、`Vulkan`——通过 `RendererAPI::s_API` 选择
 - **实体组件系统（ECS）** — 基于 entt 的灵活实体管理
 - **分层更新架构** — 确定性游戏循环，固定时间步物理
 - **依赖注入** — 无全局单例；Layer 通过 `OnAttach` 接收 `EngineContext{ Renderer&, Window& }`
 - **跨平台** — 通过 SDL3 支持 Windows、Linux、macOS
-
-## 示例应用
-
-完整的示例应用程序请访问 [Azer_App_Examples](https://github.com/Trallkong/Azer_App_Examples)。
-
-包含：
-- **场景编辑器** — 带 ImGui 的 2D 编辑器，支持撤销/重做、场景序列化
-- **ECS 示例** — 实体组件系统演示，包含物理和渲染
 
 ## 架构概览
 
@@ -35,7 +27,7 @@ Azer-Core 是一个现代 C++23 游戏引擎框架，提供：
 │         └────────────────┼────────────────┘                     │
 │                          │                                      │
 │  ┌───────────────────────▼───────────────────────┐             │
-│  │              Azer 引擎核心                     │             │
+│  │              Azer 引擎                        │             │
 │  │  ┌─────────────┐  ┌─────────────┐  ┌────────┐ │             │
 │  │  │   Layer     │  │   ECS       │  │ Event  │ │             │
 │  │  │  系统       │  │  系统       │  │ 系统   │ │             │
@@ -48,20 +40,20 @@ Azer-Core 是一个现代 C++23 游戏引擎框架，提供：
 │  │                      │                        │             │
 │  │  ┌───────────────────▼──────────────────────┐ │             │
 │  │  │           渲染器抽象层                    │ │             │
-│  │  │  ┌─────────────┐      ┌─────────────┐   │ │             │
-│  │  │  │ SDL3Renderer│      │SDL3GPURender│   │ │             │
-│  │  │  │   (2D)      │      │   (3D)      │   │ │             │
-│  │  │  └─────────────┘      └─────────────┘   │ │             │
+│  │  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ │ │             │
+│  │  │  │SDL3Render│ │SDL3GPU   │ │ Vulkan   │ │ │             │
+│  │  │  │  (2D)    │ │Render(3D)│ │Render(3D)│ │ │             │
+│  │  │  └──────────┘ └──────────┘ └──────────┘ │ │             │
 │  │  └─────────────────────────────────────────┘ │             │
 │  └──────────────────────────────────────────────┘             │
 │                          │                                      │
 │  ┌───────────────────────▼───────────────────────┐             │
 │  │              平台层                            │             │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌────────┐ │             │
-│  │  │   SDL3      │  │   GLM       │  │ spdlog │ │             │
-│  │  │  (窗口/     │  │  (数学)     │  │(日志)  │ │             │
-│  │  │   输入)     │  │             │  │        │ │             │
-│  │  └─────────────┘  └─────────────┘  └────────┘ │             │
+│  │  ┌──────────┐ ┌──────────┐ ┌────────┐ ┌─────┐│             │
+│  │  │  SDL3    │ │   GLM    │ │ spdlog │ │entt ││             │
+│  │  │(窗口/    │ │  (数学)  │ │ (日志) │ │(ECS)││             │
+│  │  │ 输入)    │ │          │ │        │ │     ││             │
+│  │  └──────────┘ └──────────┘ └────────┘ └─────┘│             │
 │  └───────────────────────────────────────────────┘             │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -106,17 +98,22 @@ Azer/
 │   ├── azpch.h                   # 预编译头
 │   ├── base/                     # 核心引擎系统
 │   │   ├── Application.h/cpp     # 主应用循环，Layer 管理
-│   │   ├── Base.h                # AppMode, Ref/Scope/Weak 别名
+│   │   ├── Base.h                # Ref/Scope/Weak 别名
+│   │   ├── DeltaTime.h/cpp       # 帧计时（基于 chrono）
 │   │   ├── EngineContext.h       # 依赖注入上下文
 │   │   ├── EntryPoint.h          # main() 入口点
 │   │   ├── Layer.h               # Layer 基类
 │   │   ├── LayerStack.h/cpp      # Layer 容器
+│   │   ├── ImGuiLayer.h/cpp      # 内部 ImGui 生命周期管理
 │   │   ├── Logger.h/cpp          # 基于 spdlog 的双日志器
-│   │   ├── Input.h/cpp           # 静态键盘输入
-│   │   ├── Window.h              # 抽象窗口接口
+│   │   ├── Input.h/cpp           # 键盘输入（单例）
+│   │   ├── Random.h              # 随机数工具
+│   │   ├── ConsoleSink.h         # 内存环形缓冲日志
+│   │   ├── Window.h/cpp          # 抽象窗口接口
 │   │   ├── GameObject.h/cpp      # 传统实体（遗留）
 │   │   ├── Scene.h/cpp           # GameObject 集合
 │   │   ├── SceneSerializer.h/cpp # JSON 场景序列化
+│   │   ├── SplashLayer.h/cpp     # 可选启动画面层
 │   │   ├── Transform2D.h         # 2D 变换
 │   │   ├── Transform3D.h         # 3D 变换
 │   │   ├── Collision.h           # AABB/球体碰撞
@@ -124,7 +121,7 @@ Azer/
 │   │   ├── event/                # 事件系统
 │   │   ├── animation/            # 动画系统
 │   │   ├── reflection/           # 属性反射
-│   │   └── file_system/          # 文件 I/O
+│   │   └── file_system/          # 文件 I/O（根相对路径）
 │   ├── ecs/                      # 实体组件系统
 │   │   ├── Components.h          # 组件定义
 │   │   ├── World.h/cpp           # 实体/组件管理器
@@ -137,7 +134,8 @@ Azer/
 │   │   ├── ECSSceneSerializer.h/cpp # ECS 序列化
 │   │   └── GameObjectWrapper.h/cpp  # 遗留桥接
 │   ├── renderer/                 # 抽象渲染器类型
-│   │   ├── Renderer.h/cpp        # 纯虚渲染器
+│   │   ├── Renderer.h/cpp        # 纯虚渲染器 + 工厂
+│   │   ├── RendererAPI.h/cpp     # 后端选择枚举（SDL_2D/SDL_GPU/Vulkan）
 │   │   ├── Camera.h              # 抽象相机
 │   │   ├── Camera2D.h            # 2D 相机
 │   │   ├── Camera3D.h            # 3D 相机
@@ -145,21 +143,30 @@ Azer/
 │   │   ├── Framebuffer.h/cpp     # 抽象帧缓冲
 │   │   ├── Model.h/cpp           # GLTF 模型加载器
 │   │   ├── Mesh.h                # 顶点/网格数据
-│   │   └── Material.h            # PBR 材质
+│   │   ├── Material.h            # PBR 材质
+│   │   └── StbImage.cpp          # 图像加载（stb_image 封装）
 │   └── backends/                 # 具体实现
-│       ├── SDL3Renderer/         # SDL_Renderer 后端
-│       ├── SDL3GPURenderer/      # SDL_GPU 后端
-│       └── SDL3Window/           # SDL3 窗口后端
+│       ├── SDL3Renderer/         # SDL_Renderer 后端（2D）
+│       ├── SDL3GPURenderer/      # SDL_GPU 后端（3D）
+│       ├── SDL3Window/           # SDL3 窗口后端
+│       └── Vulkan/               # Vulkan 后端（3D）
+│           ├── VulkanRenderer.h/cpp
+│           ├── VulkanRendererContext.h/cpp
+│           ├── VulkanFrameBuffer.h/cpp
+│           ├── VulkanCommandBuffer.h/cpp
+│           ├── VulkanGraphicPipeline.h/cpp
+│           ├── VulkanShader.h/cpp
+│           └── vk_mem_alloc.h/cpp
 ├── vendor/                       # 第三方依赖
 │   ├── SDL/                      # SDL3 (git 子模块)
 │   ├── glm/                      # GLM 数学库 (git 子模块)
 │   ├── spdlog/                   # spdlog 日志 (git 子模块)
 │   ├── imgui/                    # Dear ImGui (直接提交)
-│   ├── entt/                     # entt ECS (git clone)
+│   ├── entt/                     # entt ECS (克隆)
 │   ├── cgltf/                    # glTF 加载器 (内置)
 │   ├── stb/                      # stb_image (内置)
 │   └── nlohmann_json/            # JSON 库 (内置)
-└── assets/                       # 引擎资源
+└── assets/
     └── shaders/                  # GLSL 着色器 + SPIR-V
 ```
 
@@ -186,17 +193,18 @@ Azer/
 │  │                          │                        │         │
 │  │  ┌───────────────────────▼──────────────────┐    │         │
 │  │  │           backends/ (实现)                │    │         │
-│  │  │  ┌─────────────┐  ┌─────────────┐        │    │         │
-│  │  │  │SDL3Renderer │  │SDL3GPURender│        │    │         │
-│  │  │  └─────────────┘  └─────────────┘        │    │         │
+│  │  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ │    │         │
+│  │  │  │SDL3Render│ │SDL3GPU   │ │ Vulkan   │ │    │         │
+│  │  │  │          │ │Render    │ │ Render   │ │    │         │
+│  │  │  └──────────┘ └──────────┘ └──────────┘ │    │         │
 │  │  └─────────────────────────────────────────┘    │         │
 │  └──────────────────────────────────────────────────┘         │
 │                            │                                    │
 │  ┌─────────────────────────▼─────────────────────────┐         │
 │  │              vendor/ (依赖)                        │         │
-│  │  ┌─────┐ ┌─────┐ ┌───────┐ ┌─────┐ ┌─────┐      │         │
-│  │  │ SDL │ │ GLM │ │spdlog │ │ImGui│ │entt │      │         │
-│  │  └─────┘ └─────┘ └───────┘ └─────┘ └─────┘      │         │
+│  │  ┌──────┐ ┌──────┐ ┌───────┐ ┌──────┐ ┌──────┐  │         │
+│  │  │ SDL3 │ │ GLM  │ │spdlog │ │ImGui │ │ entt │  │         │
+│  │  └──────┘ └──────┘ └───────┘ └──────┘ └──────┘  │         │
 │  └──────────────────────────────────────────────────┘         │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -238,11 +246,17 @@ Azer/
 │  │  └─────────────────────────────────────────────────────┘   ││
 │  │  ┌─────────────────────────────────────────────────────┐   ││
 │  │  │ 5. 渲染                                            │   ││
+│  │  │    └─▶ ImGui::NewFrame（通过内部 ImGuiLayer）       │   ││
+│  │  │    └─▶ OnImGuiRender() 对每个 Layer                │   ││
+│  │  │    └─▶ ImGui::Render                               │   ││
 │  │  │    └─▶ BeginFrame()                                │   ││
 │  │  │    └─▶ 对每个 Layer 执行 OnDraw()                  │   ││
 │  │  │    └─▶ ECS RenderSystem                            │   ││
-│  │  │    └─▶ 对 ImGui Layer 执行 OnImGuiRender()        │   ││
 │  │  │    └─▶ EndFrame()                                  │   ││
+│  │  └─────────────────────────────────────────────────────┘   ││
+│  │  ┌─────────────────────────────────────────────────────┐   ││
+│  │  │ 6. 垃圾回收                                        │   ││
+│  │  │    └─▶ 移除待删除的层（RequestRemove）              │   ││
 │  │  └─────────────────────────────────────────────────────┘   ││
 │  └─────────────────────────────────────────────────────────────┘│
 └─────────────────────────────────────────────────────────────────┘
@@ -343,21 +357,18 @@ for (auto entity : view) {
 
 ### 3. 渲染器抽象
 
-抽象渲染器接口，支持可切换后端：
+抽象渲染器接口，通过 `RendererAPI::s_API` 选择后端：
 
 ```cpp
-class Renderer {
-public:
-    virtual void DrawQuad(float x, float y, float w, float h) = 0;
-    virtual void DrawTexture(Texture* tex, const SDL_FRect& src, const SDL_FRect& dst) = 0;
-    virtual void DrawModel(Model& model, const glm::mat4& transform) = 0;
-    // ... 更多虚方法
-};
+RendererAPI::API::SDL_2D   // SDL_Renderer (2D)
+RendererAPI::API::SDL_GPU  // SDL GPU API (3D)
+RendererAPI::API::Vulkan   // Vulkan (3D)
 ```
 
 **后端**：
 - `SDL3Renderer` — 基于 SDL_Renderer 的 2D 渲染
 - `SDL3GPURenderer` — 基于 SDL_GPU 的 3D 渲染
+- `VulkanRenderer` — 基于 Vulkan 的 3D 渲染
 
 ### 4. 事件系统
 
@@ -426,9 +437,12 @@ player.Update(deltaTime);
 ```cpp
 #include "Azer.h"
 
+// 在创建应用前选择后端
+Azer::RendererAPI::s_API = Azer::RendererAPI::API::SDL_2D;
+
 class MyApp : public Azer::Application {
 public:
-    MyApp() : Application("path/to/root", Azer::AppMode::Simple2D, "我的游戏") {
+    MyApp() : Application("path/to/root", "我的游戏") {
         PushLayer(new GameLayer());
     }
 };
@@ -462,7 +476,6 @@ public:
     }
 
     void OnDraw() override {
-        // 渲染所有实体
         auto view = m_Scene.GetWorld().GetAllEntitiesWith<Azer::TransformComponent, Azer::RenderComponent>();
         for (auto entity : view) {
             auto& transform = view.get<Azer::TransformComponent>(entity);
@@ -493,10 +506,7 @@ public:
             auto& transform = view.get<Azer::TransformComponent>(entity);
             auto& physics = view.get<Azer::PhysicsComponent>(entity);
             
-            // 根据速度更新位置
             transform.Transform.Position += physics.Velocity * delta;
-            
-            // 应用加速度
             physics.Velocity += physics.Acceleration * delta;
         }
     }
@@ -504,7 +514,6 @@ public:
     const char* GetName() const override { return "MovementSystem"; }
 };
 
-// 注册系统
 ecsLayer.GetSystemManager().RegisterSystem<MovementSystem>();
 ```
 
@@ -518,7 +527,7 @@ ecsLayer.GetSystemManager().RegisterSystem<MovementSystem>();
 | [GLM](https://github.com/g-truc/glm) | git 子模块 | 数学（向量、矩阵） |
 | [spdlog](https://github.com/gabime/spdlog) | git 子模块 | 日志 |
 | [Dear ImGui](https://github.com/ocornut/imgui) | 直接提交 | UI（编辑器、调试） |
-| [entt](https://github.com/skypjack/entt) | git clone | 实体组件系统 |
+| [entt](https://github.com/skypjack/entt) | 克隆 | 实体组件系统 |
 | [cgltf](https://github.com/jkuhlmann/cgltf) | 内置 | glTF 模型加载 |
 | [stb](https://github.com/nothings/stb) | 内置 | 图像加载 |
 | [nlohmann_json](https://github.com/nlohmann/json) | 内置 | JSON 序列化 |
