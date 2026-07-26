@@ -3,7 +3,7 @@
 
 #include "stb_image.h"
 
-namespace azer
+namespace Azer
 {
     static SDL_GPUTransferBuffer* CreateTextureTransferBuffer(SDL_GPUDevice* device, uint32_t width, uint32_t height, uint32_t bytesPerPixel)
     {

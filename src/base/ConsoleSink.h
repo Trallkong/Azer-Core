@@ -9,7 +9,7 @@
 #include <vector>
 #include <string>
 
-namespace azer
+namespace Azer
 {
     struct LogEntry
     {

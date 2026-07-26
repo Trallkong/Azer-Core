@@ -3,7 +3,7 @@
 #include "Base.h"
 #include <random>
 
-namespace azer
+namespace Azer
 {
     /// 简易随机数工具类。
     ///

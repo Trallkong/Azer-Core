@@ -7,7 +7,7 @@
 #include "Base.h"
 #include "EngineContext.h"
 
-namespace azer
+namespace Azer
 {
     class World;
 

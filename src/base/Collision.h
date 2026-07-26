@@ -9,7 +9,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace azer
+namespace Azer
 {
     // ==================== AABB2D ====================
     struct AABB2D

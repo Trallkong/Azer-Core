@@ -8,7 +8,7 @@
 #include <fstream>
 #include <filesystem>
 
-namespace azer
+namespace Azer
 {
     using json = nlohmann::json;
 

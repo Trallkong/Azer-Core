@@ -3,7 +3,7 @@
 
 #include "stb_image.h"
 
-namespace azer
+namespace Azer
 {
     static uint8_t FloatToByte(float value)
     {

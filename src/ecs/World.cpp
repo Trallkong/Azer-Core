@@ -5,7 +5,7 @@
 #include "azpch.h"
 #include "World.h"
 
-namespace azer
+namespace Azer
 {
     entt::entity World::CreateEntity()
     {

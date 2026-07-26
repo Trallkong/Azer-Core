@@ -11,7 +11,7 @@
 #include <string>
 #include <cstdint>
 
-namespace azer
+namespace Azer
 {
     // 唯一标识符组件
     struct IDComponent

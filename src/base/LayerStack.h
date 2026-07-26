@@ -8,7 +8,7 @@
 #include <vector>
 #include "Layer.h"
 
-namespace azer
+namespace Azer
 {
     class LayerStack {
     public:

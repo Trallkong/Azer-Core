@@ -9,7 +9,7 @@
 
 #include <functional>
 
-namespace azer
+namespace Azer
 {
     using SetterFn = std::function<void(const Variant&)>;
 

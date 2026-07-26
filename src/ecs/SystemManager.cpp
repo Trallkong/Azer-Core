@@ -5,7 +5,7 @@
 #include "azpch.h"
 #include "SystemManager.h"
 
-namespace azer
+namespace Azer
 {
     void SystemManager::InitializeSystems(World& world, EngineContext& context)
     {

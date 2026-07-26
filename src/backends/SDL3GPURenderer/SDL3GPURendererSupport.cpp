@@ -12,7 +12,7 @@
 #include "skybox_vert_spv.h"
 #include "skybox_frag_spv.h"
 
-namespace azer
+namespace Azer
 {
     void SDL3GPURendererSupport::CreateShaders(SDL3GPURenderer* renderer)
     {

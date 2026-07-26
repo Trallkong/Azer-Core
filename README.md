@@ -285,9 +285,9 @@ Azer/
 The layer system provides a modular architecture for organizing game logic:
 
 ```cpp
-class MyLayer : public azer::Layer {
+class MyLayer : public Azer::Layer {
 public:
-    void OnAttach(azer::EngineContext& ctx) override {
+    void OnAttach(Azer::EngineContext& ctx) override {
         // Initialize with renderer and window access
     }
     
@@ -364,10 +364,10 @@ public:
 Type-safe event dispatching:
 
 ```cpp
-class MyLayer : public azer::Layer {
-    void OnEvent(azer::Event& event) override {
-        azer::EventDispatcher dispatcher(event);
-        dispatcher.Dispatch<azer::KeyPressedEvent>([this](auto& e) {
+class MyLayer : public Azer::Layer {
+    void OnEvent(Azer::Event& event) override {
+        Azer::EventDispatcher dispatcher(event);
+        dispatcher.Dispatch<Azer::KeyPressedEvent>([this](auto& e) {
             // Handle key press
             return true;
         });
@@ -426,14 +426,14 @@ player.Update(deltaTime);
 ```cpp
 #include "Azer.h"
 
-class MyApp : public azer::Application {
+class MyApp : public Azer::Application {
 public:
-    MyApp() : Application("path/to/root", azer::AppMode::Simple2D, "My Game") {
+    MyApp() : Application("path/to/root", Azer::AppMode::Simple2D, "My Game") {
         PushLayer(new GameLayer());
     }
 };
 
-azer::Application* azer::CreateApplication() {
+Azer::Application* Azer::CreateApplication() {
     return new MyApp();
 }
 ```
@@ -443,30 +443,30 @@ azer::Application* azer::CreateApplication() {
 ```cpp
 #include "Azer.h"
 
-class GameLayer : public azer::Layer {
-    azer::ECSScene m_Scene;
-    azer::Renderer* m_Renderer = nullptr;
+class GameLayer : public Azer::Layer {
+    Azer::ECSScene m_Scene;
+    Azer::Renderer* m_Renderer = nullptr;
 
 public:
-    void OnAttach(azer::EngineContext& ctx) override {
+    void OnAttach(Azer::EngineContext& ctx) override {
         m_Renderer = &ctx.renderer;
         
         // Create player entity
         auto player = m_Scene.CreateEntity("Player");
-        auto& transform = m_Scene.GetWorld().GetComponent<azer::TransformComponent>(player);
+        auto& transform = m_Scene.GetWorld().GetComponent<Azer::TransformComponent>(player);
         transform.Transform.Position = glm::vec3(100.0f, 100.0f, 0.0f);
         
-        auto& render = m_Scene.GetWorld().GetComponent<azer::RenderComponent>(player);
+        auto& render = m_Scene.GetWorld().GetComponent<Azer::RenderComponent>(player);
         render.Size = glm::vec3(50.0f, 50.0f, 0.0f);
         render.Color = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
     }
 
     void OnDraw() override {
         // Render all entities
-        auto view = m_Scene.GetWorld().GetAllEntitiesWith<azer::TransformComponent, azer::RenderComponent>();
+        auto view = m_Scene.GetWorld().GetAllEntitiesWith<Azer::TransformComponent, Azer::RenderComponent>();
         for (auto entity : view) {
-            auto& transform = view.get<azer::TransformComponent>(entity);
-            auto& render = view.get<azer::RenderComponent>(entity);
+            auto& transform = view.get<Azer::TransformComponent>(entity);
+            auto& render = view.get<Azer::RenderComponent>(entity);
             
             if (render.Visible) {
                 m_Renderer->DrawColorQuad(
@@ -484,14 +484,14 @@ public:
 ### Custom System
 
 ```cpp
-class MovementSystem : public azer::System {
+class MovementSystem : public Azer::System {
 public:
-    void OnUpdate(azer::World& world, float delta) override {
-        auto view = world.GetAllEntitiesWith<azer::TransformComponent, azer::PhysicsComponent>();
+    void OnUpdate(Azer::World& world, float delta) override {
+        auto view = world.GetAllEntitiesWith<Azer::TransformComponent, Azer::PhysicsComponent>();
         
         for (auto entity : view) {
-            auto& transform = view.get<azer::TransformComponent>(entity);
-            auto& physics = view.get<azer::PhysicsComponent>(entity);
+            auto& transform = view.get<Azer::TransformComponent>(entity);
+            auto& physics = view.get<Azer::PhysicsComponent>(entity);
             
             // Update position based on velocity
             transform.Transform.Position += physics.Velocity * delta;

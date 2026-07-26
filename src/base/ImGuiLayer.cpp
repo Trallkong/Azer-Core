@@ -4,7 +4,7 @@
 #include "Renderer.h"
 #include "imgui.h"
 
-void azer::ImGuiLayer::OnAttach(EngineContext& ctx)
+void Azer::ImGuiLayer::OnAttach(EngineContext& ctx)
 {
     Layer::OnAttach(ctx);
 
@@ -18,40 +18,40 @@ void azer::ImGuiLayer::OnAttach(EngineContext& ctx)
     m_Renderer->ImGuiInit(static_cast<SDL_Window*>(ctx.window.GetHandle()));
 }
 
-void azer::ImGuiLayer::OnDetach()
+void Azer::ImGuiLayer::OnDetach()
 {
     Layer::OnDetach();
     m_Renderer->ImGuiShutdown();
     ImGui::DestroyContext();
 }
 
-void azer::ImGuiLayer::OnUpdate(const float deltaTime)
+void Azer::ImGuiLayer::OnUpdate(const float deltaTime)
 {
     Layer::OnUpdate(deltaTime);
 }
 
-void azer::ImGuiLayer::OnDraw()
+void Azer::ImGuiLayer::OnDraw()
 {
     Layer::OnDraw();
 }
 
-void azer::ImGuiLayer::OnEvent(Event& event)
+void Azer::ImGuiLayer::OnEvent(Event& event)
 {
     Layer::OnEvent(event);
 }
 
-void azer::ImGuiLayer::OnImGuiRender()
+void Azer::ImGuiLayer::OnImGuiRender()
 {
     Layer::OnImGuiRender();
 }
 
-void azer::ImGuiLayer::Begin()
+void Azer::ImGuiLayer::Begin()
 {
     m_Renderer->ImGuiNewFrame();
     ImGui::NewFrame();
 }
 
-void azer::ImGuiLayer::End()
+void Azer::ImGuiLayer::End()
 {
     ImGui::Render();
     m_Renderer->SetImGuiDrawData(ImGui::GetDrawData());

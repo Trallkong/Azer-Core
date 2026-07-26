@@ -7,7 +7,7 @@
 
 #include <algorithm>
 
-namespace azer
+namespace Azer
 {
     LayerStack::LayerStack()
     {

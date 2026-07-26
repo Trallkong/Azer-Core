@@ -1,6 +1,6 @@
 #pragma once
 
-namespace azer
+namespace Azer
 {
     class Renderer;
     class Window;

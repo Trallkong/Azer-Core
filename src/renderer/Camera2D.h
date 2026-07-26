@@ -8,7 +8,7 @@
 
 #include "Transform2D.h"
 
-namespace azer
+namespace Azer
 {
     class Camera2D : public Camera
     {

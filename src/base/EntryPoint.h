@@ -7,13 +7,13 @@
 #include "Application.h"
 #include "Logger.h"
 
-extern  azer::Application* azer::CreateApplication();
+extern Azer::Application* Azer::CreateApplication();
 
 int main(int argc, char* argv[])
 {
-    azer::Logger::Init();
+    Azer::Logger::Init();
 
-    azer::Application* app = azer::CreateApplication();
+    Azer::Application* app = Azer::CreateApplication();
     app->Run();
     delete app;
 

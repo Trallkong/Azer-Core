@@ -8,7 +8,7 @@
 #include "Renderer.h"
 #include <string>
 
-namespace azer
+namespace Azer
 {
     class ECSSceneSerializer
     {

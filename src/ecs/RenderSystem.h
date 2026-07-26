@@ -7,7 +7,7 @@
 #include "System.h"
 #include "Components.h"
 
-namespace azer
+namespace Azer
 {
     class Renderer;
 

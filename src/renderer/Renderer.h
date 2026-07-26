@@ -14,7 +14,7 @@
 #include "imgui.h"
 #include "SDL3/SDL.h"
 
-namespace azer
+namespace Azer
 {
     class Renderer {
     public:
@@ -51,7 +51,7 @@ namespace azer
 
         virtual Ref<Framebuffer> CreateFramebuffer(const FramebufferSpec& spec) = 0;
 
-        static Scope<Renderer> CreateRendererFromAppMode(const AppMode& mode);
+        static Scope<Renderer> Create();
     };
 }
 

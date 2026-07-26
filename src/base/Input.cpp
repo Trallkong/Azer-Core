@@ -5,7 +5,7 @@
 #include "azpch.h"
 #include "Input.h"
 
-namespace azer
+namespace Azer
 {
     Scope<Input> Input::s_Instance = CreateScope<Input>();
 }

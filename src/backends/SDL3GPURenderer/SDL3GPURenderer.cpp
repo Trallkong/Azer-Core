@@ -12,7 +12,7 @@
 #include "imgui_impl_sdlgpu3.h"
 
 
-namespace azer
+namespace Azer
 {
     SDL3GPURenderer::SDL3GPURenderer()
     = default;

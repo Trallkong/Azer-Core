@@ -6,7 +6,7 @@
 #include "Scene.h"
 #include <algorithm>
 
-namespace azer
+namespace Azer
 {
     GameObject& Scene::CreateObject(const std::string& name)
     {

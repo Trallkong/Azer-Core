@@ -31,6 +31,7 @@
 // Renderer
 #include "renderer/Texture.h"
 #include "renderer/Framebuffer.h"
+#include "renderer/RendererAPI.h"
 #include "renderer/Renderer.h"
 #include "renderer/Camera.h"
 #include "renderer/Camera2D.h"

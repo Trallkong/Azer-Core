@@ -8,7 +8,7 @@
 
 #include "SDL3/SDL.h"
 
-namespace azer
+namespace Azer
 {
     class SDL3Texture : public Texture
     {

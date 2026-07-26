@@ -8,7 +8,7 @@
 #include "World.h"
 #include "SystemManager.h"
 
-namespace azer
+namespace Azer
 {
     class ECSLayer : public Layer
     {

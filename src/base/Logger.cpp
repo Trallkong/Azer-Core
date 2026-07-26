@@ -9,7 +9,7 @@
 #include "spdlog/pattern_formatter.h"
 #include "spdlog/sinks/stdout_color_sinks-inl.h"
 
-namespace azer
+namespace Azer
 {
     Ref<spdlog::logger> Logger::m_CoreLogger = nullptr;
     Ref<spdlog::logger> Logger::m_ClientLogger = nullptr;

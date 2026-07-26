@@ -6,7 +6,7 @@
 #include "Base.h"
 #include "Texture.h"
 
-namespace azer
+namespace Azer
 {
     class Renderer;
 

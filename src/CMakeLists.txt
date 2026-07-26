@@ -47,6 +47,7 @@ add_library(Azer
         renderer/Framebuffer.cpp
         renderer/Model.cpp
         renderer/Renderer.cpp
+        renderer/RendererAPI.cpp
         renderer/Texture.cpp
         renderer/StbImage.cpp
 
@@ -65,6 +66,11 @@ add_library(Azer
         backends/SDL3Window/SDL3Window.cpp
         base/file_system/FileSystem.cpp
         base/file_system/FileSystem.h
+
+        # --- Backend: Vulkan ---
+        backends/Vulkan/VulkanRendererContext.cpp
+        backends/Vulkan/VulkanFrameBuffer.cpp
+        backends/Vulkan/VulkanRenderer.cpp
 )
 
 target_precompile_headers(Azer PRIVATE azpch.h)
@@ -81,13 +87,14 @@ target_include_directories(Azer PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/backends/SDL3GPURenderer
         ${CMAKE_CURRENT_SOURCE_DIR}/backends/SDL3Renderer
         ${CMAKE_CURRENT_SOURCE_DIR}/backends/SDL3Window
+        ${CMAKE_CURRENT_SOURCE_DIR}/backends/Vulkan
         ${CMAKE_CURRENT_SOURCE_DIR}/../assets/shaders
         ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/entt/single_include
 )
 
 target_link_libraries(Azer PRIVATE vendor)
 
-target_compile_definitions(Azer PRIVATE _CRT_SECURE_NO_WARNINGS GLM_ENABLE_EXPERIMENTAL)
+target_compile_definitions(Azer PRIVATE _CRT_SECURE_NO_WARNINGS GLM_ENABLE_EXPERIMENTAL AZ_DEBUG)
 
 if(AZER_ENABLE_DOCKING)
     target_compile_definitions(Azer PUBLIC AZER_ENABLE_DOCKING)

@@ -4,6 +4,6 @@
 
 #include "PropertyAccessor.h"
 
-namespace azer
+namespace Azer
 {
 } // azer

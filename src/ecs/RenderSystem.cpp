@@ -7,7 +7,7 @@
 #include "World.h"
 #include "Renderer.h"
 
-namespace azer
+namespace Azer
 {
     void RenderSystem::OnInitialize(World& world, EngineContext& context)
     {

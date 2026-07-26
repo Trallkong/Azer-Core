@@ -11,23 +11,23 @@
 #include "SDL3Texture.h"
 #include "SDL3Framebuffer.h"
 
-azer::SDL3Renderer::SDL3Renderer()
+Azer::SDL3Renderer::SDL3Renderer()
 {
 }
 
-azer::SDL3Renderer::~SDL3Renderer()
+Azer::SDL3Renderer::~SDL3Renderer()
 {
     if (m_Renderer)
         SDL_DestroyRenderer(m_Renderer);
 }
 
-bool azer::SDL3Renderer::Initialize(Window* window)
+bool Azer::SDL3Renderer::Initialize(Window* window)
 {
     m_Renderer = SDL_CreateRenderer(static_cast<SDL_Window*>(window->GetHandle()), nullptr);
     return m_Renderer != nullptr;
 }
 
-void azer::SDL3Renderer::BeginFrame(const glm::vec3& clearColor)
+void Azer::SDL3Renderer::BeginFrame(const glm::vec3& clearColor)
 {
     SDL_SetRenderDrawColor(m_Renderer,
         static_cast<Uint8>(clearColor.r * 255),
@@ -38,12 +38,12 @@ void azer::SDL3Renderer::BeginFrame(const glm::vec3& clearColor)
     SDL_RenderClear(m_Renderer);
 }
 
-void azer::SDL3Renderer::EndFrame()
+void Azer::SDL3Renderer::EndFrame()
 {
     SDL_RenderPresent(m_Renderer);
 }
 
-void azer::SDL3Renderer::SetCamera(Camera& camera)
+void Azer::SDL3Renderer::SetCamera(Camera& camera)
 {
     const auto& cam = dynamic_cast<Camera2D&>(camera);
     zoom = cam.GetZoom();
@@ -61,7 +61,7 @@ void azer::SDL3Renderer::SetCamera(Camera& camera)
     offsetY = cam.GetTransform().Position.y - vcy / zoom;
 }
 
-void azer::SDL3Renderer::ResetRenderState()
+void Azer::SDL3Renderer::ResetRenderState()
 {
     offsetX = 0.0f;
     offsetY = 0.0f;
@@ -69,7 +69,7 @@ void azer::SDL3Renderer::ResetRenderState()
     SDL_SetRenderScale(m_Renderer, 1.0f, 1.0f);
 }
 
-void azer::SDL3Renderer::SetRenderTarget(Framebuffer* target)
+void Azer::SDL3Renderer::SetRenderTarget(Framebuffer* target)
 {
     if (target)
         SDL_SetRenderTarget(m_Renderer, static_cast<SDL_Texture*>(target->GetColorTextureHandle()));
@@ -77,12 +77,12 @@ void azer::SDL3Renderer::SetRenderTarget(Framebuffer* target)
         SDL_SetRenderTarget(m_Renderer, nullptr);
 }
 
-void azer::SDL3Renderer::DrawQuad(const float x, const float y, const float w, const float h, const float alpha)
+void Azer::SDL3Renderer::DrawQuad(const float x, const float y, const float w, const float h, const float alpha)
 {
     DrawColorQuad(x, y, w, h, {1.0f, 1.0f, 1.0f, 1.0f}, alpha);
 }
 
-void azer::SDL3Renderer::DrawColorQuad(const float x, const float y, const float w, const float h, const glm::vec4& color, const float alpha)
+void Azer::SDL3Renderer::DrawColorQuad(const float x, const float y, const float w, const float h, const glm::vec4& color, const float alpha)
 {
     const SDL_FRect rect = { x - offsetX, y - offsetY, w, h };
     SDL_SetRenderDrawColor(m_Renderer,
@@ -94,52 +94,52 @@ void azer::SDL3Renderer::DrawColorQuad(const float x, const float y, const float
     SDL_RenderFillRect(m_Renderer, &rect);
 }
 
-void azer::SDL3Renderer::DrawTexture(Texture* tex, const SDL_FRect& src, const SDL_FRect& dst, const float angle, const float alpha)
+void Azer::SDL3Renderer::DrawTexture(Texture* tex, const SDL_FRect& src, const SDL_FRect& dst, const float angle, const float alpha)
 {
     SDL_SetTextureAlphaModFloat(static_cast<SDL_Texture*>(tex->GetHandle()), alpha);
     const SDL_FRect offsetDst = { dst.x - offsetX, dst.y - offsetY, dst.w, dst.h };
     SDL_RenderTextureRotated(m_Renderer, static_cast<SDL_Texture*>(tex->GetHandle()), &src, &offsetDst, angle, nullptr, SDL_FLIP_NONE);
 }
 
-azer::Ref<azer::Texture> azer::SDL3Renderer::CreateTexture(const std::string& filePath)
+Azer::Ref<Azer::Texture> Azer::SDL3Renderer::CreateTexture(const std::string& filePath)
 {
     return SDL3Texture::Create(m_Renderer, filePath);
 }
 
-azer::Ref<azer::Texture> azer::SDL3Renderer::CreateTexture(void* pixels, uint32_t width, uint32_t height)
+Azer::Ref<Azer::Texture> Azer::SDL3Renderer::CreateTexture(void* pixels, uint32_t width, uint32_t height)
 {
     return SDL3Texture::Create(m_Renderer, pixels, width, height);
 }
 
-azer::Ref<azer::Texture> azer::SDL3Renderer::CreateHDRTexture(const std::string& filePath)
+Azer::Ref<Azer::Texture> Azer::SDL3Renderer::CreateHDRTexture(const std::string& filePath)
 {
     return SDL3Texture::CreateHDR(m_Renderer, filePath);
 }
 
-azer::Ref<azer::Framebuffer> azer::SDL3Renderer::CreateFramebuffer(const FramebufferSpec& spec)
+Azer::Ref<Azer::Framebuffer> Azer::SDL3Renderer::CreateFramebuffer(const FramebufferSpec& spec)
 {
     return CreateRef<SDL3Framebuffer>(this, spec);
 }
 
-void azer::SDL3Renderer::ImGuiInit(SDL_Window* window)
+void Azer::SDL3Renderer::ImGuiInit(SDL_Window* window)
 {
     ImGui_ImplSDL3_InitForSDLRenderer(window, m_Renderer);
     ImGui_ImplSDLRenderer3_Init(m_Renderer);
 }
 
-void azer::SDL3Renderer::ImGuiShutdown()
+void Azer::SDL3Renderer::ImGuiShutdown()
 {
     ImGui_ImplSDLRenderer3_Shutdown();
     ImGui_ImplSDL3_Shutdown();
 }
 
-void azer::SDL3Renderer::ImGuiNewFrame()
+void Azer::SDL3Renderer::ImGuiNewFrame()
 {
     ImGui_ImplSDLRenderer3_NewFrame();
     ImGui_ImplSDL3_NewFrame();
 }
 
-void azer::SDL3Renderer::SetImGuiDrawData(ImDrawData* drawData)
+void Azer::SDL3Renderer::SetImGuiDrawData(ImDrawData* drawData)
 {
     ImGui_ImplSDLRenderer3_RenderDrawData(drawData, m_Renderer);
 }

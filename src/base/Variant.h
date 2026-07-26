@@ -8,7 +8,7 @@
 #include "glm/vec3.hpp"
 #include "glm/gtc/quaternion.hpp"
 
-namespace azer
+namespace Azer
 {
     enum class VariantType
     {

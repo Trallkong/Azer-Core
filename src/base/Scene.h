@@ -8,7 +8,7 @@
 #include <vector>
 #include <string>
 
-namespace azer
+namespace Azer
 {
     class Scene
     {

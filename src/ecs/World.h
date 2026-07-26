@@ -10,7 +10,7 @@
 #include <unordered_map>
 #include <string>
 
-namespace azer
+namespace Azer
 {
     class World
     {

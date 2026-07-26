@@ -6,7 +6,7 @@
 #include "Base.h"
 #include "SDL3/SDL.h"
 
-namespace azer
+namespace Azer
 {
     class SDL3GPURenderer;
 

@@ -11,14 +11,13 @@
 #include "SDL3/SDL.h"
 #include "Window.h"
 
-namespace azer
+namespace Azer
 {
 
     class Application {
     public:
         explicit Application(
             const std::string& rootPath,
-            const AppMode& mode = AppMode::Simple2D,
             const std::string& windowTitle = "Azer");
         ~Application();
 
@@ -29,22 +28,18 @@ namespace azer
         void PopLayer();
         void PopOverlay();
 
-        Window& GetWindow() const { return *m_Window.get(); }
-        const AppMode& GetMode() const { return m_Mode; }
-        Renderer* GetRenderer() const { return m_Renderer.get(); }
-
-
-        void SetCoreMenuVisibility(const bool show) { m_ShowSettings = show; }
-        const std::string& GetWindowTitle() const { return m_WindowTitle; }
-        void SetPhysicsHz(float hz) { m_PhysicsHz = hz; m_FixedTimestep = 1.0f / hz; }
-        float GetPhysicsHz() const { return m_PhysicsHz; }
+        inline Window& GetWindow() const { return *m_Window.get(); }
+        inline Renderer* GetRenderer() const { return m_Renderer.get(); }
+        inline void SetCoreMenuVisibility(const bool show) { m_ShowSettings = show; }
+        inline const std::string& GetWindowTitle() const { return m_WindowTitle; }
+        inline void SetPhysicsHz(float hz) { m_PhysicsHz = hz; m_FixedTimestep = 1.0f / hz; }
+        inline float GetPhysicsHz() const { return m_PhysicsHz; }
 
     private:
         void OnEvent(Event& e);
         void OnImGuiRender();
         bool OnWindowResize(const WindowResizeEvent& event);
 
-        AppMode m_Mode;
         Scope<Window> m_Window = nullptr;
         Scope<Renderer> m_Renderer = nullptr;
 

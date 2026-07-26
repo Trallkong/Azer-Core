@@ -3,7 +3,7 @@
 
 #include "Renderer.h"
 
-namespace azer
+namespace Azer
 {
     Ref<Texture> Texture::Create(Renderer& renderer, const std::string& filePath)
     {

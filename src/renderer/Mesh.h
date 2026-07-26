@@ -2,7 +2,7 @@
 #include "Base.h"
 #include "glm/glm.hpp"
 
-namespace azer
+namespace Azer
 {
     struct Vertex
     {

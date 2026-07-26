@@ -8,7 +8,7 @@
 
 #include "Transform3D.h"
 
-namespace azer
+namespace Azer
 {
     class Camera3D : public Camera
     {

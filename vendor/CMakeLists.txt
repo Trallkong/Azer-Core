@@ -9,8 +9,21 @@ set(JSON_BuildTests OFF CACHE BOOL "" FORCE)
 set(JSON_Install OFF CACHE BOOL "" FORCE)
 add_subdirectory(nlohmann_json)
 
+find_package(Vulkan REQUIRED) # 添加VulkanSDK
+
 add_library(vendor INTERFACE)
-target_link_libraries(vendor INTERFACE SDL3::SDL3 imgui glm::glm spdlog::spdlog cgltf stb nlohmann_json::nlohmann_json entt)
+
+target_link_libraries(vendor INTERFACE 
+    Vulkan::Vulkan
+    SDL3::SDL3 
+    imgui 
+    glm::glm 
+    spdlog::spdlog 
+    cgltf 
+    stb 
+    nlohmann_json::nlohmann_json 
+    entt
+)
 
 # entt (header-only)
 add_library(entt INTERFACE)

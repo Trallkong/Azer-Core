@@ -7,7 +7,7 @@
 #include "World.h"
 #include "Collision.h"
 
-namespace azer
+namespace Azer
 {
     void PhysicsSystem::OnInitialize(World& world, EngineContext& context)
     {

@@ -4,7 +4,7 @@
 #include "FileSystem.h"
 #include "Renderer.h"
 
-namespace azer
+namespace Azer
 {
     SplashLayer::SplashLayer(Renderer& renderer, const float duration)
         : Layer("SplashLayer"), m_duration(duration), m_Renderer(renderer)

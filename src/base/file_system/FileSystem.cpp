@@ -5,7 +5,7 @@
 #include "azpch.h"
 #include "FileSystem.h"
 
-namespace azer
+namespace Azer
 {
     Scope<FileSystem> FileSystem::s_Instance = nullptr;
 

@@ -5,7 +5,7 @@
 #include "azpch.h"
 #include "DeltaTime.h"
 
-namespace azer
+namespace Azer
 {
     DeltaTime::DeltaTime()
     {

@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-namespace azer
+namespace Azer
 {
     class AnimationPlayer
     {

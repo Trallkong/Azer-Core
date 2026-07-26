@@ -8,7 +8,7 @@
 #include "EngineContext.h"
 #include "event/Event.h"
 
-namespace azer
+namespace Azer
 {
     /**
      * @brief 层的基类。一个"层"代表应用中的一个独立逻辑/渲染模块。

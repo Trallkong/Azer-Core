@@ -5,7 +5,7 @@
 #include "azpch.h"
 #include "Variant.h"
 
-namespace azer
+namespace Azer
 {
     Variant::Variant() {}
 

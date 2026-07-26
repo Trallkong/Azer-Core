@@ -7,7 +7,7 @@
 #include "RenderSystem.h"
 #include "PhysicsSystem.h"
 
-namespace azer
+namespace Azer
 {
     ECSLayer::ECSLayer()
         : Layer("ECSLayer")

@@ -5,7 +5,7 @@
 #include "azpch.h"
 #include "GameObject.h"
 
-namespace azer
+namespace Azer
 {
     GameObjectID GameObject::s_NextID = 1;
 

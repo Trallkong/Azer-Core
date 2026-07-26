@@ -8,7 +8,7 @@
 
 #include "Base.h"
 
-namespace azer
+namespace Azer
 {
     struct WindowSize
     {

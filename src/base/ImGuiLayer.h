@@ -3,7 +3,7 @@
 #include "Base.h"
 #include "Layer.h"
 
-namespace azer
+namespace Azer
 {
     class Renderer;
 

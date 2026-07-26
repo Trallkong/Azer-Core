@@ -6,7 +6,7 @@
 #include "Framebuffer.h"
 #include "Renderer.h"
 
-namespace azer
+namespace Azer
 {
     Ref<Framebuffer> Framebuffer::Create(Renderer& renderer, const FramebufferSpec& spec)
     {

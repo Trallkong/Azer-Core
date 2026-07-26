@@ -11,7 +11,7 @@
 
 #include "stb_image.h"
 
-namespace azer
+namespace Azer
 {
     static glm::mat4 Mat4FromCgltf(const cgltf_float* data)
     {

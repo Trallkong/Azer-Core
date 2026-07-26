@@ -6,7 +6,7 @@
 
 #include <chrono>
 
-namespace azer {
+namespace Azer {
 
 class DeltaTime {
 public:

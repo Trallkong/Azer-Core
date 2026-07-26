@@ -11,7 +11,7 @@
 #include <string>
 #include <cstdint>
 
-namespace azer
+namespace Azer
 {
     using GameObjectID = uint64_t;
 

@@ -6,7 +6,7 @@
 #include "ECSScene.h"
 #include "GameObjectWrapper.h"
 
-namespace azer
+namespace Azer
 {
     entt::entity ECSScene::CreateEntity(const std::string& name)
     {

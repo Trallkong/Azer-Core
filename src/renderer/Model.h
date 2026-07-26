@@ -4,9 +4,9 @@
 #include "Material.h"
 #include "Texture.h"
 
-namespace azer { class Renderer; }
+namespace Azer { class Renderer; }
 
-namespace azer
+namespace Azer
 {
     struct ModelNode
     {

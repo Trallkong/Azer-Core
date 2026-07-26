@@ -6,7 +6,7 @@
 #include "Base.h"
 #include <string>
 
-namespace azer
+namespace Azer
 {
     class Renderer;
 

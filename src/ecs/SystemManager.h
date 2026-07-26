@@ -10,7 +10,7 @@
 #include <memory>
 #include <algorithm>
 
-namespace azer
+namespace Azer
 {
     class World;
     struct EngineContext;

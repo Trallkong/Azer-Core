@@ -13,13 +13,12 @@
 
 #include "FileSystem.h"
 
-namespace azer
+namespace Azer
 {
     Application::Application(
         const std::string& rootPath,
-        const AppMode& mode,
         const std::string& windowTitle)
-        :m_Mode(mode), m_WindowTitle(windowTitle)
+        :m_WindowTitle(windowTitle)
     {
         FileSystem::Init(rootPath);
 
@@ -31,7 +30,7 @@ namespace azer
 
         m_Window = Window::Create(1280, 720, m_WindowTitle);
 
-        m_Renderer = Renderer::CreateRendererFromAppMode(m_Mode);
+        m_Renderer = Renderer::Create();
 
         if (!m_Renderer->Initialize(m_Window.get()))
         {

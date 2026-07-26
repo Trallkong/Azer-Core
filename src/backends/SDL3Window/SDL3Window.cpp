@@ -4,7 +4,7 @@
 
 #include "SDL3Window.h"
 
-namespace azer
+namespace Azer
 {
     SDL3Window::SDL3Window(const uint32_t width, const uint32_t height, const std::string& title)
     {

@@ -6,14 +6,8 @@
 
 #include <memory>
 
-namespace azer
+namespace Azer
 {
-    enum class AppMode
-    {
-        Simple2D,
-        ForwardPlus,
-    };
-
     template<typename T>
     using Ref = std::shared_ptr<T>;
 
@@ -40,4 +34,7 @@ namespace azer
     {
         return std::weak_ptr<T>(ref);
     }
+
+
+    #define AZ_ASSERT(x, ...) { if(!(x)) { AZ_ERROR("Assertion Failed: {0}", __VA_ARGS__); __debugbreak(); } }
 }

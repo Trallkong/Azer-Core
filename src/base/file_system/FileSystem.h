@@ -9,7 +9,7 @@
 #include <filesystem>
 #include <vector>
 
-namespace azer
+namespace Azer
 {
     // 文件/目录条目（用于 Asset Browser 展示）
     struct FileEntry

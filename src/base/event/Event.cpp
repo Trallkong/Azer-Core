@@ -6,7 +6,7 @@
 #include "Event.h"
 
 
-namespace azer
+namespace Azer
 {
     Scope<Event> CreateEventFromSDL(const SDL_Event& sdlEvent)
     {

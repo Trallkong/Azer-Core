@@ -7,7 +7,7 @@
 #include "Base.h"
 #include "Renderer.h"
 
-namespace azer
+namespace Azer
 {
     class SDL3Renderer : public Renderer {
     public:

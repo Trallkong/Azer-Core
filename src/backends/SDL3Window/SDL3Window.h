@@ -9,7 +9,7 @@
 
 #include "SDL3/SDL.h"
 
-namespace azer
+namespace Azer
 {
     class SDL3Window : public Window
     {

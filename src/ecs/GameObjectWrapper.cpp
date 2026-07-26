@@ -5,7 +5,7 @@
 #include "azpch.h"
 #include "GameObjectWrapper.h"
 
-namespace azer
+namespace Azer
 {
     entt::entity GameObjectWrapper::ConvertToEntity(GameObject& gameObject, World& world)
     {

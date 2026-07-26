@@ -7,7 +7,7 @@
 
 #include "Base.h"
 
-namespace azer
+namespace Azer
 {
     class Input
     {

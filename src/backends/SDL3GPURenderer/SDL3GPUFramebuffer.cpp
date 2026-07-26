@@ -6,7 +6,7 @@
 #include "SDL3GPUFramebuffer.h"
 #include "GPUTexture.h"
 
-namespace azer
+namespace Azer
 {
     // 轻量包装：不拥有纹理生命周期，由 Framebuffer 管理
     class GPUFramebufferTexture : public Texture
