@@ -11,20 +11,16 @@
 #include "SDL3Texture.h"
 #include "SDL3Framebuffer.h"
 
-Azer::SDL3Renderer::SDL3Renderer()
-{
-}
-
-Azer::SDL3Renderer::~SDL3Renderer()
-{
-    if (m_Renderer)
-        SDL_DestroyRenderer(m_Renderer);
-}
-
 bool Azer::SDL3Renderer::Initialize(Window* window)
 {
     m_Renderer = SDL_CreateRenderer(static_cast<SDL_Window*>(window->GetHandle()), nullptr);
     return m_Renderer != nullptr;
+}
+
+void Azer::SDL3Renderer::Shutdown()
+{
+    if (m_Renderer)
+        SDL_DestroyRenderer(m_Renderer);
 }
 
 void Azer::SDL3Renderer::BeginFrame(const glm::vec3& clearColor)

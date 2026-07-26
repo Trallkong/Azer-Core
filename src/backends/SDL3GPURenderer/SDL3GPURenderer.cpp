@@ -14,41 +14,10 @@
 
 namespace Azer
 {
-    SDL3GPURenderer::SDL3GPURenderer()
-    = default;
-
     static void DestroyGPUMeshData(SDL_GPUDevice* device, const SDL3GPURenderer::GPUMeshData& data)
     {
         if (data.VertexBuffer) SDL_ReleaseGPUBuffer(device, data.VertexBuffer);
         if (data.IndexBuffer) SDL_ReleaseGPUBuffer(device, data.IndexBuffer);
-    }
-
-    SDL3GPURenderer::~SDL3GPURenderer()
-    {
-        m_Vertices.clear();
-        m_DrawCmds.clear();
-
-        for (auto& [model, meshes] : m_ModelCache)
-            for (auto& mesh : meshes)
-                DestroyGPUMeshData(m_Device, mesh);
-        m_ModelCache.clear();
-
-        m_WhiteTexture.reset();
-
-        if (m_VerticesTransferBuffer) SDL_ReleaseGPUTransferBuffer(m_Device, m_VerticesTransferBuffer);
-        if (m_Sampler)         SDL_ReleaseGPUSampler(m_Device, m_Sampler);
-        if (m_SkyboxSampler)   SDL_ReleaseGPUSampler(m_Device, m_SkyboxSampler);
-        if (m_VertexBuffer)    SDL_ReleaseGPUBuffer(m_Device, m_VertexBuffer);
-        ReleaseDepthTexture();
-        if (m_Pipeline2D)        SDL_ReleaseGPUGraphicsPipeline(m_Device, m_Pipeline2D);
-        if (m_Pipeline3D)        SDL_ReleaseGPUGraphicsPipeline(m_Device, m_Pipeline3D);
-        if (m_PipelineSkybox)    SDL_ReleaseGPUGraphicsPipeline(m_Device, m_PipelineSkybox);
-        if (m_FragmentShader)  SDL_ReleaseGPUShader(m_Device, m_FragmentShader);
-        if (m_VertexShader)    SDL_ReleaseGPUShader(m_Device, m_VertexShader);
-        if (m_SkyboxFragmentShader) SDL_ReleaseGPUShader(m_Device, m_SkyboxFragmentShader);
-        if (m_SkyboxVertexShader)   SDL_ReleaseGPUShader(m_Device, m_SkyboxVertexShader);
-        if (m_Window)          SDL_ReleaseWindowFromGPUDevice(m_Device, m_Window);
-        if (m_Device)          SDL_DestroyGPUDevice(m_Device);
     }
 
     bool SDL3GPURenderer::Initialize(Window* window)
@@ -91,6 +60,36 @@ namespace Azer
         m_Viewport.max_depth = 1;
 
         return true;
+    }
+
+    void SDL3GPURenderer::Shutdown()
+    {
+        m_Vertices.clear();
+        m_DrawCmds.clear();
+
+        for (auto& [model, meshes] : m_ModelCache)
+            for (auto& mesh : meshes)
+                DestroyGPUMeshData(m_Device, mesh);
+        m_ModelCache.clear();
+
+        m_WhiteTexture.reset();
+
+        ImGuiShutdown();
+
+        if (m_VerticesTransferBuffer) SDL_ReleaseGPUTransferBuffer(m_Device, m_VerticesTransferBuffer);
+        if (m_Sampler)         SDL_ReleaseGPUSampler(m_Device, m_Sampler);
+        if (m_SkyboxSampler)   SDL_ReleaseGPUSampler(m_Device, m_SkyboxSampler);
+        if (m_VertexBuffer)    SDL_ReleaseGPUBuffer(m_Device, m_VertexBuffer);
+        ReleaseDepthTexture();
+        if (m_Pipeline2D)        SDL_ReleaseGPUGraphicsPipeline(m_Device, m_Pipeline2D);
+        if (m_Pipeline3D)        SDL_ReleaseGPUGraphicsPipeline(m_Device, m_Pipeline3D);
+        if (m_PipelineSkybox)    SDL_ReleaseGPUGraphicsPipeline(m_Device, m_PipelineSkybox);
+        if (m_FragmentShader)  SDL_ReleaseGPUShader(m_Device, m_FragmentShader);
+        if (m_VertexShader)    SDL_ReleaseGPUShader(m_Device, m_VertexShader);
+        if (m_SkyboxFragmentShader) SDL_ReleaseGPUShader(m_Device, m_SkyboxFragmentShader);
+        if (m_SkyboxVertexShader)   SDL_ReleaseGPUShader(m_Device, m_SkyboxVertexShader);
+        if (m_Window)          SDL_ReleaseWindowFromGPUDevice(m_Device, m_Window);
+        if (m_Device)          SDL_DestroyGPUDevice(m_Device);
     }
 
     void SDL3GPURenderer::BeginFrame(const glm::vec3& clearColor)

@@ -16,11 +16,6 @@ namespace Azer
         ~ImGuiLayer() override = default;
 
         void OnAttach(EngineContext& ctx) override;
-        void OnDetach() override;
-        void OnUpdate(float deltaTime) override;
-        void OnDraw() override;
-        void OnEvent(Event& event) override;
-        void OnImGuiRender() override;
 
         void Begin();
         void End();
@@ -28,4 +23,3 @@ namespace Azer
         Renderer* m_Renderer;
     };
 }
-

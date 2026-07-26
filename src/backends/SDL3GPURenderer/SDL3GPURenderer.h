@@ -16,10 +16,11 @@ namespace Azer
         friend class SDL3GPURendererSupport;
 
     public:
-        SDL3GPURenderer();
-        ~SDL3GPURenderer() override;
+        SDL3GPURenderer() = default;
+        ~SDL3GPURenderer() override = default;
 
         bool Initialize(Window* window) override;
+        void Shutdown() override;
         void BeginFrame(const glm::vec3& clearColor) override;
         void EndFrame() override;
         void SetCamera(Camera& camera) override;

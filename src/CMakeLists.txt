@@ -71,6 +71,8 @@ add_library(Azer
         backends/Vulkan/VulkanRendererContext.cpp
         backends/Vulkan/VulkanFrameBuffer.cpp
         backends/Vulkan/VulkanRenderer.cpp
+        backends/Vulkan/vk_mem_alloc.cpp
+        backends/Vulkan/VulkanCommandBuffer.cpp
 )
 
 target_precompile_headers(Azer PRIVATE azpch.h)

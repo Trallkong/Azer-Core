@@ -11,10 +11,11 @@ namespace Azer
 {
     class SDL3Renderer : public Renderer {
     public:
-        SDL3Renderer();
-        ~SDL3Renderer() override;
+        SDL3Renderer() = default;
+        ~SDL3Renderer() override = default;
 
         bool Initialize(Window* window) override;
+        void Shutdown() override;
         void BeginFrame(const glm::vec3& clearColor) override;
         void EndFrame() override;
         void SetCamera(Camera& camera) override;

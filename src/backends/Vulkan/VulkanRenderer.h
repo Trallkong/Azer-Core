@@ -4,8 +4,11 @@
 #include "Renderer.h"
 
 #include "VulkanRendererContext.h"
+#include "VulkanCommandBuffer.h"
 
 namespace Azer {
+
+    const uint32_t MAX_FRAMES_IN_FLIGHT = 2;
 
     class VulkanRenderer : public Renderer {
     public:
@@ -13,6 +16,8 @@ namespace Azer {
         virtual ~VulkanRenderer() override;
 
         bool Initialize(Window* window) override;
+        void Shutdown() override;
+
         void BeginFrame(const glm::vec3& clearColor) override;
         void EndFrame() override;
         void SetCamera(Camera& camera) override;
@@ -38,7 +43,23 @@ namespace Azer {
         Ref<Texture> CreateHDRTexture(const std::string& filePath) override;
         Ref<Framebuffer> CreateFramebuffer(const FramebufferSpec& spec) override;
 
+        struct FrameResources {
+            Scope<VulkanCommandBuffer> cmdBuffer;
+            VkSemaphore imageAvaliableSemphore;
+            VkSemaphore renderFinishedSemphore;
+            VkFence inFlightFence;
+        };
+
     private:
         VulkanRendererContext m_Context;
+        uint32_t m_CurrentFrameIndex = 0;
+        uint32_t m_ImageIndex;
+        std::vector<FrameResources> m_Frames;
+
+        // 动态渲染函数指针
+        PFN_vkCmdBeginRenderingKHR m_vkCmdBeginRenderingKHR = nullptr;
+        PFN_vkCmdEndRenderingKHR m_vkCmdEndRenderingKHR = nullptr;
+
+        void DestroyFrameResources();
     };
 }

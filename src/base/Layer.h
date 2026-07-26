@@ -58,7 +58,7 @@ namespace Azer
         /// ImGui 面板绘制
         virtual void OnImGuiRender() {}
 
-        const std::string& GetName() const { return m_Name; }
+        inline const std::string& GetName() const { return m_Name; }
 
         /** @brief 请求在本帧结束时移除当前层。
          *

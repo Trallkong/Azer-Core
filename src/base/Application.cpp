@@ -41,7 +41,7 @@ namespace Azer
         m_ImGuiLayer = new ImGuiLayer(m_Renderer.get());
         PushLayer(m_ImGuiLayer);
 
-        PushOverlay(new SplashLayer(*m_Renderer.get(),5));
+        // PushOverlay(new SplashLayer(*m_Renderer.get(),5));
     }
 
     Application::~Application()
@@ -52,7 +52,9 @@ namespace Azer
             delete *i;
         }
 
+        m_Renderer->Shutdown();
         m_Renderer.reset();
+
         m_Window.reset();
 
         SDL_Quit();
@@ -111,15 +113,19 @@ namespace Azer
                 (*i)->OnInterpolate(alpha);
 
             // OnDraw
-            m_Renderer->BeginFrame(glm::vec3(m_ClearColor[0], m_ClearColor[1], m_ClearColor[2]));
             m_ImGuiLayer->Begin();
             OnImGuiRender();
             for (auto i = layers.begin(); i != layers.end(); ++i)
             {
-                (*i)->OnDraw();
                 (*i)->OnImGuiRender();
             }
             m_ImGuiLayer->End();
+
+            m_Renderer->BeginFrame(glm::vec3(m_ClearColor[0], m_ClearColor[1], m_ClearColor[2]));
+            for (auto i = layers.begin(); i != layers.end(); ++i)
+            {
+                (*i)->OnDraw();
+            }
             m_Renderer->EndFrame();
 
             // 移除标记为待删的层

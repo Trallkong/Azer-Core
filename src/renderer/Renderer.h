@@ -19,7 +19,10 @@ namespace Azer
     class Renderer {
     public:
         virtual ~Renderer() = default;
+
         virtual bool Initialize(Window* window) = 0;
+        virtual void Shutdown() = 0;
+
         virtual void BeginFrame(const glm::vec3& clearColor) = 0;
         virtual void EndFrame() = 0;
         virtual void SetCamera(Camera& camera) = 0;

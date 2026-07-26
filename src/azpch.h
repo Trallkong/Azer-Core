@@ -7,6 +7,7 @@
 #include <fstream>
 #include <string>
 #include <sstream>
+#include <array>
 #include <vector>
 #include <algorithm>
 #include <map>
@@ -14,6 +15,7 @@
 #include <memory>
 #include <cstdlib>
 #include <cassert>
+#include <set>
 
 #include "SDL3/SDL.h"
 

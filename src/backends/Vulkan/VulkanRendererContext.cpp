@@ -6,10 +6,6 @@
 
 namespace Azer {
 
-    VulkanRendererContext::~VulkanRendererContext()
-    {
-    }
-
     void VulkanRendererContext::Init(Window* window)
     {
         m_Window = window;
@@ -21,7 +17,7 @@ namespace Azer {
         appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
         appInfo.pEngineName = "Azer";
         appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-        appInfo.apiVersion = VK_API_VERSION_1_0;
+        appInfo.apiVersion = VK_API_VERSION_1_3;
 
         // 获取实例层扩展，与SDL_Vulkan_GetInstanceExtensions()返回的扩展列表进行比较，确保所有必需的扩展都可用
         uint32_t extensionCount = 0;
@@ -63,13 +59,82 @@ namespace Azer {
         VkResult result = vkCreateInstance(&createInfo, nullptr, &m_Context.Instance);
         AZ_ASSERT(result == VK_SUCCESS, "Failed to create Vulkan instance");
 
+        createSurface();
         choosePhysicalDevice();
         validateDeviceExtensions();
-        validateDeviceFeatures();
         createLogicalDevice();
-        createSurface();
+
         createSwapchain();
         createSwapchainImageViews();
+        createMemAllocator();
+
+        createMyDescriptorPool();
+        createImGuiDescriptorPool();
+        createCommandPool();
+    }
+
+    void VulkanRendererContext::Shutdown()
+    {
+        // 1. 等待设备空闲
+        if (m_Context.Device != VK_NULL_HANDLE) {
+            vkDeviceWaitIdle(m_Context.Device);
+        }
+
+        // 2. 销毁命令池（会隐式销毁所有命令缓冲区）
+        if (m_Context.cmdPool != VK_NULL_HANDLE) {
+            vkDestroyCommandPool(m_Context.Device, m_Context.cmdPool, nullptr);
+            m_Context.cmdPool = VK_NULL_HANDLE;
+        }
+
+        // 3. 销毁描述符池
+        if (m_Context.ImGuiDescriptorPool != VK_NULL_HANDLE) {
+            vkDestroyDescriptorPool(m_Context.Device, m_Context.ImGuiDescriptorPool, nullptr);
+            m_Context.ImGuiDescriptorPool = VK_NULL_HANDLE;
+        }
+
+        // 4. 销毁你的自定义描述符池（如果有）
+        if (m_Context.MyDescriptorPool != VK_NULL_HANDLE) {
+            vkDestroyDescriptorPool(m_Context.Device, m_Context.MyDescriptorPool, nullptr);
+        }
+
+        // 5. 销毁 VMA 分配器
+        if (m_Context.Allocator != VK_NULL_HANDLE) {
+            vmaDestroyAllocator(m_Context.Allocator);
+            m_Context.Allocator = VK_NULL_HANDLE;
+        }
+
+        // 6. 销毁交换链图像视图
+        for (auto& imageView : m_Context.SwapchainImageViews) {
+            if (imageView != VK_NULL_HANDLE) {
+                vkDestroyImageView(m_Context.Device, imageView, nullptr);
+                imageView = VK_NULL_HANDLE;
+            }
+        }
+        m_Context.SwapchainImageViews.clear();
+
+        // 7. 销毁交换链
+        if (m_Context.Swapchain != VK_NULL_HANDLE) {
+            vkDestroySwapchainKHR(m_Context.Device, m_Context.Swapchain, nullptr);
+            m_Context.Swapchain = VK_NULL_HANDLE;
+        }
+
+        // 8. 销毁表面
+        if (m_Context.Surface != VK_NULL_HANDLE) {
+            vkDestroySurfaceKHR(m_Context.Instance, m_Context.Surface, nullptr);
+            m_Context.Surface = VK_NULL_HANDLE;
+        }
+
+        // 9. 销毁逻辑设备
+        if (m_Context.Device != VK_NULL_HANDLE) {
+            vkDestroyDevice(m_Context.Device, nullptr);
+            m_Context.Device = VK_NULL_HANDLE;
+        }
+
+        // 10. 销毁实例
+        if (m_Context.Instance != VK_NULL_HANDLE) {
+            vkDestroyInstance(m_Context.Instance, nullptr);
+            m_Context.Instance = VK_NULL_HANDLE;
+        }
     }
 
     std::vector<VkExtensionProperties> VulkanRendererContext::EnumerateInstanceExtensions()
@@ -137,17 +202,79 @@ namespace Azer {
         for (const auto& device : physicalDevices) {
             VkPhysicalDeviceProperties deviceProperties;
             vkGetPhysicalDeviceProperties(device, &deviceProperties);
-            AZ_INFO("Found GPU: %s (API version %u)", deviceProperties.deviceName, deviceProperties.apiVersion);
 
             VkPhysicalDeviceFeatures deviceFeatures;
             vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
 
-            if (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU && deviceFeatures.geometryShader) {
+            // 检查队列族支持
+            uint32_t queueFamilyCount = 0;
+            vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+            std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+            vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+
+            bool foundGraphicsQueue = false;
+            bool foundPresentQueue = false;
+            uint32_t graphicsQueueIndex = 0;
+            uint32_t presentQueueIndex = 0;
+
+            for (uint32_t i = 0; i < queueFamilyCount; i++) 
+            {
+                if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+                {
+                    graphicsQueueIndex = i;
+                    foundGraphicsQueue = true;
+                }
+
+                VkBool32 presentSupport = false;
+                vkGetPhysicalDeviceSurfaceSupportKHR(device, i, m_Context.Surface, &presentSupport);
+                if (presentSupport)
+                {
+                    presentQueueIndex = i;
+                    foundPresentQueue = true;
+                }
+
+                if (foundGraphicsQueue && foundPresentQueue)
+                {
+                    break;
+                }
+            }
+
+
+            // 检查交换链扩展支持
+            uint32_t extensioncount = 0;
+            vkEnumerateDeviceExtensionProperties(device, nullptr, &extensioncount, nullptr);
+            std::vector<VkExtensionProperties> availiableExtensions(extensioncount);
+            vkEnumerateDeviceExtensionProperties(device, nullptr, &extensioncount, availiableExtensions.data());
+
+            bool swapchainSupported = false;
+            for (const auto& ext : availiableExtensions) 
+            {
+                if (strcmp(ext.extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0)
+                {
+                    swapchainSupported = true;
+                    break;
+                }
+            }
+
+            if (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
+                deviceFeatures.geometryShader && foundGraphicsQueue && foundPresentQueue && swapchainSupported
+            ) {
                 m_Context.PhysicalDevice = device;
-                AZ_INFO("Selected GPU: %s", deviceProperties.deviceName);
+                m_Context.QueueFamilyIndex = graphicsQueueIndex;
+                m_Context.PresentQueueFamilyIndex = presentQueueIndex;
+
+                AZ_CORE_INFO("Selected GPU: {0}", deviceProperties.deviceName);
+                AZ_CORE_INFO("Graphics Queue: {0}, Present Queue: {1}", graphicsQueueIndex, presentQueueIndex);
                 return;
             }
         }
+
+        for (const auto& device : physicalDevices)
+        {
+            // 兜底
+        }
+
+        AZ_ASSERT(false, "Failed to find a suitable Vulkan physical device!");
     }
 
     void VulkanRendererContext::validateDeviceExtensions()
@@ -169,45 +296,60 @@ namespace Azer {
         }
     }
 
-    void VulkanRendererContext::validateDeviceFeatures()
-    {
-        VkPhysicalDeviceFeatures deviceFeatures;
-        vkGetPhysicalDeviceFeatures(m_Context.PhysicalDevice, &deviceFeatures);
-
-        AZ_ASSERT(deviceFeatures.geometryShader, "Required feature 'geometryShader' is not supported by the selected physical device");
-    }
-
     void VulkanRendererContext::createLogicalDevice()
     {
-        uint32_t queueFamilyPropertyCount = 0;
-        vkGetPhysicalDeviceQueueFamilyProperties(m_Context.PhysicalDevice, &queueFamilyPropertyCount, nullptr);
-        std::vector<VkQueueFamilyProperties> queueFamilyProperties(queueFamilyPropertyCount);
-        vkGetPhysicalDeviceQueueFamilyProperties(m_Context.PhysicalDevice, &queueFamilyPropertyCount, queueFamilyProperties.data());
+        float queuePriority = 1.0f;
 
-        for (uint32_t i = 0; i < queueFamilyPropertyCount; ++i) {
-            if (queueFamilyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-                VkDeviceQueueCreateInfo queueCreateInfo{};
-                queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-                queueCreateInfo.queueFamilyIndex = i;
-                queueCreateInfo.queueCount = 1;
-                float queuePriority = 1.0f;
-                queueCreateInfo.pQueuePriorities = &queuePriority;
+        // ⭐ 处理图形和呈现队列（可能相同也可能不同）
+        std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+        std::set<uint32_t> uniqueQueueFamilies = {
+            m_Context.QueueFamilyIndex,
+            m_Context.PresentQueueFamilyIndex
+        };
 
-                VkDeviceCreateInfo deviceCreateInfo{};
-                deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-                deviceCreateInfo.queueCreateInfoCount = 1;
-                deviceCreateInfo.pQueueCreateInfos = &queueCreateInfo;
-                deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(m_RequiredDeviceExtensions.size());
-                deviceCreateInfo.ppEnabledExtensionNames = m_RequiredDeviceExtensions.data();
-
-                VkResult result = vkCreateDevice(m_Context.PhysicalDevice, &deviceCreateInfo, nullptr, &m_Context.Device);
-                AZ_ASSERT(result == VK_SUCCESS, "Failed to create logical device");
-
-                vkGetDeviceQueue(m_Context.Device, i, 0, &m_Context.GraphicsQueue);
-                return;
-            }
+        for (uint32_t queueFamily : uniqueQueueFamilies) {
+            VkDeviceQueueCreateInfo queueCreateInfo{};
+            queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+            queueCreateInfo.queueFamilyIndex = queueFamily;
+            queueCreateInfo.queueCount = 1;
+            queueCreateInfo.pQueuePriorities = &queuePriority;
+            queueCreateInfos.push_back(queueCreateInfo);
         }
-        AZ_ERROR("Failed to find a suitable queue family for graphics");
+
+        // ⭐ Vulkan 1.3 特性（动态渲染、同步2等）
+        VkPhysicalDeviceVulkan13Features vulkan13Features{};
+        vulkan13Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+        vulkan13Features.dynamicRendering = VK_TRUE;    // 动态渲染
+        vulkan13Features.synchronization2 = VK_TRUE;    // 同步2
+
+        // Vulkan 1.2 特性（可选）
+        VkPhysicalDeviceVulkan12Features vulkan12Features{};
+        vulkan12Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+        vulkan12Features.bufferDeviceAddress = VK_TRUE;
+        
+        // 链接特性链
+        vulkan12Features.pNext = &vulkan13Features;
+
+        VkPhysicalDeviceFeatures deviceFeatures{};
+        deviceFeatures.samplerAnisotropy = VK_TRUE;
+        deviceFeatures.fillModeNonSolid = VK_TRUE;
+
+        VkDeviceCreateInfo deviceCreateInfo{};
+        deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+        deviceCreateInfo.pNext = &vulkan12Features;  // 链接到 1.2 特性（包含 1.3）
+        deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
+        deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
+        deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(m_RequiredDeviceExtensions.size());
+        deviceCreateInfo.ppEnabledExtensionNames = m_RequiredDeviceExtensions.data();
+        deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
+        deviceCreateInfo.enabledLayerCount = 0;  // 设备层已弃用
+
+        VkResult result = vkCreateDevice(m_Context.PhysicalDevice, &deviceCreateInfo, nullptr, &m_Context.Device);
+        AZ_ASSERT(result == VK_SUCCESS, "Failed to create logical device!");
+
+        // ⭐ 获取队列句柄
+        vkGetDeviceQueue(m_Context.Device, m_Context.QueueFamilyIndex, 0, &m_Context.GraphicsQueue);
+        vkGetDeviceQueue(m_Context.Device, m_Context.PresentQueueFamilyIndex, 0, &m_Context.PresentQueue);
     }
 
     void VulkanRendererContext::createSurface()
@@ -219,7 +361,7 @@ namespace Azer {
     {
         VkSurfaceFormatKHR surfaceFormat = chooseSwapchainFormat();
         VkPresentModeKHR presentMode = chooseSwapchainPresentMode();
-        VkExtent2D extent = chooseSwapchainExtent();
+        chooseSwapchainExtent();
 
         VkSwapchainCreateInfoKHR swapchainCreateInfo{};
         swapchainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -227,7 +369,7 @@ namespace Azer {
         swapchainCreateInfo.minImageCount = 2; // 双缓冲
         swapchainCreateInfo.imageFormat = surfaceFormat.format;
         swapchainCreateInfo.imageColorSpace = surfaceFormat.colorSpace;
-        swapchainCreateInfo.imageExtent = extent;
+        swapchainCreateInfo.imageExtent = m_Context.SwapchainImageExtent;
         swapchainCreateInfo.presentMode = presentMode;
         swapchainCreateInfo.imageArrayLayers = 1;
         swapchainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -245,6 +387,7 @@ namespace Azer {
 
         uint32_t imageCount = 0;
         vkGetSwapchainImagesKHR(m_Context.Device, m_Context.Swapchain, &imageCount, nullptr);
+        m_Context.SwapchainImages.clear();
         m_Context.SwapchainImages.resize(imageCount);
         vkGetSwapchainImagesKHR(m_Context.Device, m_Context.Swapchain, &imageCount, m_Context.SwapchainImages.data());
     }
@@ -288,27 +431,28 @@ namespace Azer {
     }
 
     // 交换范围就是交换链图像的分辨率，几乎是始终与我们绘制窗口的分辨率完全相等像素
-    VkExtent2D VulkanRendererContext::chooseSwapchainExtent()
+    void VulkanRendererContext::chooseSwapchainExtent()
     {
         VkSurfaceCapabilitiesKHR surfaceCapabilities;
         vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_Context.PhysicalDevice, m_Context.Surface, &surfaceCapabilities);
 
         if (surfaceCapabilities.currentExtent.width != UINT32_MAX) {
-            return surfaceCapabilities.currentExtent;
+            m_Context.SwapchainImageExtent = surfaceCapabilities.currentExtent;
+            return;
         }
 
         int width, height;
         SDL_GetWindowSize(static_cast<SDL_Window*>(m_Window->GetHandle()), &width, &height);
-
-        return {
-            std::clamp<uint32_t>(width, surfaceCapabilities.minImageExtent.width, surfaceCapabilities.maxImageExtent.width),
-            std::clamp<uint32_t>(height, surfaceCapabilities.minImageExtent.height, surfaceCapabilities.maxImageExtent.height)
-        };
+        
+        uint32_t c_width = std::clamp<uint32_t>(width, surfaceCapabilities.minImageExtent.width, surfaceCapabilities.maxImageExtent.width);
+        uint32_t c_height = std::clamp<uint32_t>(height, surfaceCapabilities.minImageExtent.height, surfaceCapabilities.maxImageExtent.height);
+        
+        m_Context.SwapchainImageExtent = { c_width, c_height };
     }
 
     void VulkanRendererContext::createSwapchainImageViews()
     {
-        AZ_ASSERT(m_Context.SwapchainImages.empty(), "Swapchain images need to be empty");
+        m_Context.SwapchainImageViews.clear();
         m_Context.SwapchainImageViews.resize(m_Context.SwapchainImages.size());
 
         for (uint32_t i = 0; i < m_Context.SwapchainImages.size(); ++i) {
@@ -330,5 +474,89 @@ namespace Azer {
             VkResult result = vkCreateImageView(m_Context.Device, &viewCreateInfo, nullptr, &m_Context.SwapchainImageViews[i]);
             AZ_ASSERT(result == VK_SUCCESS, "Failed to create image views for swapchain images");
         }
+    }
+
+    void VulkanRendererContext::createMemAllocator()
+    {
+        VmaAllocatorCreateInfo info{};
+        info.vulkanApiVersion = VK_API_VERSION_1_3;
+        info.device = m_Context.Device;
+        info.instance = m_Context.Instance;
+        info.physicalDevice = m_Context.PhysicalDevice;
+        info.preferredLargeHeapBlockSize = 0;
+        
+        VkResult result = vmaCreateAllocator(&info, &m_Context.Allocator);
+        if (result != VK_SUCCESS) 
+        {
+            AZ_CORE_ERROR("创建内存分配器失败");
+        }
+    }
+
+    void VulkanRendererContext::createMyDescriptorPool()
+    {
+
+    }
+
+    void VulkanRendererContext::createImGuiDescriptorPool()
+    {
+        // 使用 std::array 定义描述符池大小
+        std::array<VkDescriptorPoolSize, 11> poolSizes = {{
+            { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+            { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
+            { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
+            { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+            { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
+        }};
+
+        uint32_t maxSets = 1000 * static_cast<uint32_t>(poolSizes.size());
+        
+        m_Context.ImGuiDescriptorPool = createDescriptorPool(
+            m_Context.Device,
+            poolSizes,
+            maxSets
+        );
+    }
+
+    void VulkanRendererContext::createCommandPool()
+    {
+        VkCommandPoolCreateInfo poolInfo{};
+        poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;  // 允许单独重置 CommandBuffer
+        poolInfo.queueFamilyIndex = m_Context.QueueFamilyIndex;  // 图形队列族索引
+
+        VkResult result = vkCreateCommandPool(m_Context.Device, &poolInfo, nullptr, &m_Context.cmdPool);
+        if (result != VK_SUCCESS) {
+            AZ_CORE_ERROR("创建CommandPool失败");
+        }
+    }
+
+    template<size_t N>
+    VkDescriptorPool VulkanRendererContext::createDescriptorPool(
+        VkDevice device,
+        const std::array<VkDescriptorPoolSize, N>& poolSizes,
+        uint32_t maxSets,
+        VkDescriptorPoolCreateFlags flags
+        )
+    {
+        VkDescriptorPoolCreateInfo poolInfo{};
+        poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        poolInfo.flags = flags;
+        poolInfo.maxSets = maxSets;
+        poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+        poolInfo.pPoolSizes = poolSizes.data();
+
+        VkDescriptorPool pool = VK_NULL_HANDLE;
+        VkResult result = vkCreateDescriptorPool(device, &poolInfo, nullptr, &pool);
+        if (result != VK_SUCCESS) {
+            // 处理错误
+            return VK_NULL_HANDLE;
+        }
+        return pool;
     }
 }
