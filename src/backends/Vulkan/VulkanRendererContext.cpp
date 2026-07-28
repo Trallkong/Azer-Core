@@ -142,16 +142,16 @@ namespace Azer {
         uint32_t extensionCount = 0;
         vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
         if (extensionCount == 0) {
-            AZ_ERROR("No Vulkan instance extensions found");
+            AZ_CORE_ERROR("No Vulkan instance extensions found");
             return std::vector<VkExtensionProperties>();
         }
 
         std::vector<VkExtensionProperties> extensions(extensionCount);
         vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
 
-        AZ_INFO("Available Vulkan Instance Extensions:");
+        AZ_CORE_INFO("Available Vulkan Instance Extensions:");
         for (const auto& ext : extensions) {
-            AZ_INFO("  %s (version %u)", ext.extensionName, ext.specVersion);
+            AZ_CORE_INFO("  {} (version {})", ext.extensionName, ext.specVersion);
         }
 
         return extensions;
@@ -162,16 +162,16 @@ namespace Azer {
         uint32_t layerCount = 0;
         vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
         if (layerCount == 0) {
-            AZ_ERROR("No Vulkan instance layers found");
+            AZ_CORE_ERROR("No Vulkan instance layers found");
             return std::vector<VkLayerProperties>();
         }
 
         std::vector<VkLayerProperties> layers(layerCount);
         vkEnumerateInstanceLayerProperties(&layerCount, layers.data());
 
-        AZ_INFO("Available Vulkan Instance Layers:");
+        AZ_CORE_INFO("Available Vulkan Instance Layers:");
         for (const auto& layer : layers) {
-            AZ_INFO("  %s (version %u)", layer.layerName, layer.specVersion);
+            AZ_CORE_INFO("  {0} (version {1})", layer.layerName, layer.specVersion);
         }
 
         return layers;
@@ -214,6 +214,7 @@ namespace Azer {
 
             bool foundGraphicsQueue = false;
             bool foundPresentQueue = false;
+            
             uint32_t graphicsQueueIndex = 0;
             uint32_t presentQueueIndex = 0;
 

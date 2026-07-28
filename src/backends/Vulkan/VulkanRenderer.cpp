@@ -15,9 +15,34 @@ namespace Azer {
     bool VulkanRenderer::Initialize(Window *window)
     {
         m_Context.Init(window);
-        m_Frames.resize(MAX_FRAMES_IN_FLIGHT);
 
         const VulkanContext& ctx = m_Context.GetContext();
+        
+        // 初始化帧资源
+        VkSemaphoreCreateInfo semaphoreInfo{};
+        semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+        VkFenceCreateInfo fenceInfo{};
+        fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+        for (auto& frame : m_Frames)
+        {
+            frame.cmdBuffer = CreateScope<VulkanCommandBuffer>(m_Context.GetContext());
+
+            VkResult result = vkCreateFence(ctx.Device, &fenceInfo, nullptr, &frame.inFlightFence);
+            AZ_ASSERT(result == VK_SUCCESS, "Failed to create fence");
+
+            result = vkCreateSemaphore(ctx.Device, &semaphoreInfo, nullptr, &frame.imageAvaliableSemaphore);
+            AZ_ASSERT(result == VK_SUCCESS, "vkCreateSemaphore failed");
+        }
+
+        m_RenderFinishedSemaphores.resize(ctx.SwapchainImages.size());
+        for (auto& sem : m_RenderFinishedSemaphores)
+        {
+            VkResult result = vkCreateSemaphore(ctx.Device, &semaphoreInfo, nullptr, &sem);
+            AZ_ASSERT(result == VK_SUCCESS, "vkCreateSemaphore failed");
+        }
     
         // 从设备加载函数指针
         m_vkCmdBeginRenderingKHR = (PFN_vkCmdBeginRenderingKHR)
@@ -31,46 +56,17 @@ namespace Azer {
             AZ_ERROR("Dynamic rendering functions not available!");
         }
 
-        for (auto& f : m_Frames)
-        {
-            f.cmdBuffer = CreateScope<VulkanCommandBuffer>(m_Context.GetContext());
-
-            VkFenceCreateInfo fenceInfo{};
-            fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-            // ⭐ 关键：初始状态设为已触发，这样第一帧就能立即开始
-            fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-            
-            for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
-                VkResult result = vkCreateFence(ctx.Device, &fenceInfo, nullptr, &f.inFlightFence);
-                AZ_ASSERT(result == VK_SUCCESS, "Failed to create fence for frame %u", i);
-            }
-
-            VkSemaphoreCreateInfo semaphoreInfo{};
-            semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-            VkResult result = vkCreateSemaphore(ctx.Device, &semaphoreInfo, nullptr, &f.imageAvaliableSemphore);
-            AZ_ASSERT(result == VK_SUCCESS);
-        
-            result = vkCreateSemaphore(ctx.Device, &semaphoreInfo, nullptr, &f.renderFinishedSemphore);
-            AZ_ASSERT(result == VK_SUCCESS);
-        }
-
         return true;
     }
 
     void VulkanRenderer::Shutdown()
     {
-        // 1.等待GPU完成所有工作
-        const VulkanContext& ctx = m_Context.GetContext();
+        VulkanContext& ctx = m_Context.GetContext();
         vkDeviceWaitIdle(ctx.Device);
 
-        // 2.销毁帧资源
         DestroyFrameResources();
-
-        // 3.销毁 ImGui 资源
         ImGuiShutdown();
 
-        // 4. 销毁 Context 中的所有资源（由 VulkanRendererContext 负责）
         m_Context.Shutdown();
     }
 
@@ -82,7 +78,7 @@ namespace Azer {
         vkResetFences(ctx.Device, 1, &m_Frames[m_CurrentFrameIndex].inFlightFence);
 
         vkAcquireNextImageKHR(ctx.Device, ctx.Swapchain, UINT64_MAX,
-            m_Frames[m_CurrentFrameIndex].imageAvaliableSemphore, nullptr, &m_ImageIndex);
+            m_Frames[m_CurrentFrameIndex].imageAvaliableSemaphore, nullptr, &m_ImageIndex);
 
         VkCommandBuffer cmd = m_Frames[m_CurrentFrameIndex].cmdBuffer->Get();
         vkResetCommandBuffer(cmd, 0);
@@ -179,11 +175,11 @@ namespace Azer {
         VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
         submit_info.pWaitDstStageMask = waitStages;
 
-        VkSemaphore waitSemaphores[] = {m_Frames[m_CurrentFrameIndex].imageAvaliableSemphore};
+        VkSemaphore waitSemaphores[] = { m_Frames[m_CurrentFrameIndex].imageAvaliableSemaphore };
         submit_info.waitSemaphoreCount = 1;
         submit_info.pWaitSemaphores = waitSemaphores;
 
-        VkSemaphore signalSemaphores[] = {m_Frames[m_CurrentFrameIndex].renderFinishedSemphore};
+        VkSemaphore signalSemaphores[] = { m_RenderFinishedSemaphores[m_ImageIndex] };
         submit_info.signalSemaphoreCount = 1;
         submit_info.pSignalSemaphores = signalSemaphores;
 
@@ -199,7 +195,7 @@ namespace Azer {
         
         vkQueuePresentKHR(ctx.GraphicsQueue, &present_info);
 
-        m_CurrentFrameIndex = (m_CurrentFrameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
+        m_CurrentFrameIndex = (m_CurrentFrameIndex + 1) % MAX_FLIGHT_FRAMES;
     }
 
     void VulkanRenderer::SetCamera(Camera &camera)
@@ -283,7 +279,7 @@ namespace Azer {
         init_info.PipelineCache = VK_NULL_HANDLE;
         init_info.DescriptorPool = ctx.ImGuiDescriptorPool;
         init_info.MinImageCount = 2;
-        init_info.ImageCount = static_cast<uint32_t>(ctx.SwapchainImages.size());
+        init_info.ImageCount = MAX_FLIGHT_FRAMES;
         init_info.Allocator = nullptr;
 
         init_info.UseDynamicRendering = true;
@@ -347,30 +343,33 @@ namespace Azer {
 
         for (auto& frame: m_Frames)
         {
+            vkFreeCommandBuffers(ctx.Device, ctx.cmdPool, 1, &frame.cmdBuffer->Get());
             frame.cmdBuffer.reset();
 
-            // 销毁Fence
             if (frame.inFlightFence != VK_NULL_HANDLE)
             {
                 vkDestroyFence(ctx.Device, frame.inFlightFence, nullptr);
+                AZ_CORE_DEBUG("Destroy Fence");
                 frame.inFlightFence = VK_NULL_HANDLE;
             }
 
-            // 销毁 Semaphore
-            if (frame.imageAvaliableSemphore != VK_NULL_HANDLE) 
+            if (frame.imageAvaliableSemaphore != VK_NULL_HANDLE) 
             {
-                vkDestroySemaphore(ctx.Device, frame.imageAvaliableSemphore, nullptr);
-                frame.imageAvaliableSemphore = VK_NULL_HANDLE;
-            }
-
-            if (frame.renderFinishedSemphore != VK_NULL_HANDLE) 
-            {
-                vkDestroySemaphore(ctx.Device, frame.renderFinishedSemphore, nullptr);
-                frame.renderFinishedSemphore = VK_NULL_HANDLE;
+                vkDestroySemaphore(ctx.Device, frame.imageAvaliableSemaphore, nullptr);
+                AZ_CORE_DEBUG("Destroy Semaphore");
+                frame.imageAvaliableSemaphore = VK_NULL_HANDLE;
             }
         }
 
-        // 清空帧数组
-        m_Frames.clear();
+        for (auto& sem : m_RenderFinishedSemaphores)
+        {
+            if (sem != VK_NULL_HANDLE)
+            {
+                vkDestroySemaphore(ctx.Device, sem, nullptr);
+                AZ_CORE_DEBUG("Destroy Semaphore");
+                sem = VK_NULL_HANDLE;
+            }
+        }
+        m_RenderFinishedSemaphores.clear();
     }
 }

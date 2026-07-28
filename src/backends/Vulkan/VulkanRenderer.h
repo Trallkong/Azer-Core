@@ -8,8 +8,6 @@
 
 namespace Azer {
 
-    const uint32_t MAX_FRAMES_IN_FLIGHT = 2;
-
     class VulkanRenderer : public Renderer {
     public:
         VulkanRenderer() = default;
@@ -45,16 +43,18 @@ namespace Azer {
 
         struct FrameResources {
             Scope<VulkanCommandBuffer> cmdBuffer;
-            VkSemaphore imageAvaliableSemphore;
-            VkSemaphore renderFinishedSemphore;
+            VkSemaphore imageAvaliableSemaphore;
             VkFence inFlightFence;
         };
 
+        static constexpr int MAX_FLIGHT_FRAMES = 3;
+
     private:
         VulkanRendererContext m_Context;
+        uint32_t m_ImageIndex = 0;
         uint32_t m_CurrentFrameIndex = 0;
-        uint32_t m_ImageIndex;
-        std::vector<FrameResources> m_Frames;
+        std::array<FrameResources, MAX_FLIGHT_FRAMES> m_Frames;
+        std::vector<VkSemaphore> m_RenderFinishedSemaphores;
 
         // 动态渲染函数指针
         PFN_vkCmdBeginRenderingKHR m_vkCmdBeginRenderingKHR = nullptr;
