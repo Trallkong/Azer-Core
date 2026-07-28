@@ -3,7 +3,7 @@
 #include "Base.h"
 #include "Renderer.h"
 
-#include "VulkanRendererContext.h"
+#include "VulkanContextManager.h"
 #include "VulkanCommandBuffer.h"
 
 namespace Azer {
@@ -21,6 +21,7 @@ namespace Azer {
         void SetCamera(Camera& camera) override;
         void ResetRenderState() override;
         void SetRenderTarget(Framebuffer* target) override;  // nullptr = swapchain
+        void Resize(uint32_t width, uint32_t height) override;
         void SetViewport(uint32_t width, uint32_t height, uint32_t offsetX, uint32_t offsetY) override;
 
         void DrawQuad(float x, float y, float w, float h, float alpha = 1.0f) override;
@@ -34,8 +35,8 @@ namespace Azer {
         void ImGuiInit(SDL_Window* window) override;
         void ImGuiShutdown() override;
         void ImGuiNewFrame() override;
-
         void SetImGuiDrawData(ImDrawData* drawData) override;
+
         Ref<Texture> CreateTexture(const std::string& filePath) override;
         Ref<Texture> CreateTexture(void* pixels, uint32_t width, uint32_t height) override;
         Ref<Texture> CreateHDRTexture(const std::string& filePath) override;
@@ -50,11 +51,12 @@ namespace Azer {
         static constexpr int MAX_FLIGHT_FRAMES = 3;
 
     private:
-        VulkanRendererContext m_Context;
+        VulkanContextManager m_CtxManager;
         uint32_t m_ImageIndex = 0;
         uint32_t m_CurrentFrameIndex = 0;
         std::array<FrameResources, MAX_FLIGHT_FRAMES> m_Frames;
         std::vector<VkSemaphore> m_RenderFinishedSemaphores;
+        VkViewport m_Viewport;
 
         // 动态渲染函数指针
         PFN_vkCmdBeginRenderingKHR m_vkCmdBeginRenderingKHR = nullptr;

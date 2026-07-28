@@ -8,32 +8,42 @@
 
 namespace Azer
 {
-    Scope<Event> CreateEventFromSDL(const SDL_Event& sdlEvent)
+    Event CreateEventFromSDL(const SDL_Event& sdlEvent)
     {
+        AnyEvent data;
+
         switch (sdlEvent.type)
         {
             case SDL_EVENT_QUIT:
-                return CreateScope<WindowCloseEvent>();
+                data = WindowCloseEvent(); break;
             case SDL_EVENT_WINDOW_RESIZED:
-                return CreateScope<WindowResizeEvent>(
+                data = WindowResizeEvent(
                     static_cast<int>(sdlEvent.window.data1),
-                    static_cast<int>(sdlEvent.window.data2));
+                    static_cast<int>(sdlEvent.window.data2)); break;
+            case SDL_EVENT_WINDOW_MINIMIZED :
+                data = WindowMinimizedEvent(); break;
+            case SDL_EVENT_WINDOW_RESTORED :
+                data = WindowRestoredEvent(); break;
             case SDL_EVENT_KEY_DOWN:
-                return CreateScope<KeyPressedEvent>(
+                data = KeyPressedEvent(
                     sdlEvent.key.key,
-                    sdlEvent.key.repeat);
+                    sdlEvent.key.repeat); break;
             case SDL_EVENT_KEY_UP:
-                return CreateScope<KeyReleasedEvent>(sdlEvent.key.key);
+                data = KeyReleasedEvent(sdlEvent.key.key); break;
             case SDL_EVENT_MOUSE_BUTTON_DOWN:
-                return CreateScope<MouseButtonPressedEvent>(sdlEvent.button.button);
+                data = MouseButtonPressedEvent(sdlEvent.button.button); break;
             case SDL_EVENT_MOUSE_BUTTON_UP:
-                return CreateScope<MouseButtonReleasedEvent>(sdlEvent.button.button);
+                data = MouseButtonReleasedEvent(sdlEvent.button.button); break;
             case SDL_EVENT_MOUSE_MOTION:
-                return CreateScope<MouseMovedEvent>(sdlEvent.motion.x, sdlEvent.motion.y);
+                data = MouseMovedEvent(sdlEvent.motion.x, sdlEvent.motion.y); break;
             case SDL_EVENT_MOUSE_WHEEL:
-                return CreateScope<MouseScrolledEvent>(sdlEvent.wheel.x, sdlEvent.wheel.y);
+                data = MouseScrolledEvent(sdlEvent.wheel.x, sdlEvent.wheel.y); break;
             default:
-                return nullptr;
+                data = std::monostate{};
         }
+
+        Event event{};
+        event.data = data;
+        return event;
     }
 }

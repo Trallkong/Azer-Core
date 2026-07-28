@@ -31,7 +31,13 @@ namespace Azer
             "AZER",
             spdlog::sinks_init_list{std::make_shared<spdlog::sinks::stdout_color_sink_mt>(), s_ConsoleSink}
         );
+
+        #ifdef AZ_ENABLE_DEBUG
         m_CoreLogger->set_level(spdlog::level::trace);
+        #else
+        m_CoreLogger->set_level(spdlog::level::info);
+        #endif
+
         m_CoreLogger->set_formatter(std::move(formatter));
 
         auto client_formatter = std::make_unique<spdlog::pattern_formatter>(

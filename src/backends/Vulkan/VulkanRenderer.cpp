@@ -14,9 +14,19 @@ namespace Azer {
 
     bool VulkanRenderer::Initialize(Window *window)
     {
-        m_Context.Init(window);
+        m_CtxManager.Init(window);
 
-        const VulkanContext& ctx = m_Context.GetContext();
+        const Ref<VulkanContext>& ctx = m_CtxManager.GetContext();
+
+        // 初始化 Viewport
+        VkViewport viewport{};
+        viewport.x = 0;
+        viewport.y = 0;
+        viewport.width = window->GetWindowSize().width;
+        viewport.height = window->GetWindowSize().height;
+        viewport.minDepth = 0;
+        viewport.maxDepth = 1;
+        m_Viewport = viewport;
         
         // 初始化帧资源
         VkSemaphoreCreateInfo semaphoreInfo{};
@@ -28,27 +38,27 @@ namespace Azer {
 
         for (auto& frame : m_Frames)
         {
-            frame.cmdBuffer = CreateScope<VulkanCommandBuffer>(m_Context.GetContext());
+            frame.cmdBuffer = CreateScope<VulkanCommandBuffer>(m_CtxManager.GetContext());
 
-            VkResult result = vkCreateFence(ctx.Device, &fenceInfo, nullptr, &frame.inFlightFence);
+            VkResult result = vkCreateFence(ctx->Device, &fenceInfo, nullptr, &frame.inFlightFence);
             AZ_ASSERT(result == VK_SUCCESS, "Failed to create fence");
 
-            result = vkCreateSemaphore(ctx.Device, &semaphoreInfo, nullptr, &frame.imageAvaliableSemaphore);
+            result = vkCreateSemaphore(ctx->Device, &semaphoreInfo, nullptr, &frame.imageAvaliableSemaphore);
             AZ_ASSERT(result == VK_SUCCESS, "vkCreateSemaphore failed");
         }
 
-        m_RenderFinishedSemaphores.resize(ctx.SwapchainImages.size());
+        m_RenderFinishedSemaphores.resize(ctx->SwapchainImages.size());
         for (auto& sem : m_RenderFinishedSemaphores)
         {
-            VkResult result = vkCreateSemaphore(ctx.Device, &semaphoreInfo, nullptr, &sem);
+            VkResult result = vkCreateSemaphore(ctx->Device, &semaphoreInfo, nullptr, &sem);
             AZ_ASSERT(result == VK_SUCCESS, "vkCreateSemaphore failed");
         }
     
         // 从设备加载函数指针
         m_vkCmdBeginRenderingKHR = (PFN_vkCmdBeginRenderingKHR)
-            vkGetDeviceProcAddr(ctx.Device, "vkCmdBeginRenderingKHR");
+            vkGetDeviceProcAddr(ctx->Device, "vkCmdBeginRenderingKHR");
         m_vkCmdEndRenderingKHR = (PFN_vkCmdEndRenderingKHR)
-            vkGetDeviceProcAddr(ctx.Device, "vkCmdEndRenderingKHR");
+            vkGetDeviceProcAddr(ctx->Device, "vkCmdEndRenderingKHR");
         
         // 检查是否加载成功
         if (m_vkCmdBeginRenderingKHR == nullptr || m_vkCmdEndRenderingKHR == nullptr) {
@@ -61,23 +71,23 @@ namespace Azer {
 
     void VulkanRenderer::Shutdown()
     {
-        VulkanContext& ctx = m_Context.GetContext();
-        vkDeviceWaitIdle(ctx.Device);
+        Ref<VulkanContext> ctx = m_CtxManager.GetContext();
+        vkDeviceWaitIdle(ctx->Device);
 
         DestroyFrameResources();
         ImGuiShutdown();
 
-        m_Context.Shutdown();
+        m_CtxManager.Shutdown();
     }
 
     void VulkanRenderer::BeginFrame(const glm::vec3 &clearColor)
     {
-        VulkanContext& ctx = m_Context.GetContext();
+        Ref<VulkanContext> ctx = m_CtxManager.GetContext();
 
-        vkWaitForFences(ctx.Device, 1, &m_Frames[m_CurrentFrameIndex].inFlightFence, VK_TRUE, UINT64_MAX);
-        vkResetFences(ctx.Device, 1, &m_Frames[m_CurrentFrameIndex].inFlightFence);
+        vkWaitForFences(ctx->Device, 1, &m_Frames[m_CurrentFrameIndex].inFlightFence, VK_TRUE, UINT64_MAX);
+        vkResetFences(ctx->Device, 1, &m_Frames[m_CurrentFrameIndex].inFlightFence);
 
-        vkAcquireNextImageKHR(ctx.Device, ctx.Swapchain, UINT64_MAX,
+        vkAcquireNextImageKHR(ctx->Device, ctx->Swapchain, UINT64_MAX,
             m_Frames[m_CurrentFrameIndex].imageAvaliableSemaphore, nullptr, &m_ImageIndex);
 
         VkCommandBuffer cmd = m_Frames[m_CurrentFrameIndex].cmdBuffer->Get();
@@ -94,7 +104,7 @@ namespace Azer {
         barrier.newLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR;
         barrier.srcAccessMask = 0;
         barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        barrier.image = ctx.SwapchainImages[m_ImageIndex];
+        barrier.image = ctx->SwapchainImages[m_ImageIndex];
         barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         barrier.subresourceRange.baseMipLevel = 0;
         barrier.subresourceRange.levelCount = 1;
@@ -113,12 +123,12 @@ namespace Azer {
     
         VkRenderingInfoKHR renderingInfo{};
         renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
-        renderingInfo.renderArea = { 0, 0, ctx.SwapchainImageExtent.width, ctx.SwapchainImageExtent.height};
+        renderingInfo.renderArea = { 0, 0, ctx->SwapchainImageExtent.width, ctx->SwapchainImageExtent.height};
         renderingInfo.layerCount = 1;
         renderingInfo.colorAttachmentCount = 1;
         VkRenderingAttachmentInfoKHR colorAttachment{};
         colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
-        colorAttachment.imageView = ctx.SwapchainImageViews[m_ImageIndex];
+        colorAttachment.imageView = ctx->SwapchainImageViews[m_ImageIndex];
         colorAttachment.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR;
         colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -129,12 +139,14 @@ namespace Azer {
             m_vkCmdBeginRenderingKHR(cmd, &renderingInfo);
         }
 
+        vkCmdSetViewport(cmd, 0, 1, &m_Viewport);
+
         SetImGuiDrawData(ImGui::GetDrawData());
     }
     
     void VulkanRenderer::EndFrame()
     {
-        VulkanContext& ctx = m_Context.GetContext();
+        Ref<VulkanContext> ctx = m_CtxManager.GetContext();
 
         VkCommandBuffer cmd = m_Frames[m_CurrentFrameIndex].cmdBuffer->Get();
         
@@ -148,7 +160,7 @@ namespace Azer {
         presentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
         presentBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
         presentBarrier.dstAccessMask = 0;
-        presentBarrier.image = ctx.SwapchainImages[m_ImageIndex];
+        presentBarrier.image = ctx->SwapchainImages[m_ImageIndex];
         presentBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         presentBarrier.subresourceRange.baseMipLevel = 0;
         presentBarrier.subresourceRange.levelCount = 1;
@@ -183,17 +195,17 @@ namespace Azer {
         submit_info.signalSemaphoreCount = 1;
         submit_info.pSignalSemaphores = signalSemaphores;
 
-        vkQueueSubmit(ctx.GraphicsQueue, 1, &submit_info, m_Frames[m_CurrentFrameIndex].inFlightFence);
+        vkQueueSubmit(ctx->GraphicsQueue, 1, &submit_info, m_Frames[m_CurrentFrameIndex].inFlightFence);
 
         VkPresentInfoKHR present_info{};
         present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
         present_info.swapchainCount = 1;
-        present_info.pSwapchains = &ctx.Swapchain;
+        present_info.pSwapchains = &ctx->Swapchain;
         present_info.pImageIndices = &m_ImageIndex;
         present_info.waitSemaphoreCount = 1;
         present_info.pWaitSemaphores = signalSemaphores;
         
-        vkQueuePresentKHR(ctx.GraphicsQueue, &present_info);
+        vkQueuePresentKHR(ctx->GraphicsQueue, &present_info);
 
         m_CurrentFrameIndex = (m_CurrentFrameIndex + 1) % MAX_FLIGHT_FRAMES;
     }
@@ -215,7 +227,13 @@ namespace Azer {
 
     void VulkanRenderer::SetViewport(uint32_t width, uint32_t height, uint32_t offsetX, uint32_t offsetY)
     {
-        AZ_ASSERT(false, "VulkanRenderer::SetViewport not implemented yet");
+        m_Viewport = { (float)offsetX, (float)offsetY, (float)width, (float)height };
+    }
+
+    void VulkanRenderer::Resize(uint32_t width, uint32_t height)
+    {
+        vkDeviceWaitIdle(m_CtxManager.GetContext()->Device);
+        m_CtxManager.ReCreateSwapchain(width, height);
     }
 
     void VulkanRenderer::DrawQuad(float x, float y, float w, float h, float alpha)
@@ -259,7 +277,7 @@ namespace Azer {
 
     void VulkanRenderer::ImGuiInit(SDL_Window *window)
     {
-        const VulkanContext& ctx = m_Context.GetContext();
+        const Ref<VulkanContext>& ctx = m_CtxManager.GetContext();
 
         ImGuiIO& io = ImGui::GetIO();
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
@@ -271,13 +289,13 @@ namespace Azer {
 
         ImGui_ImplVulkan_InitInfo init_info = {};
         init_info.ApiVersion = VK_API_VERSION_1_3;
-        init_info.Instance = ctx.Instance;
-        init_info.PhysicalDevice = ctx.PhysicalDevice;
-        init_info.Device = ctx.Device;
-        init_info.QueueFamily = ctx.QueueFamilyIndex;
-        init_info.Queue = ctx.GraphicsQueue;
+        init_info.Instance = ctx->Instance;
+        init_info.PhysicalDevice = ctx->PhysicalDevice;
+        init_info.Device = ctx->Device;
+        init_info.QueueFamily = ctx->QueueFamilyIndex;
+        init_info.Queue = ctx->GraphicsQueue;
         init_info.PipelineCache = VK_NULL_HANDLE;
-        init_info.DescriptorPool = ctx.ImGuiDescriptorPool;
+        init_info.DescriptorPool = ctx->ImGuiDescriptorPool;
         init_info.MinImageCount = 2;
         init_info.ImageCount = MAX_FLIGHT_FRAMES;
         init_info.Allocator = nullptr;
@@ -290,7 +308,7 @@ namespace Azer {
 
         init_info.PipelineInfoMain.PipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
         init_info.PipelineInfoMain.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
-        init_info.PipelineInfoMain.PipelineRenderingCreateInfo.pColorAttachmentFormats = &ctx.SwapchainImageFormat;
+        init_info.PipelineInfoMain.PipelineRenderingCreateInfo.pColorAttachmentFormats = &ctx->SwapchainImageFormat;
 
         ImGui_ImplVulkan_Init(&init_info);
     }
@@ -339,23 +357,22 @@ namespace Azer {
 
     void VulkanRenderer::DestroyFrameResources()
     {
-        const VulkanContext& ctx = m_Context.GetContext();
+        const Ref<VulkanContext>& ctx = m_CtxManager.GetContext();
 
         for (auto& frame: m_Frames)
         {
-            vkFreeCommandBuffers(ctx.Device, ctx.cmdPool, 1, &frame.cmdBuffer->Get());
             frame.cmdBuffer.reset();
 
             if (frame.inFlightFence != VK_NULL_HANDLE)
             {
-                vkDestroyFence(ctx.Device, frame.inFlightFence, nullptr);
+                vkDestroyFence(ctx->Device, frame.inFlightFence, nullptr);
                 AZ_CORE_DEBUG("Destroy Fence");
                 frame.inFlightFence = VK_NULL_HANDLE;
             }
 
             if (frame.imageAvaliableSemaphore != VK_NULL_HANDLE) 
             {
-                vkDestroySemaphore(ctx.Device, frame.imageAvaliableSemaphore, nullptr);
+                vkDestroySemaphore(ctx->Device, frame.imageAvaliableSemaphore, nullptr);
                 AZ_CORE_DEBUG("Destroy Semaphore");
                 frame.imageAvaliableSemaphore = VK_NULL_HANDLE;
             }
@@ -365,7 +382,7 @@ namespace Azer {
         {
             if (sem != VK_NULL_HANDLE)
             {
-                vkDestroySemaphore(ctx.Device, sem, nullptr);
+                vkDestroySemaphore(ctx->Device, sem, nullptr);
                 AZ_CORE_DEBUG("Destroy Semaphore");
                 sem = VK_NULL_HANDLE;
             }

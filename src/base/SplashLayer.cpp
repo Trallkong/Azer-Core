@@ -27,20 +27,15 @@ namespace Azer
             RequestRemove();
     }
 
-    void SplashLayer::OnDraw()
-    {
-        Layer::OnDraw();
-    }
-
-    void SplashLayer::OnEvent(Event& event)
+    void SplashLayer::OnEvent(const Event& event)
     {
         Layer::OnEvent(event);
-        EventDispatcher dispatcher(event);
-        dispatcher.Dispatch<KeyPressedEvent>([this](const KeyPressedEvent& e)
-        {
-            RequestRemove();
-            return true;
-        });
+        std::visit([this](auto&& e){
+            using T = std::decay_t<decltype(e)>;
+            if constexpr (std::is_same_v<T, KeyPressedEvent>) {
+                RequestRemove();
+            }
+        }, event.data);
     }
 
     void SplashLayer::OnImGuiRender()

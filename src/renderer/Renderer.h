@@ -28,6 +28,7 @@ namespace Azer
         virtual void SetCamera(Camera& camera) = 0;
         virtual void ResetRenderState() = 0;  // 重置渲染状态（缩放等），在切换渲染目标后调用
         virtual void SetRenderTarget(Framebuffer* target) = 0;  // nullptr = swapchain
+        virtual void Resize(uint32_t width, uint32_t height) = 0;
         virtual void SetViewport(uint32_t width, uint32_t height, uint32_t offsetX, uint32_t offsetY) = 0;
 
         // Renderer2D

@@ -28,20 +28,22 @@ namespace Azer {
         VkCommandPool cmdPool;
     };
 
-    class VulkanRendererContext {
+    class VulkanContextManager {
     public:
-        VulkanRendererContext() = default;
-        ~VulkanRendererContext() = default;
+        VulkanContextManager() = default;
+        ~VulkanContextManager() = default;
 
         void Init(Window* window);
         void Shutdown();
 
-        inline VulkanContext& GetContext() { return m_Context; }
-        inline const VulkanContext& GetContext() const { return m_Context; }
+        void ReCreateSwapchain(uint32_t width, uint32_t height);
+
+        inline Ref<VulkanContext> GetContext() { return m_Context; }
+        inline const Ref<VulkanContext>& GetContext() const { return m_Context; }
 
     private:
         Window* m_Window;
-        VulkanContext m_Context;
+        Ref<VulkanContext> m_Context;
 
         std::vector<const char*> m_RequiredDeviceExtensions = {
             VK_KHR_SWAPCHAIN_EXTENSION_NAME,
@@ -59,8 +61,8 @@ namespace Azer {
     
         void createLogicalDevice();
         void createSurface();
+        
         void createSwapchain();
-
         VkSurfaceFormatKHR chooseSwapchainFormat();
         VkPresentModeKHR chooseSwapchainPresentMode();
         void chooseSwapchainExtent();

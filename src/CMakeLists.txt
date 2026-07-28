@@ -68,7 +68,7 @@ add_library(Azer
         base/file_system/FileSystem.h
 
         # --- Backend: Vulkan ---
-        backends/Vulkan/VulkanRendererContext.cpp
+        backends/Vulkan/VulkanContextManager.cpp
         backends/Vulkan/VulkanFrameBuffer.cpp
         backends/Vulkan/VulkanRenderer.cpp
         backends/Vulkan/vk_mem_alloc.cpp
@@ -96,7 +96,7 @@ target_include_directories(Azer PRIVATE
 
 target_link_libraries(Azer PRIVATE vendor)
 
-target_compile_definitions(Azer PRIVATE _CRT_SECURE_NO_WARNINGS GLM_ENABLE_EXPERIMENTAL AZ_DEBUG)
+target_compile_definitions(Azer PRIVATE _CRT_SECURE_NO_WARNINGS GLM_ENABLE_EXPERIMENTAL AZ_ENABLE_DEBUG)
 
 if(AZER_ENABLE_DOCKING)
     target_compile_definitions(Azer PUBLIC AZER_ENABLE_DOCKING)

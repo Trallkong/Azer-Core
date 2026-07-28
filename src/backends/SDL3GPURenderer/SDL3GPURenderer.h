@@ -26,6 +26,7 @@ namespace Azer
         void SetCamera(Camera& camera) override;
         void ResetRenderState() override;
         void SetRenderTarget(Framebuffer* target) override;
+        void Resize(uint32_t width, uint32_t height) override {}
         void SetViewport(uint32_t width, uint32_t height, uint32_t offsetX, uint32_t offsetY) override;
 
         // Renderer2D

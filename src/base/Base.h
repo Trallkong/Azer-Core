@@ -35,6 +35,9 @@ namespace Azer
         return std::weak_ptr<T>(ref);
     }
 
+    template<class... Ts> struct Overloaded : Ts... { using Ts::operator()...; };
+    template<class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-    #define AZ_ASSERT(x, ...) { if(!(x)) { AZ_ERROR("Assertion Failed: {0}", __VA_ARGS__); __debugbreak(); } }
+
+    #define AZ_ASSERT(x, ...) { if(!(x)) { AZ_CORE_ERROR("Assertion Failed: {0}", __VA_ARGS__); __debugbreak(); } }
 }

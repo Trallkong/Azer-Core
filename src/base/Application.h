@@ -36,14 +36,16 @@ namespace Azer
         inline float GetPhysicsHz() const { return m_PhysicsHz; }
 
     private:
-        void OnEvent(Event& e);
+        void OnEvent(const Event& e);
         void OnImGuiRender();
         bool OnWindowResize(const WindowResizeEvent& event);
+        bool OnWindowMinimized(const WindowMinimizedEvent& event);
 
         Scope<Window> m_Window = nullptr;
         Scope<Renderer> m_Renderer = nullptr;
 
         bool m_Running = true;
+        bool m_Minimized = false;
         SDL_Event m_Event {};
 
         LayerStack m_LayerStack {};

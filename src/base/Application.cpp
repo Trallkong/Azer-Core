@@ -73,15 +73,16 @@ namespace Azer
                 if (m_Event.type == SDL_EVENT_QUIT)
                     m_Running = false;
 
-                Scope<Event> event = CreateEventFromSDL(m_Event);
-                if (!event)
+                Event event = CreateEventFromSDL(m_Event);
+
+                if (std::holds_alternative<std::monostate>(event.data))
                     continue;
 
-                OnEvent(*event);
+                OnEvent(event);
                 for (auto i = layers.rbegin(); i != layers.rend(); ++i)
                 {
-                    (*i)->OnEvent(*event);
-                    if (event->IsHandled())
+                    (*i)->OnEvent(event);
+                    if (event.IsHandled())
                         break;
                 }
             }
@@ -112,32 +113,35 @@ namespace Azer
             for (auto i = layers.begin(); i != layers.end(); ++i)
                 (*i)->OnInterpolate(alpha);
 
-            // OnDraw
-            m_ImGuiLayer->Begin();
-            OnImGuiRender();
-            for (auto i = layers.begin(); i != layers.end(); ++i)
+            if (!m_Minimized)
             {
-                (*i)->OnImGuiRender();
-            }
-            m_ImGuiLayer->End();
+                // OnDraw
+                m_ImGuiLayer->Begin();
+                OnImGuiRender();
+                for (auto i = layers.begin(); i != layers.end(); ++i)
+                {
+                    (*i)->OnImGuiRender();
+                }
+                m_ImGuiLayer->End();
 
-            m_Renderer->BeginFrame(glm::vec3(m_ClearColor[0], m_ClearColor[1], m_ClearColor[2]));
-            for (auto i = layers.begin(); i != layers.end(); ++i)
-            {
-                (*i)->OnDraw();
-            }
-            m_Renderer->EndFrame();
+                m_Renderer->BeginFrame(glm::vec3(m_ClearColor[0], m_ClearColor[1], m_ClearColor[2]));
+                for (auto i = layers.begin(); i != layers.end(); ++i)
+                {
+                    (*i)->OnDraw();
+                }
+                m_Renderer->EndFrame();
 
-            // 移除标记为待删的层
-            std::vector<Layer*> toDetach;
-            for (auto* layer : m_LayerStack)
-                if (layer->IsPendingRemove())
-                    toDetach.push_back(layer);
-            for (auto* layer : toDetach)
-            {
-                layer->OnDetach();
-                m_LayerStack.Erase(layer);
-                m_LayersToDelete.push_back(layer);
+                // 移除标记为待删的层
+                std::vector<Layer*> toDetach;
+                for (auto* layer : m_LayerStack)
+                    if (layer->IsPendingRemove())
+                        toDetach.push_back(layer);
+                for (auto* layer : toDetach)
+                {
+                    layer->OnDetach();
+                    m_LayerStack.Erase(layer);
+                    m_LayersToDelete.push_back(layer);
+                }
             }
 
             // 垃圾回收
@@ -177,23 +181,16 @@ namespace Azer
         m_LayerStack.PopOverlay();
     }
 
-    void Application::OnEvent(Event& e)
+    void Application::OnEvent(const Event& event)
     {
-        EventDispatcher dispatcher(e);
-        dispatcher.Dispatch<WindowResizeEvent>([this](const WindowResizeEvent& e)
-        {
-            return OnWindowResize(e);
-        });
-        dispatcher.Dispatch<KeyPressedEvent>([](const KeyPressedEvent& e)
-        {
-            Input::KeyPressed(e.GetKeyCode());
-            return false;
-        });
-        dispatcher.Dispatch<KeyReleasedEvent>([](const KeyReleasedEvent& e)
-        {
-            Input::KeyReleased(e.GetKeyCode());
-            return false;
-        });
+        std::visit(Overloaded{
+            [this](const WindowResizeEvent& arg) { OnWindowResize(arg); },
+            [this](const WindowMinimizedEvent& arg) { OnWindowMinimized(arg); },
+            [this](const WindowRestoredEvent& arg) { AZ_CORE_DEBUG("Window Restored!"); m_Minimized = false; },
+            [this](const KeyPressedEvent& arg) { Input::KeyPressed(arg.GetKeyCode()); },
+            [this](const KeyReleasedEvent& arg) { Input::KeyReleased(arg.GetKeyCode()); },
+            [](const auto&) {}
+        }, event.data);
     }
 
     void Application::OnImGuiRender()
@@ -207,7 +204,15 @@ namespace Azer
     bool Application::OnWindowResize(const WindowResizeEvent& event)
     {
         AZ_CORE_TRACE("Window Resize Event: {0} {1}", event.GetWidth(), event.GetHeight());
-        m_Renderer->SetViewport(event.GetWidth(), event.GetHeight(), 0, 0);
+        m_Renderer->Resize(event.GetWidth(), event.GetHeight());
+        m_Minimized = false;
+        return false;
+    }
+
+    bool Application::OnWindowMinimized(const WindowMinimizedEvent &event)
+    {
+        AZ_CORE_DEBUG("Window Minimized!");
+        m_Minimized = true;
         return false;
     }
 }

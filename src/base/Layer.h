@@ -54,7 +54,7 @@ namespace Azer
         /// 每帧绘制，发生在 BeginFrame 与 EndFrame 之间
         virtual void OnDraw() {}
         /// 事件处理，按逆序分发给各层（覆盖层优先）
-        virtual void OnEvent(Event& event) {}
+        virtual void OnEvent(const Event& event) {}
         /// ImGui 面板绘制
         virtual void OnImGuiRender() {}
 

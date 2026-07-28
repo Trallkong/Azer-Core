@@ -1,14 +1,16 @@
 #include "azpch.h"
-#include "VulkanRendererContext.h"
+#include "VulkanContextManager.h"
 
 #include "SDL3/SDL.h"
 #include "SDL3/SDL_vulkan.h"
 
 namespace Azer {
 
-    void VulkanRendererContext::Init(Window* window)
+    void VulkanContextManager::Init(Window* window)
     {
         m_Window = window;
+
+        m_Context = CreateRef<VulkanContext>();
 
         // Initialize Vulkan instance
         VkApplicationInfo appInfo{};
@@ -36,7 +38,7 @@ namespace Azer {
 
 
         // 验证 验证层的有效性
-        #ifdef AZ_DEBUG
+        #ifdef AZ_ENABLE_DEBUG
         const char* validationLayerName = "VK_LAYER_KHRONOS_validation";
         ValidateLayer(validationLayerName);
         #endif
@@ -47,7 +49,7 @@ namespace Azer {
         createInfo.enabledExtensionCount = extensionCount;
         createInfo.ppEnabledExtensionNames = requiredExtensions;
 
-        #ifdef AZ_DEBUG
+        #ifdef AZ_ENABLE_DEBUG
         createInfo.enabledLayerCount = 1;
         const char* validationLayers[] = { validationLayerName };
         createInfo.ppEnabledLayerNames = validationLayers;
@@ -56,7 +58,7 @@ namespace Azer {
         createInfo.ppEnabledLayerNames = nullptr;
         #endif
 
-        VkResult result = vkCreateInstance(&createInfo, nullptr, &m_Context.Instance);
+        VkResult result = vkCreateInstance(&createInfo, nullptr, &m_Context->Instance);
         AZ_ASSERT(result == VK_SUCCESS, "Failed to create Vulkan instance");
 
         createSurface();
@@ -73,71 +75,114 @@ namespace Azer {
         createCommandPool();
     }
 
-    void VulkanRendererContext::Shutdown()
+    void VulkanContextManager::Shutdown()
     {
         // 1. 等待设备空闲
-        if (m_Context.Device != VK_NULL_HANDLE) {
-            vkDeviceWaitIdle(m_Context.Device);
+        if (m_Context->Device != VK_NULL_HANDLE) {
+            vkDeviceWaitIdle(m_Context->Device);
         }
 
         // 2. 销毁命令池（会隐式销毁所有命令缓冲区）
-        if (m_Context.cmdPool != VK_NULL_HANDLE) {
-            vkDestroyCommandPool(m_Context.Device, m_Context.cmdPool, nullptr);
-            m_Context.cmdPool = VK_NULL_HANDLE;
+        if (m_Context->cmdPool != VK_NULL_HANDLE) {
+            vkDestroyCommandPool(m_Context->Device, m_Context->cmdPool, nullptr);
+            m_Context->cmdPool = VK_NULL_HANDLE;
         }
 
         // 3. 销毁描述符池
-        if (m_Context.ImGuiDescriptorPool != VK_NULL_HANDLE) {
-            vkDestroyDescriptorPool(m_Context.Device, m_Context.ImGuiDescriptorPool, nullptr);
-            m_Context.ImGuiDescriptorPool = VK_NULL_HANDLE;
+        if (m_Context->ImGuiDescriptorPool != VK_NULL_HANDLE) {
+            vkDestroyDescriptorPool(m_Context->Device, m_Context->ImGuiDescriptorPool, nullptr);
+            m_Context->ImGuiDescriptorPool = VK_NULL_HANDLE;
         }
 
         // 4. 销毁你的自定义描述符池（如果有）
-        if (m_Context.MyDescriptorPool != VK_NULL_HANDLE) {
-            vkDestroyDescriptorPool(m_Context.Device, m_Context.MyDescriptorPool, nullptr);
+        if (m_Context->MyDescriptorPool != VK_NULL_HANDLE) {
+            vkDestroyDescriptorPool(m_Context->Device, m_Context->MyDescriptorPool, nullptr);
         }
 
         // 5. 销毁 VMA 分配器
-        if (m_Context.Allocator != VK_NULL_HANDLE) {
-            vmaDestroyAllocator(m_Context.Allocator);
-            m_Context.Allocator = VK_NULL_HANDLE;
+        if (m_Context->Allocator != VK_NULL_HANDLE) {
+            vmaDestroyAllocator(m_Context->Allocator);
+            m_Context->Allocator = VK_NULL_HANDLE;
         }
 
         // 6. 销毁交换链图像视图
-        for (auto& imageView : m_Context.SwapchainImageViews) {
+        for (auto& imageView : m_Context->SwapchainImageViews) {
             if (imageView != VK_NULL_HANDLE) {
-                vkDestroyImageView(m_Context.Device, imageView, nullptr);
+                vkDestroyImageView(m_Context->Device, imageView, nullptr);
                 imageView = VK_NULL_HANDLE;
             }
         }
-        m_Context.SwapchainImageViews.clear();
+        m_Context->SwapchainImageViews.clear();
 
         // 7. 销毁交换链
-        if (m_Context.Swapchain != VK_NULL_HANDLE) {
-            vkDestroySwapchainKHR(m_Context.Device, m_Context.Swapchain, nullptr);
-            m_Context.Swapchain = VK_NULL_HANDLE;
+        if (m_Context->Swapchain != VK_NULL_HANDLE) {
+            vkDestroySwapchainKHR(m_Context->Device, m_Context->Swapchain, nullptr);
+            m_Context->Swapchain = VK_NULL_HANDLE;
         }
 
         // 8. 销毁表面
-        if (m_Context.Surface != VK_NULL_HANDLE) {
-            vkDestroySurfaceKHR(m_Context.Instance, m_Context.Surface, nullptr);
-            m_Context.Surface = VK_NULL_HANDLE;
+        if (m_Context->Surface != VK_NULL_HANDLE) {
+            vkDestroySurfaceKHR(m_Context->Instance, m_Context->Surface, nullptr);
+            m_Context->Surface = VK_NULL_HANDLE;
         }
 
         // 9. 销毁逻辑设备
-        if (m_Context.Device != VK_NULL_HANDLE) {
-            vkDestroyDevice(m_Context.Device, nullptr);
-            m_Context.Device = VK_NULL_HANDLE;
+        if (m_Context->Device != VK_NULL_HANDLE) {
+            vkDestroyDevice(m_Context->Device, nullptr);
+            m_Context->Device = VK_NULL_HANDLE;
         }
 
         // 10. 销毁实例
-        if (m_Context.Instance != VK_NULL_HANDLE) {
-            vkDestroyInstance(m_Context.Instance, nullptr);
-            m_Context.Instance = VK_NULL_HANDLE;
+        if (m_Context->Instance != VK_NULL_HANDLE) {
+            vkDestroyInstance(m_Context->Instance, nullptr);
+            m_Context->Instance = VK_NULL_HANDLE;
         }
     }
 
-    std::vector<VkExtensionProperties> VulkanRendererContext::EnumerateInstanceExtensions()
+    void VulkanContextManager::ReCreateSwapchain(uint32_t width, uint32_t height)
+    {
+        if (m_Context->Swapchain != VK_NULL_HANDLE) 
+        {
+            vkDeviceWaitIdle(m_Context->Device);
+            vkDestroySwapchainKHR(m_Context->Device, m_Context->Swapchain, nullptr);
+        }
+
+        VkSurfaceFormatKHR surfaceFormat = chooseSwapchainFormat();
+        VkPresentModeKHR presentMode = chooseSwapchainPresentMode();
+        m_Context->SwapchainImageExtent = { width, height };
+
+        VkSwapchainCreateInfoKHR swapchainCreateInfo{};
+        swapchainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+        swapchainCreateInfo.surface = m_Context->Surface;
+        swapchainCreateInfo.minImageCount = 2; // 双缓冲
+        swapchainCreateInfo.imageFormat = surfaceFormat.format;
+        swapchainCreateInfo.imageColorSpace = surfaceFormat.colorSpace;
+        swapchainCreateInfo.imageExtent = m_Context->SwapchainImageExtent;
+        swapchainCreateInfo.presentMode = presentMode;
+        swapchainCreateInfo.imageArrayLayers = 1;
+        swapchainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        swapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+        VkSurfaceCapabilitiesKHR surfaceCapabilities;
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_Context->PhysicalDevice, m_Context->Surface, &surfaceCapabilities);
+
+        swapchainCreateInfo.preTransform = surfaceCapabilities.currentTransform;
+        swapchainCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+        swapchainCreateInfo.clipped = VK_TRUE;
+
+        VkResult result = vkCreateSwapchainKHR(m_Context->Device, &swapchainCreateInfo, nullptr, &m_Context->Swapchain);
+        AZ_ASSERT(result == VK_SUCCESS, "Failed to create swapchain");
+
+        uint32_t imageCount = 0;
+        vkGetSwapchainImagesKHR(m_Context->Device, m_Context->Swapchain, &imageCount, nullptr);
+        m_Context->SwapchainImages.clear();
+        m_Context->SwapchainImages.resize(imageCount);
+        vkGetSwapchainImagesKHR(m_Context->Device, m_Context->Swapchain, &imageCount, m_Context->SwapchainImages.data());
+    
+        createSwapchainImageViews();
+    }
+
+    std::vector<VkExtensionProperties> VulkanContextManager::EnumerateInstanceExtensions()
     {
         uint32_t extensionCount = 0;
         vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
@@ -149,15 +194,15 @@ namespace Azer {
         std::vector<VkExtensionProperties> extensions(extensionCount);
         vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
 
-        AZ_CORE_INFO("Available Vulkan Instance Extensions:");
+        AZ_CORE_DEBUG("Available Vulkan Instance Extensions:");
         for (const auto& ext : extensions) {
-            AZ_CORE_INFO("  {} (version {})", ext.extensionName, ext.specVersion);
+            AZ_CORE_DEBUG("  {} (version {})", ext.extensionName, ext.specVersion);
         }
 
         return extensions;
     }
     
-    std::vector<VkLayerProperties> VulkanRendererContext::EnumerateInstanceLayers()
+    std::vector<VkLayerProperties> VulkanContextManager::EnumerateInstanceLayers()
     {
         uint32_t layerCount = 0;
         vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
@@ -169,15 +214,15 @@ namespace Azer {
         std::vector<VkLayerProperties> layers(layerCount);
         vkEnumerateInstanceLayerProperties(&layerCount, layers.data());
 
-        AZ_CORE_INFO("Available Vulkan Instance Layers:");
+        AZ_CORE_DEBUG("Available Vulkan Instance Layers:");
         for (const auto& layer : layers) {
-            AZ_CORE_INFO("  {0} (version {1})", layer.layerName, layer.specVersion);
+            AZ_CORE_DEBUG("  {0} (version {1})", layer.layerName, layer.specVersion);
         }
 
         return layers;
     }
 
-    void VulkanRendererContext::ValidateLayer(const char *layerName)
+    void VulkanContextManager::ValidateLayer(const char *layerName)
     {
         std::vector<VkLayerProperties> layers = EnumerateInstanceLayers();
         bool found = false;
@@ -190,14 +235,14 @@ namespace Azer {
         AZ_ASSERT(found, "Vulkan layer not found: %s", layerName);
     }
 
-    void VulkanRendererContext::choosePhysicalDevice()
+    void VulkanContextManager::choosePhysicalDevice()
     {
         uint32_t physicalDeviceCount = 0;
-        vkEnumeratePhysicalDevices(m_Context.Instance, &physicalDeviceCount, nullptr);
+        vkEnumeratePhysicalDevices(m_Context->Instance, &physicalDeviceCount, nullptr);
         AZ_ASSERT(physicalDeviceCount > 0, "Failed to find GPUs with Vulkan support");
 
         std::vector<VkPhysicalDevice> physicalDevices(physicalDeviceCount);
-        vkEnumeratePhysicalDevices(m_Context.Instance, &physicalDeviceCount, physicalDevices.data());
+        vkEnumeratePhysicalDevices(m_Context->Instance, &physicalDeviceCount, physicalDevices.data());
 
         for (const auto& device : physicalDevices) {
             VkPhysicalDeviceProperties deviceProperties;
@@ -227,7 +272,7 @@ namespace Azer {
                 }
 
                 VkBool32 presentSupport = false;
-                vkGetPhysicalDeviceSurfaceSupportKHR(device, i, m_Context.Surface, &presentSupport);
+                vkGetPhysicalDeviceSurfaceSupportKHR(device, i, m_Context->Surface, &presentSupport);
                 if (presentSupport)
                 {
                     presentQueueIndex = i;
@@ -260,12 +305,12 @@ namespace Azer {
             if (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
                 deviceFeatures.geometryShader && foundGraphicsQueue && foundPresentQueue && swapchainSupported
             ) {
-                m_Context.PhysicalDevice = device;
-                m_Context.QueueFamilyIndex = graphicsQueueIndex;
-                m_Context.PresentQueueFamilyIndex = presentQueueIndex;
+                m_Context->PhysicalDevice = device;
+                m_Context->QueueFamilyIndex = graphicsQueueIndex;
+                m_Context->PresentQueueFamilyIndex = presentQueueIndex;
 
-                AZ_CORE_INFO("Selected GPU: {0}", deviceProperties.deviceName);
-                AZ_CORE_INFO("Graphics Queue: {0}, Present Queue: {1}", graphicsQueueIndex, presentQueueIndex);
+                AZ_CORE_DEBUG("Selected GPU: {0}", deviceProperties.deviceName);
+                AZ_CORE_DEBUG("Graphics Queue: {0}, Present Queue: {1}", graphicsQueueIndex, presentQueueIndex);
                 return;
             }
         }
@@ -278,12 +323,12 @@ namespace Azer {
         AZ_ASSERT(false, "Failed to find a suitable Vulkan physical device!");
     }
 
-    void VulkanRendererContext::validateDeviceExtensions()
+    void VulkanContextManager::validateDeviceExtensions()
     {
         uint32_t extensionCount = 0;
-        vkEnumerateDeviceExtensionProperties(m_Context.PhysicalDevice, nullptr, &extensionCount, nullptr);
+        vkEnumerateDeviceExtensionProperties(m_Context->PhysicalDevice, nullptr, &extensionCount, nullptr);
         std::vector<VkExtensionProperties> deviceExtensions(extensionCount);
-        vkEnumerateDeviceExtensionProperties(m_Context.PhysicalDevice, nullptr, &extensionCount, deviceExtensions.data());
+        vkEnumerateDeviceExtensionProperties(m_Context->PhysicalDevice, nullptr, &extensionCount, deviceExtensions.data());
 
         for (const char* requiredExtension : m_RequiredDeviceExtensions) {
             bool found = false;
@@ -297,15 +342,15 @@ namespace Azer {
         }
     }
 
-    void VulkanRendererContext::createLogicalDevice()
+    void VulkanContextManager::createLogicalDevice()
     {
         float queuePriority = 1.0f;
 
         // ⭐ 处理图形和呈现队列（可能相同也可能不同）
         std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
         std::set<uint32_t> uniqueQueueFamilies = {
-            m_Context.QueueFamilyIndex,
-            m_Context.PresentQueueFamilyIndex
+            m_Context->QueueFamilyIndex,
+            m_Context->PresentQueueFamilyIndex
         };
 
         for (uint32_t queueFamily : uniqueQueueFamilies) {
@@ -345,20 +390,20 @@ namespace Azer {
         deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
         deviceCreateInfo.enabledLayerCount = 0;  // 设备层已弃用
 
-        VkResult result = vkCreateDevice(m_Context.PhysicalDevice, &deviceCreateInfo, nullptr, &m_Context.Device);
+        VkResult result = vkCreateDevice(m_Context->PhysicalDevice, &deviceCreateInfo, nullptr, &m_Context->Device);
         AZ_ASSERT(result == VK_SUCCESS, "Failed to create logical device!");
 
         // ⭐ 获取队列句柄
-        vkGetDeviceQueue(m_Context.Device, m_Context.QueueFamilyIndex, 0, &m_Context.GraphicsQueue);
-        vkGetDeviceQueue(m_Context.Device, m_Context.PresentQueueFamilyIndex, 0, &m_Context.PresentQueue);
+        vkGetDeviceQueue(m_Context->Device, m_Context->QueueFamilyIndex, 0, &m_Context->GraphicsQueue);
+        vkGetDeviceQueue(m_Context->Device, m_Context->PresentQueueFamilyIndex, 0, &m_Context->PresentQueue);
     }
 
-    void VulkanRendererContext::createSurface()
+    void VulkanContextManager::createSurface()
     {
-        SDL_Vulkan_CreateSurface(static_cast<SDL_Window*>(m_Window->GetHandle()), m_Context.Instance, nullptr, &m_Context.Surface);
+        SDL_Vulkan_CreateSurface(static_cast<SDL_Window*>(m_Window->GetHandle()), m_Context->Instance, nullptr, &m_Context->Surface);
     }
 
-    void VulkanRendererContext::createSwapchain()
+    void VulkanContextManager::createSwapchain()
     {
         VkSurfaceFormatKHR surfaceFormat = chooseSwapchainFormat();
         VkPresentModeKHR presentMode = chooseSwapchainPresentMode();
@@ -366,79 +411,79 @@ namespace Azer {
 
         VkSwapchainCreateInfoKHR swapchainCreateInfo{};
         swapchainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-        swapchainCreateInfo.surface = m_Context.Surface;
+        swapchainCreateInfo.surface = m_Context->Surface;
         swapchainCreateInfo.minImageCount = 2; // 双缓冲
         swapchainCreateInfo.imageFormat = surfaceFormat.format;
         swapchainCreateInfo.imageColorSpace = surfaceFormat.colorSpace;
-        swapchainCreateInfo.imageExtent = m_Context.SwapchainImageExtent;
+        swapchainCreateInfo.imageExtent = m_Context->SwapchainImageExtent;
         swapchainCreateInfo.presentMode = presentMode;
         swapchainCreateInfo.imageArrayLayers = 1;
         swapchainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         swapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
         VkSurfaceCapabilitiesKHR surfaceCapabilities;
-        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_Context.PhysicalDevice, m_Context.Surface, &surfaceCapabilities);
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_Context->PhysicalDevice, m_Context->Surface, &surfaceCapabilities);
 
         swapchainCreateInfo.preTransform = surfaceCapabilities.currentTransform;
         swapchainCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
         swapchainCreateInfo.clipped = VK_TRUE;
 
-        VkResult result = vkCreateSwapchainKHR(m_Context.Device, &swapchainCreateInfo, nullptr, &m_Context.Swapchain);
+        VkResult result = vkCreateSwapchainKHR(m_Context->Device, &swapchainCreateInfo, nullptr, &m_Context->Swapchain);
         AZ_ASSERT(result == VK_SUCCESS, "Failed to create swapchain");
 
         uint32_t imageCount = 0;
-        vkGetSwapchainImagesKHR(m_Context.Device, m_Context.Swapchain, &imageCount, nullptr);
-        m_Context.SwapchainImages.clear();
-        m_Context.SwapchainImages.resize(imageCount);
-        vkGetSwapchainImagesKHR(m_Context.Device, m_Context.Swapchain, &imageCount, m_Context.SwapchainImages.data());
+        vkGetSwapchainImagesKHR(m_Context->Device, m_Context->Swapchain, &imageCount, nullptr);
+        m_Context->SwapchainImages.clear();
+        m_Context->SwapchainImages.resize(imageCount);
+        vkGetSwapchainImagesKHR(m_Context->Device, m_Context->Swapchain, &imageCount, m_Context->SwapchainImages.data());
     }
 
-    VkSurfaceFormatKHR VulkanRendererContext::chooseSwapchainFormat()
+    VkSurfaceFormatKHR VulkanContextManager::chooseSwapchainFormat()
     {
         uint32_t formatCount = 0;
-        vkGetPhysicalDeviceSurfaceFormatsKHR(m_Context.PhysicalDevice, m_Context.Surface, &formatCount, nullptr);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(m_Context->PhysicalDevice, m_Context->Surface, &formatCount, nullptr);
         std::vector<VkSurfaceFormatKHR> surfaceFormats(formatCount);
-        vkGetPhysicalDeviceSurfaceFormatsKHR(m_Context.PhysicalDevice, m_Context.Surface, &formatCount, surfaceFormats.data());
+        vkGetPhysicalDeviceSurfaceFormatsKHR(m_Context->PhysicalDevice, m_Context->Surface, &formatCount, surfaceFormats.data());
         
         for (const auto& format : surfaceFormats) {
             if (format.format == VK_FORMAT_B8G8R8A8_SRGB && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-                m_Context.SwapchainImageFormat = format.format;
-                AZ_INFO("Using VK_FORMAT_B8G8R8A8_SRGB with VK_COLOR_SPACE_SRGB_NONLINEAR_KHR for swapchain");
+                m_Context->SwapchainImageFormat = format.format;
+                AZ_CORE_DEBUG("Using VK_FORMAT_B8G8R8A8_SRGB with VK_COLOR_SPACE_SRGB_NONLINEAR_KHR for swapchain");
                 return format;
             }
         }
         
-        AZ_INFO("Using default swapchain format");
-        m_Context.SwapchainImageFormat = surfaceFormats[0].format;
+        AZ_CORE_DEBUG("Using default swapchain format");
+        m_Context->SwapchainImageFormat = surfaceFormats[0].format;
         return surfaceFormats[0];
     }   
 
-    VkPresentModeKHR VulkanRendererContext::chooseSwapchainPresentMode()
+    VkPresentModeKHR VulkanContextManager::chooseSwapchainPresentMode()
     {
         uint32_t presentModeCount = 0;
-        vkGetPhysicalDeviceSurfacePresentModesKHR(m_Context.PhysicalDevice, m_Context.Surface, &presentModeCount, nullptr);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(m_Context->PhysicalDevice, m_Context->Surface, &presentModeCount, nullptr);
         std::vector<VkPresentModeKHR> presentModes(presentModeCount);
-        vkGetPhysicalDeviceSurfacePresentModesKHR(m_Context.PhysicalDevice, m_Context.Surface, &presentModeCount, presentModes.data());
+        vkGetPhysicalDeviceSurfacePresentModesKHR(m_Context->PhysicalDevice, m_Context->Surface, &presentModeCount, presentModes.data());
         
         for (const auto& mode : presentModes) {
             if (mode == VK_PRESENT_MODE_FIFO_KHR) {
-                AZ_INFO("Using VK_PRESENT_MODE_FIFO_KHR for swapchain");
+                AZ_CORE_DEBUG("Using VK_PRESENT_MODE_FIFO_KHR for swapchain");
                 return mode;
             }
         }
         
-        AZ_INFO("Using default present mode for swapchain");
+        AZ_CORE_DEBUG("Using default present mode for swapchain");
         return presentModes[0];
     }
 
     // 交换范围就是交换链图像的分辨率，几乎是始终与我们绘制窗口的分辨率完全相等像素
-    void VulkanRendererContext::chooseSwapchainExtent()
+    void VulkanContextManager::chooseSwapchainExtent()
     {
         VkSurfaceCapabilitiesKHR surfaceCapabilities;
-        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_Context.PhysicalDevice, m_Context.Surface, &surfaceCapabilities);
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_Context->PhysicalDevice, m_Context->Surface, &surfaceCapabilities);
 
         if (surfaceCapabilities.currentExtent.width != UINT32_MAX) {
-            m_Context.SwapchainImageExtent = surfaceCapabilities.currentExtent;
+            m_Context->SwapchainImageExtent = surfaceCapabilities.currentExtent;
             return;
         }
 
@@ -448,20 +493,25 @@ namespace Azer {
         uint32_t c_width = std::clamp<uint32_t>(width, surfaceCapabilities.minImageExtent.width, surfaceCapabilities.maxImageExtent.width);
         uint32_t c_height = std::clamp<uint32_t>(height, surfaceCapabilities.minImageExtent.height, surfaceCapabilities.maxImageExtent.height);
         
-        m_Context.SwapchainImageExtent = { c_width, c_height };
+        m_Context->SwapchainImageExtent = { c_width, c_height };
     }
 
-    void VulkanRendererContext::createSwapchainImageViews()
+    void VulkanContextManager::createSwapchainImageViews()
     {
-        m_Context.SwapchainImageViews.clear();
-        m_Context.SwapchainImageViews.resize(m_Context.SwapchainImages.size());
+        for (auto& iv : m_Context->SwapchainImageViews) 
+        {
+            if (iv != VK_NULL_HANDLE)
+                vkDestroyImageView(m_Context->Device, iv, nullptr);
+        }
+        m_Context->SwapchainImageViews.clear();
+        m_Context->SwapchainImageViews.resize(m_Context->SwapchainImages.size());
 
-        for (uint32_t i = 0; i < m_Context.SwapchainImages.size(); ++i) {
+        for (uint32_t i = 0; i < m_Context->SwapchainImages.size(); ++i) {
             VkImageViewCreateInfo viewCreateInfo{};
             viewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-            viewCreateInfo.image = m_Context.SwapchainImages[i];
+            viewCreateInfo.image = m_Context->SwapchainImages[i];
             viewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            viewCreateInfo.format = m_Context.SwapchainImageFormat;
+            viewCreateInfo.format = m_Context->SwapchainImageFormat;
             viewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
             viewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
             viewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -472,33 +522,33 @@ namespace Azer {
             viewCreateInfo.subresourceRange.baseArrayLayer = 0;
             viewCreateInfo.subresourceRange.layerCount = 1;
 
-            VkResult result = vkCreateImageView(m_Context.Device, &viewCreateInfo, nullptr, &m_Context.SwapchainImageViews[i]);
+            VkResult result = vkCreateImageView(m_Context->Device, &viewCreateInfo, nullptr, &m_Context->SwapchainImageViews[i]);
             AZ_ASSERT(result == VK_SUCCESS, "Failed to create image views for swapchain images");
         }
     }
 
-    void VulkanRendererContext::createMemAllocator()
+    void VulkanContextManager::createMemAllocator()
     {
         VmaAllocatorCreateInfo info{};
         info.vulkanApiVersion = VK_API_VERSION_1_3;
-        info.device = m_Context.Device;
-        info.instance = m_Context.Instance;
-        info.physicalDevice = m_Context.PhysicalDevice;
+        info.device = m_Context->Device;
+        info.instance = m_Context->Instance;
+        info.physicalDevice = m_Context->PhysicalDevice;
         info.preferredLargeHeapBlockSize = 0;
         
-        VkResult result = vmaCreateAllocator(&info, &m_Context.Allocator);
+        VkResult result = vmaCreateAllocator(&info, &m_Context->Allocator);
         if (result != VK_SUCCESS) 
         {
             AZ_CORE_ERROR("创建内存分配器失败");
         }
     }
 
-    void VulkanRendererContext::createMyDescriptorPool()
+    void VulkanContextManager::createMyDescriptorPool()
     {
 
     }
 
-    void VulkanRendererContext::createImGuiDescriptorPool()
+    void VulkanContextManager::createImGuiDescriptorPool()
     {
         // 使用 std::array 定义描述符池大小
         std::array<VkDescriptorPoolSize, 11> poolSizes = {{
@@ -517,28 +567,28 @@ namespace Azer {
 
         uint32_t maxSets = 1000 * static_cast<uint32_t>(poolSizes.size());
         
-        m_Context.ImGuiDescriptorPool = createDescriptorPool(
-            m_Context.Device,
+        m_Context->ImGuiDescriptorPool = createDescriptorPool(
+            m_Context->Device,
             poolSizes,
             maxSets
         );
     }
 
-    void VulkanRendererContext::createCommandPool()
+    void VulkanContextManager::createCommandPool()
     {
         VkCommandPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
         poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;  // 允许单独重置 CommandBuffer
-        poolInfo.queueFamilyIndex = m_Context.QueueFamilyIndex;  // 图形队列族索引
+        poolInfo.queueFamilyIndex = m_Context->QueueFamilyIndex;  // 图形队列族索引
 
-        VkResult result = vkCreateCommandPool(m_Context.Device, &poolInfo, nullptr, &m_Context.cmdPool);
+        VkResult result = vkCreateCommandPool(m_Context->Device, &poolInfo, nullptr, &m_Context->cmdPool);
         if (result != VK_SUCCESS) {
             AZ_CORE_ERROR("创建CommandPool失败");
         }
     }
 
     template<size_t N>
-    VkDescriptorPool VulkanRendererContext::createDescriptorPool(
+    VkDescriptorPool VulkanContextManager::createDescriptorPool(
         VkDevice device,
         const std::array<VkDescriptorPoolSize, N>& poolSizes,
         uint32_t maxSets,
