@@ -73,28 +73,37 @@ void Azer::SDL3Renderer::SetRenderTarget(Framebuffer* target)
         SDL_SetRenderTarget(m_Renderer, nullptr);
 }
 
-void Azer::SDL3Renderer::DrawQuad(const float x, const float y, const float w, const float h, const float alpha)
+void Azer::SDL3Renderer::DrawQuad(const Transform2D& transform, float alpha)
 {
-    DrawColorQuad(x, y, w, h, {1.0f, 1.0f, 1.0f, 1.0f}, alpha);
+    DrawColorQuad(transform, {1.0f, 1.0f, 1.0f, alpha});
 }
 
-void Azer::SDL3Renderer::DrawColorQuad(const float x, const float y, const float w, const float h, const glm::vec4& color, const float alpha)
+void Azer::SDL3Renderer::DrawColorQuad(const Transform2D& transform, const glm::vec4& color)
 {
-    const SDL_FRect rect = { x - offsetX, y - offsetY, w, h };
+    const SDL_FRect rect = {
+        transform.Position.x - transform.Scale.x * 0.5f - offsetX,
+        transform.Position.y - transform.Scale.y * 0.5f - offsetY,
+        transform.Scale.x, transform.Scale.y
+    };
     SDL_SetRenderDrawColor(m_Renderer,
         static_cast<Uint8>(color.r * 255),
         static_cast<Uint8>(color.g * 255),
         static_cast<Uint8>(color.b * 255),
-        static_cast<Uint8>(color.a * alpha * 255)
+        static_cast<Uint8>(color.a * 255)
     );
     SDL_RenderFillRect(m_Renderer, &rect);
 }
 
-void Azer::SDL3Renderer::DrawTexture(Texture* tex, const SDL_FRect& src, const SDL_FRect& dst, const float angle, const float alpha)
+void Azer::SDL3Renderer::DrawTexture(Texture* tex, const SDL_FRect& src, const Transform2D& transform, float alpha)
 {
     SDL_SetTextureAlphaModFloat(static_cast<SDL_Texture*>(tex->GetHandle()), alpha);
-    const SDL_FRect offsetDst = { dst.x - offsetX, dst.y - offsetY, dst.w, dst.h };
-    SDL_RenderTextureRotated(m_Renderer, static_cast<SDL_Texture*>(tex->GetHandle()), &src, &offsetDst, angle, nullptr, SDL_FLIP_NONE);
+    const SDL_FRect dst = {
+        transform.Position.x - transform.Scale.x * 0.5f - offsetX,
+        transform.Position.y - transform.Scale.y * 0.5f - offsetY,
+        transform.Scale.x, transform.Scale.y
+    };
+    SDL_RenderTextureRotated(m_Renderer, static_cast<SDL_Texture*>(tex->GetHandle()),
+        &src, &dst, transform.Rotation, nullptr, SDL_FLIP_NONE);
 }
 
 Azer::Ref<Azer::Texture> Azer::SDL3Renderer::CreateTexture(const std::string& filePath)

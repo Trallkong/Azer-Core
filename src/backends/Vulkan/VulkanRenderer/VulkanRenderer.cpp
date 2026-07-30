@@ -34,6 +34,13 @@ namespace Azer {
         m_ColorQuadVbo = CreateRef<VulkanVertexBuffer>(ctx, 4 * sizeof(VertexData));
         m_ColorQuadIbo = CreateRef<VulkanIndexBuffer>(ctx, 6 * 4);
 
+        {
+            QuadMesh unit;
+            unit.SetSize({1.0f, 1.0f});
+            m_ColorQuadVbo->Upload(unit.GetVertices());
+            m_ColorQuadIbo->Upload(unit.GetIndices());
+        }
+
         // 初始化 Viewport
         VkViewport viewport{};
         viewport.x = 0;
@@ -268,41 +275,34 @@ namespace Azer {
         m_CtxManager.ReCreateSwapchain(width, height);
     }
 
-    void VulkanRenderer::DrawQuad(float x, float y, float w, float h, float alpha)
+    void VulkanRenderer::DrawQuad(const Transform2D& transform, float alpha)
     {
-        AZ_ASSERT(false, "VulkanRenderer::DrawQuad not implemented yet");
+        DrawColorQuad(transform, {1.0f, 1.0f, 1.0f, 1.0f});
     }
 
-    void VulkanRenderer::DrawColorQuad(float x, float y, float w, float h, const glm::vec4 &color, float alpha)
+    void VulkanRenderer::DrawColorQuad(const Transform2D& transform, const glm::vec4 &color)
     {
         const VkCommandBuffer& cmd = m_Frames[m_CurrentFrameIndex].cmdBuffer->Get();
 
-        QuadMesh quadMesh;
-        quadMesh.SetSize({w, h});
-        quadMesh.SetColor(color);
-
-        glm::mat4 model = glm::translate(glm::mat4(1.0), glm::vec3(x, y, 0.0));
-        m_BufferData.modelMat = model;
+        m_BufferData.modelMat = transform.GetMatrix();
+        m_BufferData.color = color;
 
         uint32_t frame = m_CurrentFrameIndex;
         m_Ubo->Upload(m_BufferData);
         m_Ubo->Bind(m_Frames[frame].cmdBuffer->Get(), m_Pipeline, frame);
 
-        m_ColorQuadVbo->Upload(quadMesh.GetVertices());
         m_ColorQuadVbo->Bind(cmd);
-
-        m_ColorQuadIbo->Upload(quadMesh.GetIndices());
         m_ColorQuadIbo->Bind(cmd);
 
-        vkCmdDrawIndexed(cmd, quadMesh.GetIndices().size(), 1, 0, 0, 0);
+        vkCmdDrawIndexed(cmd, 6, 1, 0, 0, 0);
     }
 
-    void VulkanRenderer::DrawTexture(Texture *tex, const SDL_FRect &src, const SDL_FRect &dst, float angle, float alpha)
+    void VulkanRenderer::DrawTexture(Texture *tex, const SDL_FRect &src, const Transform2D& transform, float alpha)
     {
         AZ_ASSERT(false, "VulkanRenderer::DrawTexture not implemented yet");
     }
 
-    void VulkanRenderer::DrawCube(const glm::vec3 &position, const glm::vec3 &rotation, const glm::vec3 &scale)
+    void VulkanRenderer::DrawCube(const Transform3D& transform)
     {
         AZ_ASSERT(false, "VulkanRenderer::DrawCube not implemented yet");
     }

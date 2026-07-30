@@ -29,29 +29,22 @@ namespace Azer
             // 跳过不可见的实体
             if (!render.Visible) continue;
             
-            // 计算位置和大小
-            float x = transform.Transform.Position.x;
-            float y = transform.Transform.Position.y;
-            float w = render.Size.x;
-            float h = render.Size.y;
-            
-            // 如果有纹理，绘制纹理
+            Transform2D t;
+            t.Position = glm::vec2(transform.Transform.Position.x, transform.Transform.Position.y);
+            t.Scale = glm::vec2(render.Size.x, render.Size.y);
+            t.Rotation = transform.Transform.Rotation.z;
+
             if (render.Texture)
             {
                 SDL_FRect src = {0.0f, 0.0f, 
                     static_cast<float>(render.Texture->GetWidth()), 
                     static_cast<float>(render.Texture->GetHeight())};
-                SDL_FRect dst = {x, y, w, h};
-                
-                // 计算旋转角度（绕Z轴）
-                float angle = transform.Transform.Rotation.z;
-                
-                m_Renderer->DrawTexture(render.Texture.get(), src, dst, angle, render.Color.a);
+
+                m_Renderer->DrawTexture(render.Texture.get(), src, t, render.Color.a);
             }
             else
             {
-                // 绘制纯色矩形
-                m_Renderer->DrawColorQuad(x, y, w, h, render.Color, render.Color.a);
+                m_Renderer->DrawColorQuad(t, render.Color);
             }
         }
     }

@@ -29,11 +29,11 @@ namespace Azer {
         void Resize(uint32_t width, uint32_t height) override;
         void SetViewport(uint32_t width, uint32_t height, uint32_t offsetX, uint32_t offsetY) override;
 
-        void DrawQuad(float x, float y, float w, float h, float alpha = 1.0f) override;
-        void DrawColorQuad(float x, float y, float w, float h, const glm::vec4& color, float alpha = 1.0f) override;
-        void DrawTexture(Texture* tex, const SDL_FRect& src, const SDL_FRect& dst, float angle = 0.0f, float alpha = 1.0f) override;
+        void DrawQuad(const Transform2D& transform, float alpha = 1.0f) override;
+        void DrawColorQuad(const Transform2D& transform, const glm::vec4& color) override;
+        void DrawTexture(Texture* tex, const SDL_FRect& src, const Transform2D& transform, float alpha = 1.0f) override;
 
-        void DrawCube(const glm::vec3& position, const glm::vec3& rotation, const glm::vec3& scale) override;
+        void DrawCube(const Transform3D& transform) override;
         void DrawModel(Model& model, const glm::mat4& worldTransform, float alpha = 1.0f) override;
         void DrawSkybox(const Ref<Texture>& hdrTexture) override;
 

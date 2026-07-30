@@ -343,17 +343,17 @@ namespace Azer
         m_DepthTextureHeight = 0;
     }
 
-    void SDL3GPURenderer::DrawQuad(float x, float y, float w, float h, float alpha)
+    void SDL3GPURenderer::DrawQuad(const Transform2D& transform, float alpha)
     {
-        DrawColorQuad(x, y, w, h, {1.0f, 1.0f, 1.0f, 1.0f}, alpha);
+        DrawColorQuad(transform, {1.0f, 1.0f, 1.0f, alpha});
     }
 
-    void SDL3GPURenderer::DrawColorQuad(float x, float y, float w, float h, const glm::vec4& color, float alpha)
+    void SDL3GPURenderer::DrawColorQuad(const Transform2D& transform, const glm::vec4& color)
     {
         const float n[3] = {0, 0, 1};
 
         QuadMesh quadMesh;
-        quadMesh.SetSize({w, h});
+        quadMesh.SetSize(transform.Scale);
         quadMesh.SetColor(color);
         const auto& verts = quadMesh.GetVertices();
         const auto& idxs = quadMesh.GetIndices();
@@ -377,14 +377,13 @@ namespace Azer
 
         UniformBufferObject ubo {};
         ubo.viewProjection = m_ViewProjectionMatrix;
-        ubo.transform = glm::mat4(1.0f);
-        ubo.alpha = alpha;
+        ubo.transform = transform.GetMatrix();
 
         cmd.ubo = ubo;
         m_DrawCmds.push_back(cmd);
     }
 
-    void SDL3GPURenderer::DrawTexture(Texture* tex, const SDL_FRect& src, const SDL_FRect& dst, float angle, float alpha)
+    void SDL3GPURenderer::DrawTexture(Texture* tex, const SDL_FRect& src, const Transform2D& transform, float alpha)
     {
         const auto* gpuTex = dynamic_cast<GPUTexture*>(tex);
         const auto handle = static_cast<SDL_GPUTexture*>(gpuTex->GetHandle());
@@ -396,10 +395,10 @@ namespace Azer
         const float u1 = (src.x + src.w) / tw;
         const float v1 = (src.y + src.h) / th;
 
-        const float x0 = dst.x;
-        const float y0 = dst.y;
-        const float x1 = dst.x + dst.w;
-        const float y1 = dst.y + dst.h;
+        const float hw = transform.Scale.x * 0.5f;
+        const float hh = transform.Scale.y * 0.5f;
+        const float x0 = -hw, y0 = -hh;
+        const float x1 =  hw, y1 =  hh;
 
         const float n[3] = {0, 0, 1};
 
@@ -419,7 +418,7 @@ namespace Azer
 
         UniformBufferObject ubo {};
         ubo.viewProjection = m_ViewProjectionMatrix;
-        ubo.transform = glm::mat4(1.0f);
+        ubo.transform = transform.GetMatrix();
         ubo.alpha = alpha;
 
         cmd.ubo = ubo;
@@ -446,14 +445,9 @@ namespace Azer
         return CreateRef<SDL3GPUFramebuffer>(m_Device, spec);
     }
 
-    void SDL3GPURenderer::DrawCube(const glm::vec3& position, const glm::vec3& rotation, const glm::vec3& scale)
+    void SDL3GPURenderer::DrawCube(const Transform3D& transform)
     {
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, position);
-        model = glm::rotate(model, glm::radians(rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
-        model = glm::rotate(model, glm::radians(rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
-        model = glm::rotate(model, glm::radians(rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
-        model = glm::scale(model, scale);
+        glm::mat4 model = transform.GetMatrix();
 
         // CCW winding from outside for back-face culling
         const glm::vec3 cubeFaces[6][4] = {

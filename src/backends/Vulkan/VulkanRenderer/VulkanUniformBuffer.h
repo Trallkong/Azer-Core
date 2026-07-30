@@ -16,6 +16,7 @@ namespace Azer {
     {
         glm::mat4 viewProjMat = glm::mat4(1.0);
         glm::mat4 modelMat = glm::mat4(1.0);
+        glm::vec4 color = glm::vec4(1.0f);
     };
 
     class VulkanUniformBuffer 

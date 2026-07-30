@@ -2,6 +2,7 @@
 #include "VulkanGraphicPipeline.h"
 #include "VulkanVertexAttributes.h"
 #include "FileSystem.h"
+#include "Mesh2D.h"
 
 namespace Azer {
     VulkanGraphicPipeline::VulkanGraphicPipeline(const Ref<VulkanContext>& context)
@@ -73,17 +74,19 @@ namespace Azer {
         std::vector<VulkanVertexAtrribute> attributes = {
             { VulkanVertexAttributeType::Float3, "a_Position" },
             { VulkanVertexAttributeType::Float2, "a_TexCoord" },
-            { VulkanVertexAttributeType::Float4, "a_Color" },
         };
 
         VulkanVertexAttributes atbs(attributes);
 
+        VkVertexInputBindingDescription bindingDesc = atbs.GetBindingDesc();
+        bindingDesc.stride = sizeof(VertexData);
+
         VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-        vertexInputInfo.vertexAttributeDescriptionCount = 3;
+        vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributes.size());
         vertexInputInfo.pVertexAttributeDescriptions = atbs.GetDescriptions().data();
         vertexInputInfo.vertexBindingDescriptionCount = 1;
-        vertexInputInfo.pVertexBindingDescriptions = &atbs.GetBindingDesc();
+        vertexInputInfo.pVertexBindingDescriptions = &bindingDesc;
 
         VkGraphicsPipelineCreateInfo pipelineInfo{};
         pipelineInfo.sType                  = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
