@@ -6,6 +6,9 @@
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_vulkan.h"
 
+
+#include "VulkanMesh.h"
+
 namespace Azer {
 
     VulkanRenderer::~VulkanRenderer()
@@ -17,6 +20,9 @@ namespace Azer {
         m_CtxManager.Init(window);
 
         const Ref<VulkanContext>& ctx = m_CtxManager.GetContext();
+
+        m_Pipeline = CreateRef<VulkanGraphicPipeline>(ctx);
+        m_Ubo = CreateRef<VulkanUniformBuffer>(ctx);
 
         // 初始化 Viewport
         VkViewport viewport{};
@@ -73,6 +79,9 @@ namespace Azer {
     {
         Ref<VulkanContext> ctx = m_CtxManager.GetContext();
         vkDeviceWaitIdle(ctx->Device);
+
+        m_Pipeline.reset();
+        m_Ubo.reset();
 
         DestroyFrameResources();
         ImGuiShutdown();
@@ -142,6 +151,8 @@ namespace Azer {
         vkCmdSetViewport(cmd, 0, 1, &m_Viewport);
 
         SetImGuiDrawData(ImGui::GetDrawData());
+
+        vkCmdBindPipeline(cmd, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline->Get());
     }
     
     void VulkanRenderer::EndFrame()
@@ -212,7 +223,9 @@ namespace Azer {
 
     void VulkanRenderer::SetCamera(Camera &camera)
     {
-        AZ_ASSERT(false, "VulkanRenderer::SetCamera not implemented yet");
+        BufferData data{};
+        data.viewProjMat = camera.GetViewProjectionMatrix();
+        m_Ubo->Upload(data, m_Frames[m_CurrentFrameIndex].cmdBuffer->Get(), m_Pipeline);
     }
 
     void VulkanRenderer::ResetRenderState()
@@ -243,7 +256,15 @@ namespace Azer {
 
     void VulkanRenderer::DrawColorQuad(float x, float y, float w, float h, const glm::vec4 &color, float alpha)
     {
-        AZ_ASSERT(false, "VulkanRenderer::DrawColorQuad not implemented yet");
+        const VkCommandBuffer& cmd = m_Frames[m_CurrentFrameIndex].cmdBuffer->Get();
+        QuadMesh quadMesh;
+        quadMesh
+        vkCmdBindVertexBuffers(cmd, 0, 1, )
+
+        
+        vkCmdDrawIndexed(m_Frames[m_CurrentFrameIndex].cmdBuffer->Get(), quadMesh.GetIndices().size(),
+            1, 0, 0, 0
+        );
     }
 
     void VulkanRenderer::DrawTexture(Texture *tex, const SDL_FRect &src, const SDL_FRect &dst, float angle, float alpha)

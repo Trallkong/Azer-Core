@@ -47,7 +47,7 @@ namespace Azer {
 
         std::vector<const char*> m_RequiredDeviceExtensions = {
             VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-            VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME
+            VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
         };
 
         std::vector<VkExtensionProperties> EnumerateInstanceExtensions();

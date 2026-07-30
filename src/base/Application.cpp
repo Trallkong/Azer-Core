@@ -16,11 +16,9 @@
 namespace Azer
 {
     Application::Application(
-        const std::string& rootPath,
         const std::string& windowTitle)
-        :m_WindowTitle(windowTitle)
     {
-        FileSystem::Init(rootPath);
+        FileSystem::Init("E:\\Projects\\GameDev\\azer_dev\\Azer");
 
         if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS))
         {
@@ -40,8 +38,6 @@ namespace Azer
 
         m_ImGuiLayer = new ImGuiLayer(m_Renderer.get());
         PushLayer(m_ImGuiLayer);
-
-        // PushOverlay(new SplashLayer(*m_Renderer.get(),5));
     }
 
     Application::~Application()

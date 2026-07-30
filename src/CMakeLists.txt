@@ -69,10 +69,16 @@ add_library(Azer
 
         # --- Backend: Vulkan ---
         backends/Vulkan/VulkanContextManager.cpp
-        backends/Vulkan/VulkanFrameBuffer.cpp
-        backends/Vulkan/VulkanRenderer.cpp
         backends/Vulkan/vk_mem_alloc.cpp
         backends/Vulkan/VulkanCommandBuffer.cpp
+
+        # --- Backend: Vulkan Renderer ---
+        backends/Vulkan/VulkanRenderer/VulkanRenderer.cpp
+        backends/Vulkan/VulkanRenderer/VulkanFrameBuffer.cpp
+        backends/Vulkan/VulkanRenderer/VulkanGraphicPipeline.cpp
+        backends/Vulkan/VulkanRenderer/VulkanShader.cpp
+        backends/Vulkan/VulkanRenderer/VulkanUniformBuffer.cpp
+        backends/Vulkan/VulkanRenderer/VulkanVertexBuffer.cpp
 )
 
 target_precompile_headers(Azer PRIVATE azpch.h)
@@ -90,6 +96,7 @@ target_include_directories(Azer PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/backends/SDL3Renderer
         ${CMAKE_CURRENT_SOURCE_DIR}/backends/SDL3Window
         ${CMAKE_CURRENT_SOURCE_DIR}/backends/Vulkan
+        ${CMAKE_CURRENT_SOURCE_DIR}/backends/Vulkan/VulkanRenderer
         ${CMAKE_CURRENT_SOURCE_DIR}/../assets/shaders
         ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/entt/single_include
 )

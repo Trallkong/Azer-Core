@@ -545,7 +545,15 @@ namespace Azer {
 
     void VulkanContextManager::createMyDescriptorPool()
     {
+        std::array<VkDescriptorPoolSize, 1> poolSizes = {{
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 100 }
+        }};
 
+        m_Context->MyDescriptorPool = createDescriptorPool(
+            m_Context->Device,
+            poolSizes,
+            100
+        );
     }
 
     void VulkanContextManager::createImGuiDescriptorPool()

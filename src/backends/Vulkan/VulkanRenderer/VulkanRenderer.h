@@ -5,6 +5,8 @@
 
 #include "VulkanContextManager.h"
 #include "VulkanCommandBuffer.h"
+#include "VulkanGraphicPipeline.h"
+#include "VulkanUniformBuffer.h"
 
 namespace Azer {
 
@@ -57,6 +59,9 @@ namespace Azer {
         std::array<FrameResources, MAX_FLIGHT_FRAMES> m_Frames;
         std::vector<VkSemaphore> m_RenderFinishedSemaphores;
         VkViewport m_Viewport;
+
+        Ref<VulkanGraphicPipeline> m_Pipeline;
+        Ref<VulkanUniformBuffer> m_Ubo;
 
         // 动态渲染函数指针
         PFN_vkCmdBeginRenderingKHR m_vkCmdBeginRenderingKHR = nullptr;

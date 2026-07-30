@@ -16,9 +16,7 @@ namespace Azer
 
     class Application {
     public:
-        explicit Application(
-            const std::string& rootPath,
-            const std::string& windowTitle = "Azer");
+        explicit Application(const std::string& windowTitle = "Azer");
         ~Application();
 
         void Run();

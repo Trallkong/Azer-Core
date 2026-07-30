@@ -3,6 +3,7 @@
 #include "Base.h"
 
 #include <string>
+#include <vector>
 
 #include "vulkan/vulkan.h"
 
@@ -13,13 +14,18 @@ namespace Azer {
         FRAGMENT
     };
 
+    class VulkanContext;
+
     class VulkanShader {
     public:
-        VulkanShader(VkDevice device, const std::string& filePath, ShaderType type, const std::string& entryPoint = "main");
+        VulkanShader(const Ref<VulkanContext>& ctx, const std::string& filePath, ShaderType type, const std::string& entryPoint = "main");
         ~VulkanShader();
 
+        inline VkPipelineShaderStageCreateInfo GetStageInfo() { return m_ShaderStageInfo; }
+        inline VkShaderModule GetModule() { return m_ShaderModule; }
+
     private:
-        VkDevice m_Device;
+        Ref<VulkanContext> m_Context;
         std::string m_FilePath;
         std::string m_EntryPoint;
         ShaderType m_Type;
