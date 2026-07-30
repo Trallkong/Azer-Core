@@ -1,18 +1,18 @@
 #include "azpch.h"
-#include "VulkanVertexBuffer.h"
+#include "VulkanIndexBuffer.h"
 #include "VulkanContextManager.h"
 
 namespace Azer {
 
-    VulkanVertexBuffer::VulkanVertexBuffer(
-        const Ref<VulkanContext>& ctx, 
+    VulkanIndexBuffer::VulkanIndexBuffer(
+        const Ref<VulkanContext>& ctx,
         uint32_t size)
         : m_Context(ctx)
     {
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         bufferInfo.size = size;
-        bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+        bufferInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
         VmaAllocationCreateInfo allocInfo{};
@@ -26,7 +26,7 @@ namespace Azer {
         m_MappedData = allocResult.pMappedData;
     }
 
-    VulkanVertexBuffer::~VulkanVertexBuffer()
+    VulkanIndexBuffer::~VulkanIndexBuffer()
     {
         if (m_Buffer != VK_NULL_HANDLE)
         {
@@ -34,15 +34,15 @@ namespace Azer {
         }
     }
 
-    void VulkanVertexBuffer::Upload(const Vertices &vertices)
+    void VulkanIndexBuffer::Upload(const Indices& indices)
     {
-        uint32_t size = vertices.size() * sizeof(VertexData);
-        memcpy(m_MappedData, vertices.data(), size);
+        uint32_t size = indices.size() * sizeof(uint32_t);
+        m_Count = indices.size();
+        memcpy(m_MappedData, indices.data(), size);
     }
 
-    void VulkanVertexBuffer::Bind(const VkCommandBuffer &cmd)
+    void VulkanIndexBuffer::Bind(const VkCommandBuffer& cmd)
     {
-        VkDeviceSize offset = 0;
-        vkCmdBindVertexBuffers(cmd, 0, 1, &m_Buffer, &offset);
+        vkCmdBindIndexBuffer(cmd, m_Buffer, 0, VK_INDEX_TYPE_UINT32);
     }
 }

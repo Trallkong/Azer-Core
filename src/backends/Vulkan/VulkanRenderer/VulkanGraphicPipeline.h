@@ -11,13 +11,16 @@ namespace Azer {
 
     class VulkanGraphicPipeline {
     public:
+        static constexpr uint32_t MAX_FLIGHT_FRAMES = 3;
+
         VulkanGraphicPipeline(const Ref<VulkanContext>& context);
         ~VulkanGraphicPipeline();
 
         inline const VkPipeline& Get() const { return m_GraphicPipeline; }
         inline const VkPipelineLayout& Layout() const { return m_PipelineLayout; }
-        inline const VkDescriptorSet& DescriptorSet() const { return m_Set; }
         inline const VkDescriptorSetLayout& DescriptorSetLayout() const { return m_SetLayout; }
+        inline const VkDescriptorSet& DescriptorSet(uint32_t frameIndex) const { return m_Sets[frameIndex]; }
+        inline VkDescriptorSet* DescriptorSetPtr(uint32_t frameIndex) { return &m_Sets[frameIndex]; }
 
     private:
         Ref<VulkanContext> m_Context;
@@ -29,7 +32,7 @@ namespace Azer {
         VkPipelineLayout m_PipelineLayout;
 
         VkDescriptorSetLayout m_SetLayout;
-        VkDescriptorSet m_Set;
+        std::array<VkDescriptorSet, MAX_FLIGHT_FRAMES> m_Sets{};
 
         void CreatePipelineLayout();
     };

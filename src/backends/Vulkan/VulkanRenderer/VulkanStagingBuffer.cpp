@@ -1,19 +1,17 @@
 #include "azpch.h"
-#include "VulkanVertexBuffer.h"
+#include "VulkanStagingBuffer.h"
 #include "VulkanContextManager.h"
 
 namespace Azer {
 
-    VulkanVertexBuffer::VulkanVertexBuffer(
-        const Ref<VulkanContext>& ctx, 
-        uint32_t size)
+    VulkanStagingBuffer::VulkanStagingBuffer(const Ref<VulkanContext> &ctx, uint32_t size)
         : m_Context(ctx)
     {
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.size = size;
-        bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+        bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        bufferInfo.size = size;
 
         VmaAllocationCreateInfo allocInfo{};
         allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
@@ -26,7 +24,7 @@ namespace Azer {
         m_MappedData = allocResult.pMappedData;
     }
 
-    VulkanVertexBuffer::~VulkanVertexBuffer()
+    VulkanStagingBuffer::~VulkanStagingBuffer()
     {
         if (m_Buffer != VK_NULL_HANDLE)
         {
@@ -34,15 +32,8 @@ namespace Azer {
         }
     }
 
-    void VulkanVertexBuffer::Upload(const Vertices &vertices)
+    void VulkanStagingBuffer::Upload(void *data, uint32_t size)
     {
-        uint32_t size = vertices.size() * sizeof(VertexData);
-        memcpy(m_MappedData, vertices.data(), size);
-    }
-
-    void VulkanVertexBuffer::Bind(const VkCommandBuffer &cmd)
-    {
-        VkDeviceSize offset = 0;
-        vkCmdBindVertexBuffers(cmd, 0, 1, &m_Buffer, &offset);
+        memcpy(m_MappedData, data, size);
     }
 }

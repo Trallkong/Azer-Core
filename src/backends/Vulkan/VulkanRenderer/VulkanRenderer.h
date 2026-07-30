@@ -10,6 +10,9 @@
 
 namespace Azer {
 
+    class VulkanVertexBuffer;
+    class VulkanIndexBuffer;
+
     class VulkanRenderer : public Renderer {
     public:
         VulkanRenderer() = default;
@@ -50,7 +53,7 @@ namespace Azer {
             VkFence inFlightFence;
         };
 
-        static constexpr int MAX_FLIGHT_FRAMES = 3;
+        static constexpr uint32_t MAX_FLIGHT_FRAMES = 3;
 
     private:
         VulkanContextManager m_CtxManager;
@@ -61,7 +64,12 @@ namespace Azer {
         VkViewport m_Viewport;
 
         Ref<VulkanGraphicPipeline> m_Pipeline;
+
         Ref<VulkanUniformBuffer> m_Ubo;
+        Ref<VulkanVertexBuffer> m_ColorQuadVbo;
+        Ref<VulkanIndexBuffer> m_ColorQuadIbo;
+
+        BufferData m_BufferData{};
 
         // 动态渲染函数指针
         PFN_vkCmdBeginRenderingKHR m_vkCmdBeginRenderingKHR = nullptr;

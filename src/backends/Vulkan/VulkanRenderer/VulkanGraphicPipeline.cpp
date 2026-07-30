@@ -32,7 +32,7 @@ namespace Azer {
         rasterizerInfo.rasterizerDiscardEnable  = VK_FALSE;
         rasterizerInfo.polygonMode              = VK_POLYGON_MODE_FILL;
         rasterizerInfo.cullMode                 = VK_CULL_MODE_BACK_BIT;
-        rasterizerInfo.frontFace                = VK_FRONT_FACE_CLOCKWISE;
+        rasterizerInfo.frontFace                = VK_FRONT_FACE_COUNTER_CLOCKWISE;
         rasterizerInfo.depthBiasEnable          = VK_FALSE;
         rasterizerInfo.lineWidth                = 1.0f;
 
@@ -110,6 +110,14 @@ namespace Azer {
 
     VulkanGraphicPipeline::~VulkanGraphicPipeline()
     {
+        for (auto& set : m_Sets)
+        {
+            if (set != VK_NULL_HANDLE)
+            {
+                vkFreeDescriptorSets(m_Context->Device, m_Context->MyDescriptorPool, 1, &set);
+            }
+        }
+
         if (m_PipelineLayout != VK_NULL_HANDLE)
         {
             vkDestroyPipelineLayout(m_Context->Device, m_PipelineLayout, nullptr);
@@ -129,11 +137,6 @@ namespace Azer {
         {
             vkDestroyDescriptorSetLayout(m_Context->Device, m_SetLayout, nullptr);
         }
-
-        if (m_Set != VK_NULL_HANDLE)
-        {
-            vkFreeDescriptorSets(m_Context->Device, m_Context->MyDescriptorPool, 1, &m_Set);
-        }
     }
 
     void VulkanGraphicPipeline::CreatePipelineLayout()
@@ -151,12 +154,15 @@ namespace Azer {
         setLayoutInfo.pBindings = &layout_binding;
         vkCreateDescriptorSetLayout(m_Context->Device, &setLayoutInfo, nullptr, &m_SetLayout);
 
+        std::array<VkDescriptorSetLayout, VulkanGraphicPipeline::MAX_FLIGHT_FRAMES> setLayouts;
+        for (auto& l : setLayouts) l = m_SetLayout;
+
         VkDescriptorSetAllocateInfo allocateInfo{};
         allocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         allocateInfo.descriptorPool = m_Context->MyDescriptorPool;
-        allocateInfo.descriptorSetCount = 1;
-        allocateInfo.pSetLayouts = &m_SetLayout;
-        vkAllocateDescriptorSets(m_Context->Device, &allocateInfo, &m_Set);
+        allocateInfo.descriptorSetCount = VulkanGraphicPipeline::MAX_FLIGHT_FRAMES;
+        allocateInfo.pSetLayouts = setLayouts.data();
+        vkAllocateDescriptorSets(m_Context->Device, &allocateInfo, m_Sets.data());
 
         VkPipelineLayoutCreateInfo layoutInfo{};
         layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;

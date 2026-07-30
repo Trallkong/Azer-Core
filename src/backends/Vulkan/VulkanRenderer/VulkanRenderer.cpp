@@ -7,7 +7,9 @@
 #include "imgui_impl_vulkan.h"
 
 
-#include "VulkanMesh.h"
+#include "Mesh2D.h"
+#include "VulkanVertexBuffer.h"
+#include "VulkanIndexBuffer.h"
 
 namespace Azer {
 
@@ -23,6 +25,14 @@ namespace Azer {
 
         m_Pipeline = CreateRef<VulkanGraphicPipeline>(ctx);
         m_Ubo = CreateRef<VulkanUniformBuffer>(ctx);
+
+        for (uint32_t i = 0; i < MAX_FLIGHT_FRAMES; i++)
+        {
+            m_Ubo->InitDescriptor(m_Pipeline, i);
+        }
+
+        m_ColorQuadVbo = CreateRef<VulkanVertexBuffer>(ctx, 4 * sizeof(VertexData));
+        m_ColorQuadIbo = CreateRef<VulkanIndexBuffer>(ctx, 6 * 4);
 
         // 初始化 Viewport
         VkViewport viewport{};
@@ -82,6 +92,8 @@ namespace Azer {
 
         m_Pipeline.reset();
         m_Ubo.reset();
+        m_ColorQuadIbo.reset();
+        m_ColorQuadVbo.reset();
 
         DestroyFrameResources();
         ImGuiShutdown();
@@ -148,15 +160,20 @@ namespace Azer {
             m_vkCmdBeginRenderingKHR(cmd, &renderingInfo);
         }
 
+        vkCmdBindPipeline(cmd, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline->Get());
+
         vkCmdSetViewport(cmd, 0, 1, &m_Viewport);
 
-        SetImGuiDrawData(ImGui::GetDrawData());
-
-        vkCmdBindPipeline(cmd, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline->Get());
+        VkRect2D scissor{};
+        scissor.offset = { 0, 0 };
+        scissor.extent = ctx->SwapchainImageExtent;
+        vkCmdSetScissor(cmd, 0, 1, &scissor);
     }
     
     void VulkanRenderer::EndFrame()
     {
+        SetImGuiDrawData(ImGui::GetDrawData());
+
         Ref<VulkanContext> ctx = m_CtxManager.GetContext();
 
         VkCommandBuffer cmd = m_Frames[m_CurrentFrameIndex].cmdBuffer->Get();
@@ -223,9 +240,11 @@ namespace Azer {
 
     void VulkanRenderer::SetCamera(Camera &camera)
     {
-        BufferData data{};
-        data.viewProjMat = camera.GetViewProjectionMatrix();
-        m_Ubo->Upload(data, m_Frames[m_CurrentFrameIndex].cmdBuffer->Get(), m_Pipeline);
+        m_BufferData.viewProjMat = camera.GetViewProjectionMatrix();
+        m_BufferData.modelMat = glm::mat4(1.0);
+        uint32_t frame = m_CurrentFrameIndex;
+        m_Ubo->Upload(m_BufferData);
+        m_Ubo->Bind(m_Frames[frame].cmdBuffer->Get(), m_Pipeline, frame);
     }
 
     void VulkanRenderer::ResetRenderState()
@@ -257,14 +276,25 @@ namespace Azer {
     void VulkanRenderer::DrawColorQuad(float x, float y, float w, float h, const glm::vec4 &color, float alpha)
     {
         const VkCommandBuffer& cmd = m_Frames[m_CurrentFrameIndex].cmdBuffer->Get();
-        QuadMesh quadMesh;
-        quadMesh
-        vkCmdBindVertexBuffers(cmd, 0, 1, )
 
-        
-        vkCmdDrawIndexed(m_Frames[m_CurrentFrameIndex].cmdBuffer->Get(), quadMesh.GetIndices().size(),
-            1, 0, 0, 0
-        );
+        QuadMesh quadMesh;
+        quadMesh.SetSize({w, h});
+        quadMesh.SetColor(color);
+
+        glm::mat4 model = glm::translate(glm::mat4(1.0), glm::vec3(x, y, 0.0));
+        m_BufferData.modelMat = model;
+
+        uint32_t frame = m_CurrentFrameIndex;
+        m_Ubo->Upload(m_BufferData);
+        m_Ubo->Bind(m_Frames[frame].cmdBuffer->Get(), m_Pipeline, frame);
+
+        m_ColorQuadVbo->Upload(quadMesh.GetVertices());
+        m_ColorQuadVbo->Bind(cmd);
+
+        m_ColorQuadIbo->Upload(quadMesh.GetIndices());
+        m_ColorQuadIbo->Bind(cmd);
+
+        vkCmdDrawIndexed(cmd, quadMesh.GetIndices().size(), 1, 0, 0, 0);
     }
 
     void VulkanRenderer::DrawTexture(Texture *tex, const SDL_FRect &src, const SDL_FRect &dst, float angle, float alpha)

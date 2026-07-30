@@ -8,6 +8,7 @@
 
 #include "GPUTexture.h"
 #include "SDL3GPUFramebuffer.h"
+#include "Mesh2D.h"
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_sdlgpu3.h"
 
@@ -349,22 +350,29 @@ namespace Azer
 
     void SDL3GPURenderer::DrawColorQuad(float x, float y, float w, float h, const glm::vec4& color, float alpha)
     {
-        const float x2 = x + w, y2 = y + h;
-        const float c[4] = {color.r, color.g, color.b, color.a};
         const float n[3] = {0, 0, 1};
 
-        // Triangle 1: v0, v1, v2
-        m_Vertices.push_back({{x,  y, 0.0f }, {n[0],n[1],n[2]}, {0,0}, {c[0],c[1],c[2],c[3]}});
-        m_Vertices.push_back({{x2, y, 0.0f}, {n[0],n[1],n[2]}, {1,0}, {c[0],c[1],c[2],c[3]}});
-        m_Vertices.push_back({{x2, y2, 0.0f}, {n[0],n[1],n[2]}, {1,1}, {c[0],c[1],c[2],c[3]}});
-        // Triangle 2: v2, v3, v0
-        m_Vertices.push_back({{x2, y2, 0.0f}, {n[0],n[1],n[2]}, {1,1}, {c[0],c[1],c[2],c[3]}});
-        m_Vertices.push_back({{x,  y2, 0.0f}, {n[0],n[1],n[2]}, {0,1}, {c[0],c[1],c[2],c[3]}});
-        m_Vertices.push_back({{x,  y, 0.0f }, {n[0],n[1],n[2]}, {0,0}, {c[0],c[1],c[2],c[3]}});
+        QuadMesh quadMesh;
+        quadMesh.SetSize({w, h});
+        quadMesh.SetColor(color);
+        const auto& verts = quadMesh.GetVertices();
+        const auto& idxs = quadMesh.GetIndices();
+
+        for (auto i : idxs)
+        {
+            const auto& v = verts[i];
+            m_Vertices.push_back({
+                {v.position.x, v.position.y, v.position.z},
+                {n[0], n[1], n[2]},
+                {v.uv.x, v.uv.y},
+                {v.color.r, v.color.g, v.color.b, v.color.a}
+            });
+        }
 
         BatchDrawCmd cmd {};
-        cmd.target = m_CurrentTarget;        cmd.texture = static_cast<SDL_GPUTexture*>(m_WhiteTexture->GetHandle());
-        cmd.vertexCount = 6;
+        cmd.target = m_CurrentTarget;
+        cmd.texture = static_cast<SDL_GPUTexture*>(m_WhiteTexture->GetHandle());
+        cmd.vertexCount = static_cast<uint32_t>(idxs.size());
         cmd.pipeline = PipelineType::Renderer2D;
 
         UniformBufferObject ubo {};

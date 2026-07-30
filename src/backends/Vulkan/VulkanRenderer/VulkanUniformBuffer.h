@@ -5,6 +5,8 @@
 
 #include "glm/glm.hpp"
 
+#include "vk_mem_alloc.h"
+
 namespace Azer {
 
     struct VulkanContext;
@@ -22,16 +24,16 @@ namespace Azer {
         VulkanUniformBuffer(const Ref<VulkanContext>& ctx);
         ~VulkanUniformBuffer();
 
-        void Upload(const BufferData& data, const VkCommandBuffer& cmd, const Ref<VulkanGraphicPipeline>& pipeline);
+        void Upload(const BufferData& data);
+        void Bind(const VkCommandBuffer& cmd, const Ref<VulkanGraphicPipeline>& pipeline, uint32_t frameIndex);
+
+        void InitDescriptor(const Ref<VulkanGraphicPipeline>& pipeline, uint32_t frameIndex);
 
     private:
         Ref<VulkanContext> m_Context;
 
-        VkBuffer m_Buffer;
-        VkDeviceMemory m_Memory;
-
-        uint32_t findMemoryType(VkPhysicalDevice physicalDevice, 
-                            uint32_t resourceMemoryTypeBits, 
-                            VkMemoryPropertyFlags requiredProperties);
+        VkBuffer m_Buffer = VK_NULL_HANDLE;
+        VmaAllocation m_Allocation = VK_NULL_HANDLE;
+        void* m_MappedData = nullptr;
     };
 }

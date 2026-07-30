@@ -1,4 +1,4 @@
-#pragma once 
+#pragma once
 
 #include "Base.h"
 
@@ -14,16 +14,18 @@ namespace Azer {
 
     class VulkanContext;
 
-    class VulkanVertexBuffer 
+    class VulkanIndexBuffer
     {
     public:
-        VulkanVertexBuffer(
-            const Ref<VulkanContext>& ctx, 
+        VulkanIndexBuffer(
+            const Ref<VulkanContext>& ctx,
             uint32_t size);
-        ~VulkanVertexBuffer();
+        ~VulkanIndexBuffer();
 
-        void Upload(const Vertices& vertices);
+        void Upload(const Indices& indices);
         void Bind(const VkCommandBuffer& cmd);
+
+        uint32_t GetCount() const { return m_Count; }
 
     private:
         Ref<VulkanContext> m_Context;
@@ -31,5 +33,6 @@ namespace Azer {
         VkBuffer m_Buffer = VK_NULL_HANDLE;
         VmaAllocation m_Allocation = VK_NULL_HANDLE;
         void* m_MappedData = nullptr;
+        uint32_t m_Count = 0;
     };
 }
