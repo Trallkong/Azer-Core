@@ -124,7 +124,7 @@ namespace Azer
             {
                 // 加载纹理
                 std::string fullPath = assetsRoot + "/" + component.TexturePath;
-                component.Texture = Texture::Create(renderer, fullPath);
+                component.Texture = Texture::Create(fullPath);
             }
         }
     }

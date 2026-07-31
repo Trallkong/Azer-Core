@@ -49,7 +49,6 @@ add_library(Azer
         renderer/Renderer.cpp
         renderer/RendererAPI.cpp
         renderer/Texture.cpp
-        renderer/StbImage.cpp
         renderer/Mesh2D.h
 
         # --- Backend: SDL3 Renderer (2D) ---
@@ -82,6 +81,7 @@ add_library(Azer
         backends/Vulkan/VulkanRenderer/VulkanVertexBuffer.cpp
         backends/Vulkan/VulkanRenderer/VulkanIndexBuffer.cpp
         backends/Vulkan/VulkanRenderer/VulkanStagingBuffer.cpp
+        backends/Vulkan/VulkanRenderer/VulkanTexture.cpp
 )
 
 target_precompile_headers(Azer PRIVATE azpch.h)

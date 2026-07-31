@@ -3,7 +3,7 @@ add_subdirectory(imgui)
 add_subdirectory(glm)
 add_subdirectory(spdlog)
 add_subdirectory(cgltf)
-add_subdirectory(stb)
+add_subdirectory(stb_image)
 
 set(JSON_BuildTests OFF CACHE BOOL "" FORCE)
 set(JSON_Install OFF CACHE BOOL "" FORCE)
@@ -20,7 +20,7 @@ target_link_libraries(vendor INTERFACE
     glm::glm 
     spdlog::spdlog 
     cgltf 
-    stb 
+    stb_image 
     nlohmann_json::nlohmann_json 
     entt
 )

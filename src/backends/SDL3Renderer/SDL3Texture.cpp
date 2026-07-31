@@ -3,6 +3,8 @@
 
 #include "stb_image.h"
 
+#include "SDL3Renderer.h"
+
 namespace Azer
 {
     static uint8_t FloatToByte(float value)
@@ -11,8 +13,33 @@ namespace Azer
         return static_cast<uint8_t>(value * 255.0f);
     }
 
-    Ref<Texture> SDL3Texture::Create(SDL_Renderer* renderer, const std::string& filePath)
+    Ref<Texture> SDL3Texture::Create(const std::string& filePath, bool isHDR)
     {
+        SDL_Renderer* renderer = SDL3Renderer::GetRenderer();
+
+        if (isHDR)
+        {
+            int width = 0, height = 0, channels = 0;
+            float* hdrPixels = stbi_loadf(filePath.c_str(), &width, &height, &channels, 4);
+            if (!hdrPixels)
+            {
+                AZ_CORE_ERROR("Failed to load HDR texture: {0}", filePath);
+                return nullptr;
+            }
+
+            std::vector<uint8_t> pixels(static_cast<size_t>(width) * static_cast<size_t>(height) * 4);
+            for (size_t i = 0; i < pixels.size(); i += 4)
+            {
+                pixels[i + 0] = FloatToByte(hdrPixels[i + 0]);
+                pixels[i + 1] = FloatToByte(hdrPixels[i + 1]);
+                pixels[i + 2] = FloatToByte(hdrPixels[i + 2]);
+                pixels[i + 3] = FloatToByte(hdrPixels[i + 3]);
+            }
+
+            stbi_image_free(hdrPixels);
+            return Create(pixels.data(), static_cast<uint32_t>(width), static_cast<uint32_t>(height));
+        }
+
         SDL_Surface* surface = SDL_LoadPNG(filePath.c_str());
         if (!surface)
         {
@@ -34,8 +61,10 @@ namespace Azer
         return CreateRef<SDL3Texture>(texture, width, height);
     }
 
-    Ref<Texture> SDL3Texture::Create(SDL_Renderer* renderer, void* pixels, uint32_t width, uint32_t height)
+    Ref<Texture> SDL3Texture::Create(void* pixels, uint32_t width, uint32_t height)
     {
+        SDL_Renderer* renderer = SDL3Renderer::GetRenderer();
+
         SDL_Surface* surface = SDL_CreateSurfaceFrom(
             static_cast<int>(width),
             static_cast<int>(height),
@@ -59,28 +88,5 @@ namespace Azer
         }
 
         return CreateRef<SDL3Texture>(texture, width, height);
-    }
-
-    Ref<Texture> SDL3Texture::CreateHDR(SDL_Renderer* renderer, const std::string& filePath)
-    {
-        int width = 0, height = 0, channels = 0;
-        float* hdrPixels = stbi_loadf(filePath.c_str(), &width, &height, &channels, 4);
-        if (!hdrPixels)
-        {
-            AZ_CORE_ERROR("Failed to load HDR texture: {0}", filePath);
-            return nullptr;
-        }
-
-        std::vector<uint8_t> pixels(static_cast<size_t>(width) * static_cast<size_t>(height) * 4);
-        for (size_t i = 0; i < pixels.size(); i += 4)
-        {
-            pixels[i + 0] = FloatToByte(hdrPixels[i + 0]);
-            pixels[i + 1] = FloatToByte(hdrPixels[i + 1]);
-            pixels[i + 2] = FloatToByte(hdrPixels[i + 2]);
-            pixels[i + 3] = FloatToByte(hdrPixels[i + 3]);
-        }
-
-        stbi_image_free(hdrPixels);
-        return Create(renderer, pixels.data(), static_cast<uint32_t>(width), static_cast<uint32_t>(height));
     }
 }

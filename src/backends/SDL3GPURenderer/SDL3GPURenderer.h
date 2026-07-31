@@ -33,9 +33,6 @@ namespace Azer
         void DrawQuad(const Transform2D& transform, float alpha) override;
         void DrawColorQuad(const Transform2D& transform, const glm::vec4& color) override;
         void DrawTexture(Texture* tex, const SDL_FRect& src, const Transform2D& transform, float alpha) override;
-        Ref<Texture> CreateTexture(const std::string& filePath) override;
-        Ref<Texture> CreateTexture(void* pixels, uint32_t width, uint32_t height) override;
-        Ref<Texture> CreateHDRTexture(const std::string& filePath) override;
         Ref<Framebuffer> CreateFramebuffer(const FramebufferSpec& spec) override;
 
         // Renderer3D
@@ -49,7 +46,7 @@ namespace Azer
         void ImGuiNewFrame() override;
         void SetImGuiDrawData(ImDrawData* drawData) override;
 
-        SDL_GPUDevice* GetDevice() const { return m_Device; }
+        static SDL_GPUDevice* GetDevice() { return s_Device; }
 
         struct BatchVertex
         {
@@ -97,6 +94,7 @@ namespace Azer
         };
 
     private:
+        static SDL_GPUDevice* s_Device;
         SDL_GPUDevice* m_Device = nullptr;
         SDL_Window* m_Window = nullptr;
         glm::mat4 m_ViewProjectionMatrix{};

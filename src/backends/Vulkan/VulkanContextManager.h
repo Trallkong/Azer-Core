@@ -25,6 +25,9 @@ namespace Azer {
         VmaAllocator Allocator;
         VkDescriptorPool MyDescriptorPool;
         VkDescriptorPool ImGuiDescriptorPool;
+        VkDescriptorPool TextureDescriptorPool;
+        VkDescriptorSetLayout UboSetLayout;      // set 0：uniform buffer
+        VkDescriptorSetLayout TextureSetLayout;  // set 1：combined image sampler
         VkCommandPool cmdPool;
     };
 
@@ -38,12 +41,13 @@ namespace Azer {
 
         void ReCreateSwapchain(uint32_t width, uint32_t height);
 
-        inline Ref<VulkanContext> GetContext() { return m_Context; }
-        inline const Ref<VulkanContext>& GetContext() const { return m_Context; }
-
+        static Ref<VulkanContext> GetContext() { 
+            AZ_ASSERT(s_Context != nullptr, "It Should be created at \"Init\" time.");
+            return s_Context; 
+        }
     private:
         Window* m_Window;
-        Ref<VulkanContext> m_Context;
+        static Ref<VulkanContext> s_Context;
 
         std::vector<const char*> m_RequiredDeviceExtensions = {
             VK_KHR_SWAPCHAIN_EXTENSION_NAME,
@@ -80,6 +84,8 @@ namespace Azer {
 
         void createMyDescriptorPool();
         void createImGuiDescriptorPool();
+        void createTextureDescriptorPool();
+        void createDescriptorSetLayouts();
         void createCommandPool();
     };
 }

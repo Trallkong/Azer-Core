@@ -18,7 +18,6 @@ namespace Azer {
 
         inline const VkPipeline& Get() const { return m_GraphicPipeline; }
         inline const VkPipelineLayout& Layout() const { return m_PipelineLayout; }
-        inline const VkDescriptorSetLayout& DescriptorSetLayout() const { return m_SetLayout; }
         inline const VkDescriptorSet& DescriptorSet(uint32_t frameIndex) const { return m_Sets[frameIndex]; }
         inline VkDescriptorSet* DescriptorSetPtr(uint32_t frameIndex) { return &m_Sets[frameIndex]; }
 
@@ -31,7 +30,6 @@ namespace Azer {
         VkPipeline m_GraphicPipeline;
         VkPipelineLayout m_PipelineLayout;
 
-        VkDescriptorSetLayout m_SetLayout;
         std::array<VkDescriptorSet, MAX_FLIGHT_FRAMES> m_Sets{};
 
         void CreatePipelineLayout();

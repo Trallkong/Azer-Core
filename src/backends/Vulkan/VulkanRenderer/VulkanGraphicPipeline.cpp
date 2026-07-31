@@ -61,8 +61,8 @@ namespace Azer {
 
         CreatePipelineLayout();
 
-        m_VertexShader = CreateScope<VulkanShader>(m_Context, FileSystem::ResolvePath("./assets/shaders/vertex_test.spv"), ShaderType::VERTEX);
-        m_FragmentShader = CreateScope<VulkanShader>(m_Context, FileSystem::ResolvePath("./assets/shaders/fragment_test.spv"), ShaderType::FRAGMENT);
+        m_VertexShader = CreateScope<VulkanShader>(m_Context, FileSystem::ResolvePath("./assets/shaders/vulkan_vert.spv"), ShaderType::VERTEX);
+        m_FragmentShader = CreateScope<VulkanShader>(m_Context, FileSystem::ResolvePath("./assets/shaders/vulkan_frag.spv"), ShaderType::FRAGMENT);
         
         VkPipelineShaderStageCreateInfo stages[] = { m_VertexShader->GetStageInfo(), m_FragmentShader->GetStageInfo() };
 
@@ -135,30 +135,13 @@ namespace Azer {
         {
             vkDestroyPipelineCache(m_Context->Device, m_Cache, nullptr);
         }
-
-        if (m_SetLayout != VK_NULL_HANDLE)
-        {
-            vkDestroyDescriptorSetLayout(m_Context->Device, m_SetLayout, nullptr);
-        }
     }
 
     void VulkanGraphicPipeline::CreatePipelineLayout()
     {
-        VkShaderStageFlags stages = { VK_SHADER_STAGE_VERTEX_BIT };
-        VkDescriptorSetLayoutBinding layout_binding{};
-        layout_binding.binding = 0;
-        layout_binding.descriptorCount = 1;
-        layout_binding.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        layout_binding.stageFlags = stages;
-
-        VkDescriptorSetLayoutCreateInfo setLayoutInfo{};
-        setLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        setLayoutInfo.bindingCount = 1;
-        setLayoutInfo.pBindings = &layout_binding;
-        vkCreateDescriptorSetLayout(m_Context->Device, &setLayoutInfo, nullptr, &m_SetLayout);
-
+        // 分配 per-frame 的 UBO descriptor sets（set 0）
         std::array<VkDescriptorSetLayout, VulkanGraphicPipeline::MAX_FLIGHT_FRAMES> setLayouts;
-        for (auto& l : setLayouts) l = m_SetLayout;
+        for (auto& l : setLayouts) l = m_Context->UboSetLayout;
 
         VkDescriptorSetAllocateInfo allocateInfo{};
         allocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -167,10 +150,16 @@ namespace Azer {
         allocateInfo.pSetLayouts = setLayouts.data();
         vkAllocateDescriptorSets(m_Context->Device, &allocateInfo, m_Sets.data());
 
+        // Pipeline layout：set 0 = UBO，set 1 = texture
+        VkDescriptorSetLayout pipelineSetLayouts[] = {
+            m_Context->UboSetLayout,
+            m_Context->TextureSetLayout
+        };
+
         VkPipelineLayoutCreateInfo layoutInfo{};
         layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        layoutInfo.setLayoutCount = 1;
-        layoutInfo.pSetLayouts = &m_SetLayout;
+        layoutInfo.setLayoutCount = 2;
+        layoutInfo.pSetLayouts = pipelineSetLayouts;
 
         vkCreatePipelineLayout(m_Context->Device, &layoutInfo, nullptr, &m_PipelineLayout);
     }

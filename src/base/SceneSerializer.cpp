@@ -158,7 +158,7 @@ namespace Azer
                     std::filesystem::path absPath = std::filesystem::path(assetsRoot) / texRel;
                     std::string absStr = absPath.string();
 
-                    auto tex = Texture::Create(renderer, absStr);
+                    auto tex = Texture::Create(absStr);
                     if (tex)
                     {
                         obj.SetTexture(tex);

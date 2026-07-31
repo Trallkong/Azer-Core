@@ -11,9 +11,12 @@
 #include "SDL3Texture.h"
 #include "SDL3Framebuffer.h"
 
+SDL_Renderer* Azer::SDL3Renderer::s_Renderer = nullptr;
+
 bool Azer::SDL3Renderer::Initialize(Window* window)
 {
     m_Renderer = SDL_CreateRenderer(static_cast<SDL_Window*>(window->GetHandle()), nullptr);
+    s_Renderer = m_Renderer;
     return m_Renderer != nullptr;
 }
 
@@ -21,6 +24,8 @@ void Azer::SDL3Renderer::Shutdown()
 {
     if (m_Renderer)
         SDL_DestroyRenderer(m_Renderer);
+    m_Renderer = nullptr;
+    s_Renderer = nullptr;
 }
 
 void Azer::SDL3Renderer::BeginFrame(const glm::vec3& clearColor)
@@ -104,21 +109,6 @@ void Azer::SDL3Renderer::DrawTexture(Texture* tex, const SDL_FRect& src, const T
     };
     SDL_RenderTextureRotated(m_Renderer, static_cast<SDL_Texture*>(tex->GetHandle()),
         &src, &dst, transform.Rotation, nullptr, SDL_FLIP_NONE);
-}
-
-Azer::Ref<Azer::Texture> Azer::SDL3Renderer::CreateTexture(const std::string& filePath)
-{
-    return SDL3Texture::Create(m_Renderer, filePath);
-}
-
-Azer::Ref<Azer::Texture> Azer::SDL3Renderer::CreateTexture(void* pixels, uint32_t width, uint32_t height)
-{
-    return SDL3Texture::Create(m_Renderer, pixels, width, height);
-}
-
-Azer::Ref<Azer::Texture> Azer::SDL3Renderer::CreateHDRTexture(const std::string& filePath)
-{
-    return SDL3Texture::CreateHDR(m_Renderer, filePath);
 }
 
 Azer::Ref<Azer::Framebuffer> Azer::SDL3Renderer::CreateFramebuffer(const FramebufferSpec& spec)

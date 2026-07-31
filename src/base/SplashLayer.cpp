@@ -16,7 +16,7 @@ namespace Azer
         Layer::OnAttach(ctx);
         m_Window = &ctx.window;
         if (m_Logo == nullptr)
-            m_Logo = Texture::Create(m_Renderer, FileSystem::ResolvePath("./assets/azer_logo.png"));
+            m_Logo = Texture::Create(FileSystem::ResolvePath("./assets/azer_logo.png"));
     }
 
     void SplashLayer::OnUpdate(const float delta)
@@ -51,7 +51,7 @@ namespace Azer
 
     void SplashLayer::SetLogo(const std::string& path)
     {
-        m_Logo = Texture::Create(m_Renderer, path);
+        m_Logo = Texture::Create(path);
     }
 
     void SplashLayer::SetEngineName(const std::string& name)

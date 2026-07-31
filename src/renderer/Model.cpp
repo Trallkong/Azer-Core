@@ -78,7 +78,7 @@ namespace Azer
                         continue;
                     }
 
-                    model->m_Textures[i] = Texture::Create(*renderer, pixels,
+                    model->m_Textures[i] = Texture::Create(pixels,
                         static_cast<uint32_t>(w), static_cast<uint32_t>(h));
                     stbi_image_free(pixels);
                 }

@@ -3,6 +3,8 @@
 
 #include "stb_image.h"
 
+#include "SDL3GPURenderer.h"
+
 namespace Azer
 {
     static SDL_GPUTransferBuffer* CreateTextureTransferBuffer(SDL_GPUDevice* device, uint32_t width, uint32_t height, uint32_t bytesPerPixel)
@@ -89,8 +91,33 @@ namespace Azer
         return CreateRef<GPUTexture>(device, gpuTexture, info.format, width, height);
     }
 
-    Ref<Texture> GPUTexture::Create(SDL_GPUDevice* device, const std::string& filePath)
+    Ref<Texture> GPUTexture::Create(const std::string& filePath, bool isHDR)
     {
+        SDL_GPUDevice* device = SDL3GPURenderer::GetDevice();
+
+        if (isHDR)
+        {
+            int width = 0, height = 0, channels = 0;
+            float* pixels = stbi_loadf(filePath.c_str(), &width, &height, &channels, 4);
+            if (!pixels)
+            {
+                AZ_CORE_ERROR("Failed to load HDR texture: {0}", filePath);
+                return nullptr;
+            }
+
+            Ref<Texture> texture = CreateGPUTextureFromPixels(
+                device,
+                pixels,
+                static_cast<uint32_t>(width),
+                static_cast<uint32_t>(height),
+                SDL_GPU_TEXTUREFORMAT_R32G32B32A32_FLOAT,
+                static_cast<uint32_t>(sizeof(float) * 4)
+            );
+
+            stbi_image_free(pixels);
+            return texture;
+        }
+
         SDL_Surface* loadedSurface = SDL_LoadPNG(filePath.c_str());
         if (!loadedSurface)
         {
@@ -119,31 +146,8 @@ namespace Azer
         return texture;
     }
 
-    Ref<Texture> GPUTexture::Create(SDL_GPUDevice* device, void* pixels, uint32_t width, uint32_t height)
+    Ref<Texture> GPUTexture::Create(void* pixels, uint32_t width, uint32_t height)
     {
-        return CreateGPUTextureFromPixels(device, pixels, width, height, SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM, 4);
-    }
-
-    Ref<Texture> GPUTexture::CreateHDR(SDL_GPUDevice* device, const std::string& filePath)
-    {
-        int width = 0, height = 0, channels = 0;
-        float* pixels = stbi_loadf(filePath.c_str(), &width, &height, &channels, 4);
-        if (!pixels)
-        {
-            AZ_CORE_ERROR("Failed to load HDR texture: {0}", filePath);
-            return nullptr;
-        }
-
-        Ref<Texture> texture = CreateGPUTextureFromPixels(
-            device,
-            pixels,
-            static_cast<uint32_t>(width),
-            static_cast<uint32_t>(height),
-            SDL_GPU_TEXTUREFORMAT_R32G32B32A32_FLOAT,
-            static_cast<uint32_t>(sizeof(float) * 4)
-        );
-
-        stbi_image_free(pixels);
-        return texture;
+        return CreateGPUTextureFromPixels(SDL3GPURenderer::GetDevice(), pixels, width, height, SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM, 4);
     }
 }

@@ -45,10 +45,6 @@ namespace Azer
         virtual void ImGuiNewFrame() = 0;
         virtual void SetImGuiDrawData(ImDrawData* drawData) = 0;
 
-        virtual Ref<Texture> CreateTexture(const std::string& filePath) = 0;
-        virtual Ref<Texture> CreateTexture(void* pixels, uint32_t width, uint32_t height) = 0;
-        virtual Ref<Texture> CreateHDRTexture(const std::string& filePath) = 0;
-
         virtual Ref<Framebuffer> CreateFramebuffer(const FramebufferSpec& spec) = 0;
 
         static Scope<Renderer> Create();

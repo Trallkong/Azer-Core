@@ -21,9 +21,12 @@ namespace Azer
         if (data.IndexBuffer) SDL_ReleaseGPUBuffer(device, data.IndexBuffer);
     }
 
+    SDL_GPUDevice* SDL3GPURenderer::s_Device = nullptr;
+
     bool SDL3GPURenderer::Initialize(Window* window)
     {
         m_Device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, true, nullptr);
+        s_Device = m_Device;
         if (!m_Device)
         {
             AZ_CORE_ERROR("Failed to create gpu device: {0}", SDL_GetError());
@@ -91,6 +94,7 @@ namespace Azer
         if (m_SkyboxVertexShader)   SDL_ReleaseGPUShader(m_Device, m_SkyboxVertexShader);
         if (m_Window)          SDL_ReleaseWindowFromGPUDevice(m_Device, m_Window);
         if (m_Device)          SDL_DestroyGPUDevice(m_Device);
+        s_Device = nullptr;
     }
 
     void SDL3GPURenderer::BeginFrame(const glm::vec3& clearColor)
@@ -423,21 +427,6 @@ namespace Azer
 
         cmd.ubo = ubo;
         m_DrawCmds.push_back(cmd);
-    }
-
-    Ref<Texture> SDL3GPURenderer::CreateTexture(const std::string& filePath)
-    {
-        return GPUTexture::Create(m_Device, filePath);
-    }
-
-    Ref<Texture> SDL3GPURenderer::CreateTexture(void* pixels, uint32_t width, uint32_t height)
-    {
-        return GPUTexture::Create(m_Device, pixels, width, height);
-    }
-
-    Ref<Texture> SDL3GPURenderer::CreateHDRTexture(const std::string& filePath)
-    {
-        return GPUTexture::CreateHDR(m_Device, filePath);
     }
 
     Ref<Framebuffer> SDL3GPURenderer::CreateFramebuffer(const FramebufferSpec& spec)

@@ -273,7 +273,7 @@ namespace Azer
     void SDL3GPURendererSupport::CreateWhiteTexture(SDL3GPURenderer* renderer)
     {
         uint8_t white[4] = {255, 255, 255, 255};
-        renderer->m_WhiteTexture = renderer->CreateTexture(white, 1, 1);
+        renderer->m_WhiteTexture = Texture::Create(white, 1, 1);
     }
 
     void SDL3GPURendererSupport::CreateBuffers(SDL3GPURenderer* renderer)

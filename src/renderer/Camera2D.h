@@ -32,11 +32,19 @@ namespace Azer
             return glm::inverse(m_Transform.GetMatrix());
         }
 
-        float GetZoom() const { return m_Zoom; }
-        void SetZoom(const float zoom) { m_Zoom = zoom; }
+        inline float GetZoom() const { return m_Zoom; }
+        inline void SetZoom(const float zoom) { m_Zoom = zoom; }
 
-        const Transform2D& GetTransform() const { return m_Transform; }
-        void SetTransform(const Transform2D& transform) { m_Transform = transform; }
+        inline glm::vec2 GetSize() const { return { m_Width, m_Height }; }
+        inline void SetSize(const uint32_t width, const uint32_t height)
+        {
+            m_Width = width;
+            m_Height = height;
+            UpdateProjection();
+        }
+
+        inline const Transform2D& GetTransform() const { return m_Transform; }
+        inline void SetTransform(const Transform2D& transform) { m_Transform = transform; }
 
         static glm::mat4 GetOrthoMatrixFromTransform(
             const Transform2D& transform,

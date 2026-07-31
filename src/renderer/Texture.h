@@ -8,19 +8,17 @@
 
 namespace Azer
 {
-    class Renderer;
-
     class Texture
     {
     public:
         virtual ~Texture() = default;
-        virtual uint32_t GetWidth() const = 0;
-        virtual uint32_t GetHeight() const = 0;
+        inline virtual uint32_t GetWidth() const = 0;
+        inline virtual uint32_t GetHeight() const = 0;
         virtual void* GetHandle() const = 0;
 
-        static Ref<Texture> Create(Renderer& renderer, const std::string& filePath);
-        static Ref<Texture> Create(Renderer& renderer, void* pixels, uint32_t width, uint32_t height);
-        static Ref<Texture> CreateHDR(Renderer& renderer, const std::string& filePath);
+        // 通过后端静态上下文构造对应派生类，不需要 Renderer
+        static Ref<Texture> Create(const std::string& filePath);
+        static Ref<Texture> Create(void* pixels, uint32_t width, uint32_t height);
 
         // 禁止拷贝，只许移动
         Texture(const Texture&) = delete;
@@ -29,4 +27,3 @@ namespace Azer
         Texture() = default;
     };
 }
-

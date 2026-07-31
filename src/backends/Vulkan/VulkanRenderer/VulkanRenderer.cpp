@@ -10,6 +10,7 @@
 #include "Mesh2D.h"
 #include "VulkanVertexBuffer.h"
 #include "VulkanIndexBuffer.h"
+#include "VulkanTexture.h"
 
 namespace Azer {
 
@@ -39,6 +40,12 @@ namespace Azer {
             unit.SetSize({1.0f, 1.0f});
             m_ColorQuadVbo->Upload(unit.GetVertices());
             m_ColorQuadIbo->Upload(unit.GetIndices());
+        }
+
+        // 空白纹理：绘制纯色块时绑定到 set 1，保证 shader 采样为白色
+        {
+            uint32_t whitePixel = 0xFFFFFFFF;
+            m_WhiteTexture = CreateRef<VulkanTexture>(1, 1, &whitePixel);
         }
 
         // 初始化 Viewport
@@ -101,6 +108,7 @@ namespace Azer {
         m_Ubo.reset();
         m_ColorQuadIbo.reset();
         m_ColorQuadVbo.reset();
+        m_WhiteTexture.reset();
 
         DestroyFrameResources();
         ImGuiShutdown();
@@ -291,6 +299,9 @@ namespace Azer {
         m_Ubo->Upload(m_BufferData);
         m_Ubo->Bind(m_Frames[frame].cmdBuffer->Get(), m_Pipeline, frame);
 
+        // 纯色块绑定空白纹理到 set 1
+        m_WhiteTexture->Bind(cmd, m_Pipeline->Layout());
+
         m_ColorQuadVbo->Bind(cmd);
         m_ColorQuadIbo->Bind(cmd);
 
@@ -380,24 +391,6 @@ namespace Azer {
     void VulkanRenderer::SetImGuiDrawData(ImDrawData *drawData)
     {
         ImGui_ImplVulkan_RenderDrawData(drawData, m_Frames[m_CurrentFrameIndex].cmdBuffer->Get());
-    }
-
-    Ref<Texture> VulkanRenderer::CreateTexture(const std::string &filePath)
-    {
-        AZ_ASSERT(false, "VulkanRenderer::CreateTexture not implemented yet");
-        return Ref<Texture>();
-    }
-
-    Ref<Texture> VulkanRenderer::CreateTexture(void *pixels, uint32_t width, uint32_t height)
-    {
-        AZ_ASSERT(false, "VulkanRenderer::CreateTexture not implemented yet");
-        return Ref<Texture>();
-    }
-
-    Ref<Texture> VulkanRenderer::CreateHDRTexture(const std::string &filePath)
-    {
-        AZ_ASSERT(false, "VulkanRenderer::CreateHDRTexture not implemented yet");
-        return Ref<Texture>();
     }
 
     Ref<Framebuffer> VulkanRenderer::CreateFramebuffer(const FramebufferSpec &spec)

@@ -12,6 +12,7 @@ namespace Azer {
 
     class VulkanVertexBuffer;
     class VulkanIndexBuffer;
+    class VulkanTexture;
 
     class VulkanRenderer : public Renderer {
     public:
@@ -42,9 +43,6 @@ namespace Azer {
         void ImGuiNewFrame() override;
         void SetImGuiDrawData(ImDrawData* drawData) override;
 
-        Ref<Texture> CreateTexture(const std::string& filePath) override;
-        Ref<Texture> CreateTexture(void* pixels, uint32_t width, uint32_t height) override;
-        Ref<Texture> CreateHDRTexture(const std::string& filePath) override;
         Ref<Framebuffer> CreateFramebuffer(const FramebufferSpec& spec) override;
 
         struct FrameResources {
@@ -68,6 +66,7 @@ namespace Azer {
         Ref<VulkanUniformBuffer> m_Ubo;
         Ref<VulkanVertexBuffer> m_ColorQuadVbo;
         Ref<VulkanIndexBuffer> m_ColorQuadIbo;
+        Ref<VulkanTexture> m_WhiteTexture;
 
         BufferData m_BufferData{};
 

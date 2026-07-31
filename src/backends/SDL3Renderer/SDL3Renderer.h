@@ -29,9 +29,6 @@ namespace Azer
         void DrawQuad(const Transform2D& transform, float alpha) override;
         void DrawColorQuad(const Transform2D& transform, const glm::vec4& color) override;
         void DrawTexture(Texture* tex, const SDL_FRect& src, const Transform2D& transform, float alpha) override;
-        Ref<Texture> CreateTexture(const std::string& filePath) override;
-        Ref<Texture> CreateTexture(void* pixels, uint32_t width, uint32_t height) override;
-        Ref<Texture> CreateHDRTexture(const std::string& filePath) override;
         Ref<Framebuffer> CreateFramebuffer(const FramebufferSpec& spec) override;
 
         // ImGui
@@ -40,7 +37,7 @@ namespace Azer
         void ImGuiNewFrame() override;
         void SetImGuiDrawData(ImDrawData* drawData) override;
 
-        SDL_Renderer* GetRenderer() const { return m_Renderer; }
+        static SDL_Renderer* GetRenderer() { return s_Renderer; }
 
         // No Implement
         void DrawCube(const Transform3D& transform) override { assert(false); }
@@ -49,6 +46,7 @@ namespace Azer
 
     private:
         SDL_Renderer* m_Renderer = nullptr;
+        static SDL_Renderer* s_Renderer;
         float offsetX = 0.0f, offsetY = 0.0f;
         float zoom = 1.0f;
     };
