@@ -6,6 +6,8 @@
 
 #include "vk_mem_alloc.h"
 
+#include "VulkanSwapchain.h"
+
 namespace Azer {
 
     struct VulkanContext {
@@ -17,11 +19,7 @@ namespace Azer {
         VkQueue GraphicsQueue;
         VkQueue PresentQueue;
         VkSurfaceKHR Surface;
-        VkSwapchainKHR Swapchain;
-        VkFormat SwapchainImageFormat;
-        VkExtent2D SwapchainImageExtent;
-        std::vector<VkImage> SwapchainImages;
-        std::vector<VkImageView> SwapchainImageViews;
+        Scope<VulkanSwapchain> Swapchain;
         VmaAllocator Allocator;
         VkDescriptorPool MyDescriptorPool;
         VkDescriptorPool ImGuiDescriptorPool;
@@ -51,7 +49,6 @@ namespace Azer {
 
         std::vector<const char*> m_RequiredDeviceExtensions = {
             VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-            VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
         };
 
         std::vector<VkExtensionProperties> EnumerateInstanceExtensions();
@@ -65,13 +62,7 @@ namespace Azer {
     
         void createLogicalDevice();
         void createSurface();
-        
-        void createSwapchain();
-        VkSurfaceFormatKHR chooseSwapchainFormat();
-        VkPresentModeKHR chooseSwapchainPresentMode();
-        void chooseSwapchainExtent();
 
-        void createSwapchainImageViews();
         void createMemAllocator();
 
         template<size_t N>

@@ -71,6 +71,7 @@ add_library(Azer
         backends/Vulkan/VulkanContextManager.cpp
         backends/Vulkan/vk_mem_alloc.cpp
         backends/Vulkan/VulkanCommandBuffer.cpp
+        backends/Vulkan/VulkanSwapchain.cpp
 
         # --- Backend: Vulkan Renderer ---
         backends/Vulkan/VulkanRenderer/VulkanRenderer.cpp

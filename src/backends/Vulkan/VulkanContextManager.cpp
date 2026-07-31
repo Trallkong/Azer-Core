@@ -73,8 +73,7 @@ namespace Azer {
         validateDeviceExtensions();
         createLogicalDevice();
 
-        createSwapchain();
-        createSwapchainImageViews();
+        s_Context->Swapchain = CreateScope<VulkanSwapchain>(window);
         createMemAllocator();
 
         createMyDescriptorPool();
@@ -134,20 +133,8 @@ namespace Azer {
             s_Context->Allocator = VK_NULL_HANDLE;
         }
 
-        // 6. 销毁交换链图像视图
-        for (auto& imageView : s_Context->SwapchainImageViews) {
-            if (imageView != VK_NULL_HANDLE) {
-                vkDestroyImageView(s_Context->Device, imageView, nullptr);
-                imageView = VK_NULL_HANDLE;
-            }
-        }
-        s_Context->SwapchainImageViews.clear();
-
         // 7. 销毁交换链
-        if (s_Context->Swapchain != VK_NULL_HANDLE) {
-            vkDestroySwapchainKHR(s_Context->Device, s_Context->Swapchain, nullptr);
-            s_Context->Swapchain = VK_NULL_HANDLE;
-        }
+        s_Context->Swapchain.reset();
 
         // 8. 销毁表面
         if (s_Context->Surface != VK_NULL_HANDLE) {
@@ -169,49 +156,6 @@ namespace Azer {
 
         delete s_Context;
         s_Context = nullptr;
-    }
-
-    void VulkanContextManager::ReCreateSwapchain(uint32_t width, uint32_t height)
-    {
-        if (s_Context->Swapchain != VK_NULL_HANDLE) 
-        {
-            vkDeviceWaitIdle(s_Context->Device);
-            vkDestroySwapchainKHR(s_Context->Device, s_Context->Swapchain, nullptr);
-        }
-
-        VkSurfaceFormatKHR surfaceFormat = chooseSwapchainFormat();
-        VkPresentModeKHR presentMode = chooseSwapchainPresentMode();
-        s_Context->SwapchainImageExtent = { width, height };
-
-        VkSwapchainCreateInfoKHR swapchainCreateInfo{};
-        swapchainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-        swapchainCreateInfo.surface = s_Context->Surface;
-        swapchainCreateInfo.minImageCount = 2; // 双缓冲
-        swapchainCreateInfo.imageFormat = surfaceFormat.format;
-        swapchainCreateInfo.imageColorSpace = surfaceFormat.colorSpace;
-        swapchainCreateInfo.imageExtent = s_Context->SwapchainImageExtent;
-        swapchainCreateInfo.presentMode = presentMode;
-        swapchainCreateInfo.imageArrayLayers = 1;
-        swapchainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-        swapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-        VkSurfaceCapabilitiesKHR surfaceCapabilities;
-        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(s_Context->PhysicalDevice, s_Context->Surface, &surfaceCapabilities);
-
-        swapchainCreateInfo.preTransform = surfaceCapabilities.currentTransform;
-        swapchainCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-        swapchainCreateInfo.clipped = VK_TRUE;
-
-        VkResult result = vkCreateSwapchainKHR(s_Context->Device, &swapchainCreateInfo, nullptr, &s_Context->Swapchain);
-        AZ_ASSERT(result == VK_SUCCESS, "Failed to create swapchain");
-
-        uint32_t imageCount = 0;
-        vkGetSwapchainImagesKHR(s_Context->Device, s_Context->Swapchain, &imageCount, nullptr);
-        s_Context->SwapchainImages.clear();
-        s_Context->SwapchainImages.resize(imageCount);
-        vkGetSwapchainImagesKHR(s_Context->Device, s_Context->Swapchain, &imageCount, s_Context->SwapchainImages.data());
-    
-        createSwapchainImageViews();
     }
 
     std::vector<VkExtensionProperties> VulkanContextManager::EnumerateInstanceExtensions()
@@ -347,11 +291,6 @@ namespace Azer {
             }
         }
 
-        for (const auto& device : physicalDevices)
-        {
-            // 兜底
-        }
-
         AZ_ASSERT(false, "Failed to find a suitable Vulkan physical device!");
     }
 
@@ -433,130 +372,6 @@ namespace Azer {
     void VulkanContextManager::createSurface()
     {
         SDL_Vulkan_CreateSurface(static_cast<SDL_Window*>(m_Window->GetHandle()), s_Context->Instance, nullptr, &s_Context->Surface);
-    }
-
-    void VulkanContextManager::createSwapchain()
-    {
-        VkSurfaceFormatKHR surfaceFormat = chooseSwapchainFormat();
-        VkPresentModeKHR presentMode = chooseSwapchainPresentMode();
-        chooseSwapchainExtent();
-
-        VkSwapchainCreateInfoKHR swapchainCreateInfo{};
-        swapchainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-        swapchainCreateInfo.surface = s_Context->Surface;
-        swapchainCreateInfo.minImageCount = 2; // 双缓冲
-        swapchainCreateInfo.imageFormat = surfaceFormat.format;
-        swapchainCreateInfo.imageColorSpace = surfaceFormat.colorSpace;
-        swapchainCreateInfo.imageExtent = s_Context->SwapchainImageExtent;
-        swapchainCreateInfo.presentMode = presentMode;
-        swapchainCreateInfo.imageArrayLayers = 1;
-        swapchainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-        swapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-        VkSurfaceCapabilitiesKHR surfaceCapabilities;
-        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(s_Context->PhysicalDevice, s_Context->Surface, &surfaceCapabilities);
-
-        swapchainCreateInfo.preTransform = surfaceCapabilities.currentTransform;
-        swapchainCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-        swapchainCreateInfo.clipped = VK_TRUE;
-
-        VkResult result = vkCreateSwapchainKHR(s_Context->Device, &swapchainCreateInfo, nullptr, &s_Context->Swapchain);
-        AZ_ASSERT(result == VK_SUCCESS, "Failed to create swapchain");
-
-        uint32_t imageCount = 0;
-        vkGetSwapchainImagesKHR(s_Context->Device, s_Context->Swapchain, &imageCount, nullptr);
-        s_Context->SwapchainImages.clear();
-        s_Context->SwapchainImages.resize(imageCount);
-        vkGetSwapchainImagesKHR(s_Context->Device, s_Context->Swapchain, &imageCount, s_Context->SwapchainImages.data());
-    }
-
-    VkSurfaceFormatKHR VulkanContextManager::chooseSwapchainFormat()
-    {
-        uint32_t formatCount = 0;
-        vkGetPhysicalDeviceSurfaceFormatsKHR(s_Context->PhysicalDevice, s_Context->Surface, &formatCount, nullptr);
-        std::vector<VkSurfaceFormatKHR> surfaceFormats(formatCount);
-        vkGetPhysicalDeviceSurfaceFormatsKHR(s_Context->PhysicalDevice, s_Context->Surface, &formatCount, surfaceFormats.data());
-        
-        for (const auto& format : surfaceFormats) {
-            if (format.format == VK_FORMAT_B8G8R8A8_SRGB && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-                s_Context->SwapchainImageFormat = format.format;
-                AZ_CORE_DEBUG("Using VK_FORMAT_B8G8R8A8_SRGB with VK_COLOR_SPACE_SRGB_NONLINEAR_KHR for swapchain");
-                return format;
-            }
-        }
-        
-        AZ_CORE_DEBUG("Using default swapchain format");
-        s_Context->SwapchainImageFormat = surfaceFormats[0].format;
-        return surfaceFormats[0];
-    }   
-
-    VkPresentModeKHR VulkanContextManager::chooseSwapchainPresentMode()
-    {
-        uint32_t presentModeCount = 0;
-        vkGetPhysicalDeviceSurfacePresentModesKHR(s_Context->PhysicalDevice, s_Context->Surface, &presentModeCount, nullptr);
-        std::vector<VkPresentModeKHR> presentModes(presentModeCount);
-        vkGetPhysicalDeviceSurfacePresentModesKHR(s_Context->PhysicalDevice, s_Context->Surface, &presentModeCount, presentModes.data());
-        
-        for (const auto& mode : presentModes) {
-            if (mode == VK_PRESENT_MODE_FIFO_KHR) {
-                AZ_CORE_DEBUG("Using VK_PRESENT_MODE_FIFO_KHR for swapchain");
-                return mode;
-            }
-        }
-        
-        AZ_CORE_DEBUG("Using default present mode for swapchain");
-        return presentModes[0];
-    }
-
-    // 交换范围就是交换链图像的分辨率，几乎是始终与我们绘制窗口的分辨率完全相等像素
-    void VulkanContextManager::chooseSwapchainExtent()
-    {
-        VkSurfaceCapabilitiesKHR surfaceCapabilities;
-        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(s_Context->PhysicalDevice, s_Context->Surface, &surfaceCapabilities);
-
-        if (surfaceCapabilities.currentExtent.width != UINT32_MAX) {
-            s_Context->SwapchainImageExtent = surfaceCapabilities.currentExtent;
-            return;
-        }
-
-        int width, height;
-        SDL_GetWindowSize(static_cast<SDL_Window*>(m_Window->GetHandle()), &width, &height);
-        
-        uint32_t c_width = std::clamp<uint32_t>(width, surfaceCapabilities.minImageExtent.width, surfaceCapabilities.maxImageExtent.width);
-        uint32_t c_height = std::clamp<uint32_t>(height, surfaceCapabilities.minImageExtent.height, surfaceCapabilities.maxImageExtent.height);
-        
-        s_Context->SwapchainImageExtent = { c_width, c_height };
-    }
-
-    void VulkanContextManager::createSwapchainImageViews()
-    {
-        for (auto& iv : s_Context->SwapchainImageViews) 
-        {
-            if (iv != VK_NULL_HANDLE)
-                vkDestroyImageView(s_Context->Device, iv, nullptr);
-        }
-        s_Context->SwapchainImageViews.clear();
-        s_Context->SwapchainImageViews.resize(s_Context->SwapchainImages.size());
-
-        for (uint32_t i = 0; i < s_Context->SwapchainImages.size(); ++i) {
-            VkImageViewCreateInfo viewCreateInfo{};
-            viewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-            viewCreateInfo.image = s_Context->SwapchainImages[i];
-            viewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            viewCreateInfo.format = s_Context->SwapchainImageFormat;
-            viewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-            viewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-            viewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-            viewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-            viewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            viewCreateInfo.subresourceRange.baseMipLevel = 0;
-            viewCreateInfo.subresourceRange.levelCount = 1;
-            viewCreateInfo.subresourceRange.baseArrayLayer = 0;
-            viewCreateInfo.subresourceRange.layerCount = 1;
-
-            VkResult result = vkCreateImageView(s_Context->Device, &viewCreateInfo, nullptr, &s_Context->SwapchainImageViews[i]);
-            AZ_ASSERT(result == VK_SUCCESS, "Failed to create image views for swapchain images");
-        }
     }
 
     void VulkanContextManager::createMemAllocator()

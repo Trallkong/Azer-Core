@@ -71,9 +71,9 @@ namespace Azer {
         VkPipelineRenderingCreateInfo pipelineRenderingInfo{};
         pipelineRenderingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
         pipelineRenderingInfo.colorAttachmentCount = 1;
-        pipelineRenderingInfo.pColorAttachmentFormats = &ctx.SwapchainImageFormat;
+        pipelineRenderingInfo.pColorAttachmentFormats = &ctx.Swapchain->GetFormat();
 
-        std::vector<VulkanVertexAtrribute> attributes = {
+        std::vector<VulkanVertexAttribute> attributes = {
             { VulkanVertexAttributeType::Float3, "a_Position" },
             { VulkanVertexAttributeType::Float2, "a_TexCoord" },
         };

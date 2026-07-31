@@ -34,6 +34,9 @@ namespace Azer {
             case VulkanVertexAttributeType::Int16: return 2;
             case VulkanVertexAttributeType::Int32: return 4;
             case VulkanVertexAttributeType::Int64: return 8;
+            default:
+                AZ_CORE_ERROR("Unsupported vertex attribute type for byte size");
+                return 0;
         }
     }
 
@@ -41,15 +44,28 @@ namespace Azer {
     {
         switch (type)
         {
-            case VulkanVertexAttributeType::Float: return VkFormat::VK_FORMAT_R32_SFLOAT;
-            case VulkanVertexAttributeType::Float2: return VkFormat::VK_FORMAT_R32G32_SFLOAT;
-            case VulkanVertexAttributeType::Float3: return VkFormat::VK_FORMAT_R32G32B32_SFLOAT;
-            case VulkanVertexAttributeType::Float4: return VkFormat::VK_FORMAT_R32G32B32A32_SFLOAT;
-            case VulkanVertexAttributeType::Uint32: return VkFormat::VK_FORMAT_R8G8B8A8_UINT;
+            case VulkanVertexAttributeType::Float:  return VK_FORMAT_R32_SFLOAT;
+            case VulkanVertexAttributeType::Float2: return VK_FORMAT_R32G32_SFLOAT;
+            case VulkanVertexAttributeType::Float3: return VK_FORMAT_R32G32B32_SFLOAT;
+            case VulkanVertexAttributeType::Float4: return VK_FORMAT_R32G32B32A32_SFLOAT;
+            case VulkanVertexAttributeType::Int8:   return VK_FORMAT_R8_SINT;
+            case VulkanVertexAttributeType::Int16:  return VK_FORMAT_R16_SINT;
+            case VulkanVertexAttributeType::Int32:  return VK_FORMAT_R32_SINT;
+            case VulkanVertexAttributeType::Int64:  return VK_FORMAT_R64_SINT;
+            case VulkanVertexAttributeType::Uint8:  return VK_FORMAT_R8_UINT;
+            case VulkanVertexAttributeType::Uint16: return VK_FORMAT_R16_UINT;
+            case VulkanVertexAttributeType::Uint32: return VK_FORMAT_R32_UINT;
+            case VulkanVertexAttributeType::Uint64: return VK_FORMAT_R64_UINT;
+            case VulkanVertexAttributeType::Mat2:
+            case VulkanVertexAttributeType::Mat3:
+            case VulkanVertexAttributeType::Mat4:
+            default:
+                AZ_CORE_ERROR("Unsupported vertex attribute type for VkFormat mapping");
+                return VK_FORMAT_R32G32B32A32_SFLOAT;
         }
     }
 
-    struct VulkanVertexAtrribute
+    struct VulkanVertexAttribute
     {
         VulkanVertexAttributeType type;
         std::string name;
@@ -58,10 +74,10 @@ namespace Azer {
     class VulkanVertexAttributes 
     {
     public:
-        VulkanVertexAttributes(std::vector<VulkanVertexAtrribute> attributes)
+        VulkanVertexAttributes(std::vector<VulkanVertexAttribute> attributes)
         {
             uint32_t offset = 0;
-            for (int i = 0; i < attributes.size(); i++)
+            for (size_t i = 0; i < attributes.size(); i++)
             {
                 VkVertexInputAttributeDescription desc;
                 desc.location = i;
