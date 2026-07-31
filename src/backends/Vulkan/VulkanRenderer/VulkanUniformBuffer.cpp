@@ -2,7 +2,6 @@
 #include "VulkanUniformBuffer.h"
 
 #include "VulkanContextManager.h"
-#include "VulkanGraphicPipeline.h"
 
 namespace Azer {
 
@@ -24,10 +23,38 @@ namespace Azer {
         vmaCreateBuffer(m_Context->Allocator, &bufferInfo, &allocInfo,
             &m_Buffer, &m_Allocation, &allocResult);
         m_MappedData = allocResult.pMappedData;
+
+        // 创建 descriptor set（set 0：UBO），从静态上下文的 layout/pool 分配
+        VkDescriptorSetAllocateInfo setAllocInfo{};
+        setAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        setAllocInfo.descriptorPool = m_Context->MyDescriptorPool;
+        setAllocInfo.descriptorSetCount = 1;
+        setAllocInfo.pSetLayouts = &m_Context->UboSetLayout;
+        vkAllocateDescriptorSets(m_Context->Device, &setAllocInfo, &m_DescriptorSet);
+
+        // 一次性把 buffer 写入 set
+        VkDescriptorBufferInfo descBufferInfo{};
+        descBufferInfo.buffer = m_Buffer;
+        descBufferInfo.offset = 0;
+        descBufferInfo.range = sizeof(BufferData);
+
+        VkWriteDescriptorSet write{};
+        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write.dstSet = m_DescriptorSet;
+        write.dstBinding = 0;
+        write.descriptorCount = 1;
+        write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        write.pBufferInfo = &descBufferInfo;
+        vkUpdateDescriptorSets(m_Context->Device, 1, &write, 0, nullptr);
     }
 
     VulkanUniformBuffer::~VulkanUniformBuffer()
     {
+        if (m_DescriptorSet != VK_NULL_HANDLE)
+        {
+            vkFreeDescriptorSets(m_Context->Device, m_Context->MyDescriptorPool, 1, &m_DescriptorSet);
+        }
+
         if (m_Buffer != VK_NULL_HANDLE)
         {
             vmaDestroyBuffer(m_Context->Allocator, m_Buffer, m_Allocation);
@@ -39,29 +66,9 @@ namespace Azer {
         memcpy(m_MappedData, &data, sizeof(BufferData));
     }
 
-    void VulkanUniformBuffer::Bind(const VkCommandBuffer& cmd, const Ref<VulkanGraphicPipeline>& pipeline, uint32_t frameIndex)
+    void VulkanUniformBuffer::Bind(const VkCommandBuffer& cmd, VkPipelineLayout pipelineLayout) const
     {
-        vkCmdBindDescriptorSets(cmd, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS,
-            pipeline->Layout(), 0, 1, &pipeline->DescriptorSet(frameIndex), 0, nullptr
-        );
-    }
-
-    void VulkanUniformBuffer::InitDescriptor(const Ref<VulkanGraphicPipeline>& pipeline, uint32_t frameIndex)
-    {
-        VkDescriptorBufferInfo bufferInfo{};
-        bufferInfo.buffer = m_Buffer;
-        bufferInfo.offset = 0;
-        bufferInfo.range = sizeof(BufferData);
-
-        VkWriteDescriptorSet writeSet{};
-        writeSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        writeSet.descriptorCount = 1;
-        writeSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        writeSet.dstBinding = 0;
-        writeSet.dstSet = pipeline->DescriptorSet(frameIndex);
-        writeSet.dstArrayElement = 0;
-        writeSet.pBufferInfo = &bufferInfo;
-
-        vkUpdateDescriptorSets(m_Context->Device, 1, &writeSet, 0, nullptr);
+        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
+            pipelineLayout, 0, 1, &m_DescriptorSet, 0, nullptr);
     }
 }

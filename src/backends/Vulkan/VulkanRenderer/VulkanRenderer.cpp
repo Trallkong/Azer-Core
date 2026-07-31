@@ -25,12 +25,6 @@ namespace Azer {
         const Ref<VulkanContext>& ctx = m_CtxManager.GetContext();
 
         m_Pipeline = CreateRef<VulkanGraphicPipeline>(ctx);
-        m_Ubo = CreateRef<VulkanUniformBuffer>(ctx);
-
-        for (uint32_t i = 0; i < MAX_FLIGHT_FRAMES; i++)
-        {
-            m_Ubo->InitDescriptor(m_Pipeline, i);
-        }
 
         m_ColorQuadVbo = CreateRef<VulkanVertexBuffer>(ctx, 4 * sizeof(VertexData));
         m_ColorQuadIbo = CreateRef<VulkanIndexBuffer>(ctx, 6 * 4);
@@ -69,6 +63,7 @@ namespace Azer {
         for (auto& frame : m_Frames)
         {
             frame.cmdBuffer = CreateScope<VulkanCommandBuffer>(m_CtxManager.GetContext());
+            frame.ubo = CreateRef<VulkanUniformBuffer>(ctx);
 
             VkResult result = vkCreateFence(ctx->Device, &fenceInfo, nullptr, &frame.inFlightFence);
             AZ_ASSERT(result == VK_SUCCESS, "Failed to create fence");
@@ -105,7 +100,6 @@ namespace Azer {
         vkDeviceWaitIdle(ctx->Device);
 
         m_Pipeline.reset();
-        m_Ubo.reset();
         m_ColorQuadIbo.reset();
         m_ColorQuadVbo.reset();
         m_WhiteTexture.reset();
@@ -258,8 +252,8 @@ namespace Azer {
         m_BufferData.viewProjMat = camera.GetViewProjectionMatrix();
         m_BufferData.modelMat = glm::mat4(1.0);
         uint32_t frame = m_CurrentFrameIndex;
-        m_Ubo->Upload(m_BufferData);
-        m_Ubo->Bind(m_Frames[frame].cmdBuffer->Get(), m_Pipeline, frame);
+        m_Frames[frame].ubo->Upload(m_BufferData);
+        m_Frames[frame].ubo->Bind(m_Frames[frame].cmdBuffer->Get(), m_Pipeline->Layout());
     }
 
     void VulkanRenderer::ResetRenderState()
@@ -296,8 +290,8 @@ namespace Azer {
         m_BufferData.color = color;
 
         uint32_t frame = m_CurrentFrameIndex;
-        m_Ubo->Upload(m_BufferData);
-        m_Ubo->Bind(m_Frames[frame].cmdBuffer->Get(), m_Pipeline, frame);
+        m_Frames[frame].ubo->Upload(m_BufferData);
+        m_Frames[frame].ubo->Bind(cmd, m_Pipeline->Layout());
 
         // 纯色块绑定空白纹理到 set 1
         m_WhiteTexture->Bind(cmd, m_Pipeline->Layout());
@@ -406,6 +400,7 @@ namespace Azer {
         for (auto& frame: m_Frames)
         {
             frame.cmdBuffer.reset();
+            frame.ubo.reset();
 
             if (frame.inFlightFence != VK_NULL_HANDLE)
             {

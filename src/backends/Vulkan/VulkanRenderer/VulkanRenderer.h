@@ -47,6 +47,7 @@ namespace Azer {
 
         struct FrameResources {
             Scope<VulkanCommandBuffer> cmdBuffer;
+            Ref<VulkanUniformBuffer> ubo;
             VkSemaphore imageAvaliableSemaphore;
             VkFence inFlightFence;
         };
@@ -63,7 +64,6 @@ namespace Azer {
 
         Ref<VulkanGraphicPipeline> m_Pipeline;
 
-        Ref<VulkanUniformBuffer> m_Ubo;
         Ref<VulkanVertexBuffer> m_ColorQuadVbo;
         Ref<VulkanIndexBuffer> m_ColorQuadIbo;
         Ref<VulkanTexture> m_WhiteTexture;

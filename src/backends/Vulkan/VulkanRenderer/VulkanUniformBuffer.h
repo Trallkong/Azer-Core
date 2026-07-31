@@ -10,7 +10,6 @@
 namespace Azer {
 
     struct VulkanContext;
-    class VulkanGraphicPipeline;
 
     struct BufferData
     {
@@ -19,16 +18,15 @@ namespace Azer {
         glm::vec4 color = glm::vec4(1.0f);
     };
 
-    class VulkanUniformBuffer 
+    // 每个 UBO 实例自持 buffer / allocation / descriptor set / mapped data
+    class VulkanUniformBuffer
     {
     public:
         VulkanUniformBuffer(const Ref<VulkanContext>& ctx);
         ~VulkanUniformBuffer();
 
         void Upload(const BufferData& data);
-        void Bind(const VkCommandBuffer& cmd, const Ref<VulkanGraphicPipeline>& pipeline, uint32_t frameIndex);
-
-        void InitDescriptor(const Ref<VulkanGraphicPipeline>& pipeline, uint32_t frameIndex);
+        void Bind(const VkCommandBuffer& cmd, VkPipelineLayout pipelineLayout) const;
 
     private:
         Ref<VulkanContext> m_Context;
@@ -36,5 +34,6 @@ namespace Azer {
         VkBuffer m_Buffer = VK_NULL_HANDLE;
         VmaAllocation m_Allocation = VK_NULL_HANDLE;
         void* m_MappedData = nullptr;
+        VkDescriptorSet m_DescriptorSet = VK_NULL_HANDLE;
     };
 }

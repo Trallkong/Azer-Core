@@ -113,14 +113,6 @@ namespace Azer {
 
     VulkanGraphicPipeline::~VulkanGraphicPipeline()
     {
-        for (auto& set : m_Sets)
-        {
-            if (set != VK_NULL_HANDLE)
-            {
-                vkFreeDescriptorSets(m_Context->Device, m_Context->MyDescriptorPool, 1, &set);
-            }
-        }
-
         if (m_PipelineLayout != VK_NULL_HANDLE)
         {
             vkDestroyPipelineLayout(m_Context->Device, m_PipelineLayout, nullptr);
@@ -139,17 +131,6 @@ namespace Azer {
 
     void VulkanGraphicPipeline::CreatePipelineLayout()
     {
-        // 分配 per-frame 的 UBO descriptor sets（set 0）
-        std::array<VkDescriptorSetLayout, VulkanGraphicPipeline::MAX_FLIGHT_FRAMES> setLayouts;
-        for (auto& l : setLayouts) l = m_Context->UboSetLayout;
-
-        VkDescriptorSetAllocateInfo allocateInfo{};
-        allocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        allocateInfo.descriptorPool = m_Context->MyDescriptorPool;
-        allocateInfo.descriptorSetCount = VulkanGraphicPipeline::MAX_FLIGHT_FRAMES;
-        allocateInfo.pSetLayouts = setLayouts.data();
-        vkAllocateDescriptorSets(m_Context->Device, &allocateInfo, m_Sets.data());
-
         // Pipeline layout：set 0 = UBO，set 1 = texture
         VkDescriptorSetLayout pipelineSetLayouts[] = {
             m_Context->UboSetLayout,
