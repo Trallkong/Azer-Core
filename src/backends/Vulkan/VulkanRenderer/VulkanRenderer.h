@@ -7,6 +7,7 @@
 #include "VulkanCommandBuffer.h"
 #include "VulkanGraphicPipeline.h"
 #include "VulkanUniformBuffer.h"
+#include "VulkanMeshPool.h"
 
 namespace Azer {
 
@@ -32,7 +33,7 @@ namespace Azer {
 
         void DrawQuad(const Transform2D& transform, float alpha = 1.0f) override;
         void DrawColorQuad(const Transform2D& transform, const glm::vec4& color) override;
-        void DrawTexture(Texture* tex, const SDL_FRect& src, const Transform2D& transform, float alpha = 1.0f) override;
+        void DrawTexture(const Ref<Texture>& tex, const Transform2D& transform, float alpha = 1.0f) override;
 
         void DrawCube(const Transform3D& transform) override;
         void DrawModel(Model& model, const glm::mat4& worldTransform, float alpha = 1.0f) override;
@@ -47,9 +48,10 @@ namespace Azer {
 
         struct FrameResources {
             Scope<VulkanCommandBuffer> cmdBuffer;
-            Ref<VulkanUniformBuffer> ubo;
             VkSemaphore imageAvaliableSemaphore;
             VkFence inFlightFence;
+
+            Ref<VulkanUniformBuffer> ubo;
         };
 
         static constexpr uint32_t MAX_FLIGHT_FRAMES = 3;
@@ -64,11 +66,11 @@ namespace Azer {
 
         Ref<VulkanGraphicPipeline> m_Pipeline;
 
-        Ref<VulkanVertexBuffer> m_ColorQuadVbo;
-        Ref<VulkanIndexBuffer> m_ColorQuadIbo;
         Ref<VulkanTexture> m_WhiteTexture;
 
         BufferData m_BufferData{};
+
+        Scope<VulkanMeshPool> m_MeshPool;
 
         // 动态渲染函数指针
         PFN_vkCmdBeginRenderingKHR m_vkCmdBeginRenderingKHR = nullptr;

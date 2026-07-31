@@ -1,6 +1,7 @@
 #include "azpch.h"
 #include "VulkanGraphicPipeline.h"
 #include "VulkanVertexAttributes.h"
+#include "VulkanUniformBuffer.h"
 #include "FileSystem.h"
 #include "Mesh2D.h"
 
@@ -137,10 +138,17 @@ namespace Azer {
             m_Context->TextureSetLayout
         };
 
+        VkPushConstantRange pushRange{};
+        pushRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        pushRange.offset = 0;
+        pushRange.size = sizeof(DrawPushConstants);
+
         VkPipelineLayoutCreateInfo layoutInfo{};
         layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         layoutInfo.setLayoutCount = 2;
         layoutInfo.pSetLayouts = pipelineSetLayouts;
+        layoutInfo.pushConstantRangeCount = 1;
+        layoutInfo.pPushConstantRanges = &pushRange;
 
         vkCreatePipelineLayout(m_Context->Device, &layoutInfo, nullptr, &m_PipelineLayout);
     }

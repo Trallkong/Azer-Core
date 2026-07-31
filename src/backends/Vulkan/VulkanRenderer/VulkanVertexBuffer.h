@@ -17,17 +17,13 @@ namespace Azer {
     class VulkanVertexBuffer 
     {
     public:
-        VulkanVertexBuffer(
-            const Ref<VulkanContext>& ctx, 
-            uint32_t size);
+        VulkanVertexBuffer(uint32_t size);
         ~VulkanVertexBuffer();
 
         void Upload(const Vertices& vertices);
         void Bind(const VkCommandBuffer& cmd);
 
     private:
-        Ref<VulkanContext> m_Context;
-
         VkBuffer m_Buffer = VK_NULL_HANDLE;
         VmaAllocation m_Allocation = VK_NULL_HANDLE;
         void* m_MappedData = nullptr;

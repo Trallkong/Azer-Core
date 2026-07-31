@@ -387,17 +387,13 @@ namespace Azer
         m_DrawCmds.push_back(cmd);
     }
 
-    void SDL3GPURenderer::DrawTexture(Texture* tex, const SDL_FRect& src, const Transform2D& transform, float alpha)
+    void SDL3GPURenderer::DrawTexture(const Ref<Texture>& tex, const Transform2D& transform, float alpha)
     {
-        const auto* gpuTex = dynamic_cast<GPUTexture*>(tex);
+        const auto* gpuTex = dynamic_cast<GPUTexture*>(tex.get());
         const auto handle = static_cast<SDL_GPUTexture*>(gpuTex->GetHandle());
-        const auto tw = static_cast<float>(gpuTex->GetWidth());
-        const auto th = static_cast<float>(gpuTex->GetHeight());
 
-        const float u0 = src.x / tw;
-        const float v0 = src.y / th;
-        const float u1 = (src.x + src.w) / tw;
-        const float v1 = (src.y + src.h) / th;
+        const float u0 = 0.0f, v0 = 0.0f;
+        const float u1 = 1.0f, v1 = 1.0f;
 
         const float hw = transform.Scale.x * 0.5f;
         const float hh = transform.Scale.y * 0.5f;

@@ -32,7 +32,7 @@ namespace Azer
         // Renderer2D
         virtual void DrawQuad(const Transform2D& transform, float alpha = 1.0f) = 0;
         virtual void DrawColorQuad(const Transform2D& transform, const glm::vec4& color) = 0;
-        virtual void DrawTexture(Texture* tex, const SDL_FRect& src, const Transform2D& transform, float alpha = 1.0f) = 0;
+        virtual void DrawTexture(const Ref<Texture>& tex, const Transform2D& transform, float alpha = 1.0f) = 0;
 
         // Renderer3D
         virtual void DrawCube(const Transform3D& transform) = 0;

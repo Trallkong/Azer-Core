@@ -82,6 +82,7 @@ add_library(Azer
         backends/Vulkan/VulkanRenderer/VulkanIndexBuffer.cpp
         backends/Vulkan/VulkanRenderer/VulkanStagingBuffer.cpp
         backends/Vulkan/VulkanRenderer/VulkanTexture.cpp
+        backends/Vulkan/VulkanRenderer/VulkanMeshPool.cpp
 )
 
 target_precompile_headers(Azer PRIVATE azpch.h)

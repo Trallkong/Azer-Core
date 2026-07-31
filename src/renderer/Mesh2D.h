@@ -16,6 +16,18 @@ namespace Azer {
     using Vertices = std::vector<VertexData>;
     using Indices = std::vector<uint32_t>;
 
+    enum class MeshType2D
+    {
+        QuadMesh = 0,
+    };
+
+    struct MeshType2DHash
+    {
+        std::size_t operator()(MeshType2D t) const {
+            return std::hash<int>()(static_cast<int>(t));
+        }
+    };
+
     class Mesh2D
     {
     public:
@@ -49,6 +61,9 @@ namespace Azer {
 
         const glm::vec2& GetSize() const { return m_Size; }
         const glm::vec4& GetColor() const { return m_Color; }
+
+        static constexpr uint32_t QUAD_MESH_VERICES_SIZE = 4 * sizeof(VertexData);
+        static constexpr uint32_t QUAD_MESH_INDICES_SIZE = 6 * 4;
 
     private:
         glm::vec2 m_Size;

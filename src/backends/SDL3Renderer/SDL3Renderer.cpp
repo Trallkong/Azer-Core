@@ -99,7 +99,7 @@ void Azer::SDL3Renderer::DrawColorQuad(const Transform2D& transform, const glm::
     SDL_RenderFillRect(m_Renderer, &rect);
 }
 
-void Azer::SDL3Renderer::DrawTexture(Texture* tex, const SDL_FRect& src, const Transform2D& transform, float alpha)
+void Azer::SDL3Renderer::DrawTexture(const Ref<Texture>& tex, const Transform2D& transform, float alpha)
 {
     SDL_SetTextureAlphaModFloat(static_cast<SDL_Texture*>(tex->GetHandle()), alpha);
     const SDL_FRect dst = {
@@ -108,7 +108,7 @@ void Azer::SDL3Renderer::DrawTexture(Texture* tex, const SDL_FRect& src, const T
         transform.Scale.x, transform.Scale.y
     };
     SDL_RenderTextureRotated(m_Renderer, static_cast<SDL_Texture*>(tex->GetHandle()),
-        &src, &dst, transform.Rotation, nullptr, SDL_FLIP_NONE);
+        nullptr, &dst, transform.Rotation, nullptr, SDL_FLIP_NONE);
 }
 
 Azer::Ref<Azer::Framebuffer> Azer::SDL3Renderer::CreateFramebuffer(const FramebufferSpec& spec)

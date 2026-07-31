@@ -9,19 +9,12 @@
 
 namespace Azer {
 
-    static void ResolveChannelFormat(int channels, VkFormat& format, uint32_t& bytesPerPixel)
-    {
-        switch (channels)
-        {
-        case 1: format = VK_FORMAT_R8_SRGB;         bytesPerPixel = 1; break;
-        case 2: format = VK_FORMAT_R8G8_SRGB;       bytesPerPixel = 2; break;
-        case 3: format = VK_FORMAT_R8G8B8_SRGB;     bytesPerPixel = 3; break;
-        default: format = VK_FORMAT_R8G8B8A8_SRGB;  bytesPerPixel = 4; break;
-        }
-    }
-
     VulkanTexture::VulkanTexture(const std::string& filePath, bool isHDR)
+        : m_FilePath(filePath)
     {
+        // Vulkan UV 原点在左上，stb 加载行序从上到下，需要垂直翻转保持方向一致
+        stbi_set_flip_vertically_on_load(true);
+
         int w, h, channels;
         if (isHDR)
         {
@@ -37,19 +30,16 @@ namespace Azer {
         }
         else
         {
-            // 传入 0 让 stb_image 检测实际通道数
-            unsigned char* data = stbi_load(filePath.c_str(), &w, &h, &channels, 0);
+            // 强制 4 通道：R8G8B8 等 3 通道格式在 OPTIMAL tiling 下多数 GPU 不支持
+            unsigned char* data = stbi_load(filePath.c_str(), &w, &h, &channels, 4);
             if (!data)
             {
                 AZ_CORE_ERROR("Failed to load image: {0}", filePath);
                 return;
             }
 
-            VkFormat format;
-            uint32_t bytesPerPixel;
-            ResolveChannelFormat(channels, format, bytesPerPixel);
-
-            CreateFromData(data, static_cast<uint32_t>(w), static_cast<uint32_t>(h), format, bytesPerPixel);
+            CreateFromData(data, static_cast<uint32_t>(w), static_cast<uint32_t>(h),
+                VK_FORMAT_R8G8B8A8_SRGB, 4);
             stbi_image_free(data);
         }
     }
@@ -62,6 +52,9 @@ namespace Azer {
     VulkanTexture::~VulkanTexture()
     {
         Ref<VulkanContext> ctx = VulkanContextManager::GetContext();
+
+        // 确保 GPU 不再使用该纹理的 descriptor set / image
+        vkDeviceWaitIdle(ctx->Device);
 
         if (m_DescriptorSet != VK_NULL_HANDLE)
         {

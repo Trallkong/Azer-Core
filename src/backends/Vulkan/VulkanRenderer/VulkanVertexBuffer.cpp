@@ -4,10 +4,7 @@
 
 namespace Azer {
 
-    VulkanVertexBuffer::VulkanVertexBuffer(
-        const Ref<VulkanContext>& ctx, 
-        uint32_t size)
-        : m_Context(ctx)
+    VulkanVertexBuffer::VulkanVertexBuffer(uint32_t size)
     {
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -21,7 +18,7 @@ namespace Azer {
         allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
 
         VmaAllocationInfo allocResult{};
-        vmaCreateBuffer(m_Context->Allocator, &bufferInfo, &allocInfo,
+        vmaCreateBuffer(VulkanContextManager::GetContext()->Allocator, &bufferInfo, &allocInfo,
             &m_Buffer, &m_Allocation, &allocResult);
         m_MappedData = allocResult.pMappedData;
     }
@@ -30,7 +27,7 @@ namespace Azer {
     {
         if (m_Buffer != VK_NULL_HANDLE)
         {
-            vmaDestroyBuffer(m_Context->Allocator, m_Buffer, m_Allocation);
+            vmaDestroyBuffer(VulkanContextManager::GetContext()->Allocator, m_Buffer, m_Allocation);
         }
     }
 

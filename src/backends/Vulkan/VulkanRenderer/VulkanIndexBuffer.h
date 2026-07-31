@@ -17,9 +17,7 @@ namespace Azer {
     class VulkanIndexBuffer
     {
     public:
-        VulkanIndexBuffer(
-            const Ref<VulkanContext>& ctx,
-            uint32_t size);
+        VulkanIndexBuffer(uint32_t size);
         ~VulkanIndexBuffer();
 
         void Upload(const Indices& indices);
@@ -28,8 +26,6 @@ namespace Azer {
         uint32_t GetCount() const { return m_Count; }
 
     private:
-        Ref<VulkanContext> m_Context;
-
         VkBuffer m_Buffer = VK_NULL_HANDLE;
         VmaAllocation m_Allocation = VK_NULL_HANDLE;
         void* m_MappedData = nullptr;

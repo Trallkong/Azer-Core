@@ -26,15 +26,7 @@ namespace Azer {
 
         m_Pipeline = CreateRef<VulkanGraphicPipeline>(ctx);
 
-        m_ColorQuadVbo = CreateRef<VulkanVertexBuffer>(ctx, 4 * sizeof(VertexData));
-        m_ColorQuadIbo = CreateRef<VulkanIndexBuffer>(ctx, 6 * 4);
-
-        {
-            QuadMesh unit;
-            unit.SetSize({1.0f, 1.0f});
-            m_ColorQuadVbo->Upload(unit.GetVertices());
-            m_ColorQuadIbo->Upload(unit.GetIndices());
-        }
+        m_MeshPool = CreateScope<VulkanMeshPool>();
 
         // 空白纹理：绘制纯色块时绑定到 set 1，保证 shader 采样为白色
         {
@@ -99,9 +91,9 @@ namespace Azer {
         Ref<VulkanContext> ctx = m_CtxManager.GetContext();
         vkDeviceWaitIdle(ctx->Device);
 
+        m_MeshPool.reset();
+
         m_Pipeline.reset();
-        m_ColorQuadIbo.reset();
-        m_ColorQuadVbo.reset();
         m_WhiteTexture.reset();
 
         DestroyFrameResources();
@@ -250,7 +242,6 @@ namespace Azer {
     void VulkanRenderer::SetCamera(Camera &camera)
     {
         m_BufferData.viewProjMat = camera.GetViewProjectionMatrix();
-        m_BufferData.modelMat = glm::mat4(1.0);
         uint32_t frame = m_CurrentFrameIndex;
         m_Frames[frame].ubo->Upload(m_BufferData);
         m_Frames[frame].ubo->Bind(m_Frames[frame].cmdBuffer->Get(), m_Pipeline->Layout());
@@ -286,25 +277,51 @@ namespace Azer {
     {
         const VkCommandBuffer& cmd = m_Frames[m_CurrentFrameIndex].cmdBuffer->Get();
 
-        m_BufferData.modelMat = transform.GetMatrix();
-        m_BufferData.color = color;
+        auto& frame = m_Frames[m_CurrentFrameIndex];
+        
+        MeshRenderData& renderData = m_MeshPool->GetRenderData(MeshType2D::QuadMesh);
 
-        uint32_t frame = m_CurrentFrameIndex;
-        m_Frames[frame].ubo->Upload(m_BufferData);
-        m_Frames[frame].ubo->Bind(cmd, m_Pipeline->Layout());
+        frame.ubo->Bind(cmd, m_Pipeline->Layout());
+        renderData.Vbo->Bind(cmd);
+        renderData.Ibo->Bind(cmd);
 
-        // 纯色块绑定空白纹理到 set 1
+        DrawPushConstants pc;
+        pc.modelMat = transform.GetMatrix();
+        pc.color = color;
+        vkCmdPushConstants(cmd, m_Pipeline->Layout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DrawPushConstants), &pc);
+
         m_WhiteTexture->Bind(cmd, m_Pipeline->Layout());
-
-        m_ColorQuadVbo->Bind(cmd);
-        m_ColorQuadIbo->Bind(cmd);
 
         vkCmdDrawIndexed(cmd, 6, 1, 0, 0, 0);
     }
 
-    void VulkanRenderer::DrawTexture(Texture *tex, const SDL_FRect &src, const Transform2D& transform, float alpha)
+    void VulkanRenderer::DrawTexture(const Ref<Texture>& tex, const Transform2D& transform, float alpha)
     {
-        AZ_ASSERT(false, "VulkanRenderer::DrawTexture not implemented yet");
+        const VkCommandBuffer& cmd = m_Frames[m_CurrentFrameIndex].cmdBuffer->Get();
+
+        auto* vkTex = dynamic_cast<VulkanTexture*>(tex.get());
+
+        // 用图片像素尺寸创建临时 QuadMesh，Scale 作为缩放倍率
+        QuadMesh quad;
+        quad.SetSize({static_cast<float>(vkTex->GetWidth()), static_cast<float>(vkTex->GetHeight())});
+
+        auto& frame = m_Frames[m_CurrentFrameIndex];
+
+        MeshRenderData& data = m_MeshPool->GetRenderData(vkTex->GetFilePath(), vkTex->GetWidth(), vkTex->GetHeight());
+
+        frame.ubo->Bind(cmd, m_Pipeline->Layout());
+        data.Vbo->Bind(cmd);
+        data.Ibo->Bind(cmd);
+
+        vkTex->Bind(cmd, m_Pipeline->Layout());
+
+        DrawPushConstants pc;
+        pc.modelMat = transform.GetMatrix();
+        pc.color = {1.0f, 1.0f, 1.0f, alpha};
+        vkCmdPushConstants(cmd, m_Pipeline->Layout(), VK_SHADER_STAGE_VERTEX_BIT,
+            0, sizeof(DrawPushConstants), &pc);
+
+        vkCmdDrawIndexed(cmd, 6, 1, 0, 0, 0);
     }
 
     void VulkanRenderer::DrawCube(const Transform3D& transform)

@@ -32,7 +32,7 @@ namespace Azer
         // Renderer2D
         void DrawQuad(const Transform2D& transform, float alpha) override;
         void DrawColorQuad(const Transform2D& transform, const glm::vec4& color) override;
-        void DrawTexture(Texture* tex, const SDL_FRect& src, const Transform2D& transform, float alpha) override;
+        void DrawTexture(const Ref<Texture>& tex, const Transform2D& transform, float alpha) override;
         Ref<Framebuffer> CreateFramebuffer(const FramebufferSpec& spec) override;
 
         // Renderer3D

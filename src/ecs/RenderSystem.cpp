@@ -36,11 +36,7 @@ namespace Azer
 
             if (render.Texture)
             {
-                SDL_FRect src = {0.0f, 0.0f, 
-                    static_cast<float>(render.Texture->GetWidth()), 
-                    static_cast<float>(render.Texture->GetHeight())};
-
-                m_Renderer->DrawTexture(render.Texture.get(), src, t, render.Color.a);
+                m_Renderer->DrawTexture(render.Texture, t, render.Color.a);
             }
             else
             {

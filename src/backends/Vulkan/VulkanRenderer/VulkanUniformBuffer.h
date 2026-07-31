@@ -14,6 +14,11 @@ namespace Azer {
     struct BufferData
     {
         glm::mat4 viewProjMat = glm::mat4(1.0);
+    };
+
+    // 每次绘制各自的变换/颜色，走 push constants
+    struct DrawPushConstants
+    {
         glm::mat4 modelMat = glm::mat4(1.0);
         glm::vec4 color = glm::vec4(1.0f);
     };
