@@ -9,8 +9,6 @@
 
 namespace Azer {
 
-    struct VulkanContext;
-
     struct BufferData
     {
         glm::mat4 viewProjMat = glm::mat4(1.0);
@@ -27,15 +25,13 @@ namespace Azer {
     class VulkanUniformBuffer
     {
     public:
-        VulkanUniformBuffer(const Ref<VulkanContext>& ctx);
+        VulkanUniformBuffer();
         ~VulkanUniformBuffer();
 
         void Upload(const BufferData& data);
         void Bind(const VkCommandBuffer& cmd, VkPipelineLayout pipelineLayout) const;
 
     private:
-        Ref<VulkanContext> m_Context;
-
         VkBuffer m_Buffer = VK_NULL_HANDLE;
         VmaAllocation m_Allocation = VK_NULL_HANDLE;
         void* m_MappedData = nullptr;

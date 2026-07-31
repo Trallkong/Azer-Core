@@ -41,13 +41,13 @@ namespace Azer {
 
         void ReCreateSwapchain(uint32_t width, uint32_t height);
 
-        static Ref<VulkanContext> GetContext() { 
+        static VulkanContext& GetContext() { 
             AZ_ASSERT(s_Context != nullptr, "It Should be created at \"Init\" time.");
-            return s_Context; 
+            return *s_Context; 
         }
     private:
         Window* m_Window;
-        static Ref<VulkanContext> s_Context;
+        static VulkanContext* s_Context;
 
         std::vector<const char*> m_RequiredDeviceExtensions = {
             VK_KHR_SWAPCHAIN_EXTENSION_NAME,

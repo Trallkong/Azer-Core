@@ -18,7 +18,7 @@ namespace Azer {
         allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
 
         VmaAllocationInfo allocResult{};
-        vmaCreateBuffer(VulkanContextManager::GetContext()->Allocator, &bufferInfo, &allocInfo,
+        vmaCreateBuffer(VulkanContextManager::GetContext().Allocator, &bufferInfo, &allocInfo,
             &m_Buffer, &m_Allocation, &allocResult);
         m_MappedData = allocResult.pMappedData;
     }
@@ -27,7 +27,7 @@ namespace Azer {
     {
         if (m_Buffer != VK_NULL_HANDLE)
         {
-            vmaDestroyBuffer(VulkanContextManager::GetContext()->Allocator, m_Buffer, m_Allocation);
+            vmaDestroyBuffer(VulkanContextManager::GetContext().Allocator, m_Buffer, m_Allocation);
         }
     }
 

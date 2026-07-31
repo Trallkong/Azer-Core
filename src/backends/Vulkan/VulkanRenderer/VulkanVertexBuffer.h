@@ -1,18 +1,14 @@
-#pragma once 
+#pragma once
 
 #include "Base.h"
-
 #include <vector>
 
 #include "vulkan/vulkan.h"
 
 #include "Mesh2D.h"
-
 #include "vk_mem_alloc.h"
 
 namespace Azer {
-
-    class VulkanContext;
 
     class VulkanVertexBuffer 
     {

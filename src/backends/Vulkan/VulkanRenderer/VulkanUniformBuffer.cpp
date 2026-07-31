@@ -5,9 +5,10 @@
 
 namespace Azer {
 
-    VulkanUniformBuffer::VulkanUniformBuffer(const Ref<VulkanContext>& ctx)
-        : m_Context(ctx)
+    VulkanUniformBuffer::VulkanUniformBuffer()
     {
+        VulkanContext& ctx = VulkanContextManager::GetContext();
+
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         bufferInfo.size = sizeof(BufferData);
@@ -20,17 +21,17 @@ namespace Azer {
         allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
 
         VmaAllocationInfo allocResult{};
-        vmaCreateBuffer(m_Context->Allocator, &bufferInfo, &allocInfo,
+        vmaCreateBuffer(ctx.Allocator, &bufferInfo, &allocInfo,
             &m_Buffer, &m_Allocation, &allocResult);
         m_MappedData = allocResult.pMappedData;
 
         // 创建 descriptor set（set 0：UBO），从静态上下文的 layout/pool 分配
         VkDescriptorSetAllocateInfo setAllocInfo{};
         setAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        setAllocInfo.descriptorPool = m_Context->MyDescriptorPool;
+        setAllocInfo.descriptorPool = ctx.MyDescriptorPool;
         setAllocInfo.descriptorSetCount = 1;
-        setAllocInfo.pSetLayouts = &m_Context->UboSetLayout;
-        vkAllocateDescriptorSets(m_Context->Device, &setAllocInfo, &m_DescriptorSet);
+        setAllocInfo.pSetLayouts = &ctx.UboSetLayout;
+        vkAllocateDescriptorSets(ctx.Device, &setAllocInfo, &m_DescriptorSet);
 
         // 一次性把 buffer 写入 set
         VkDescriptorBufferInfo descBufferInfo{};
@@ -45,19 +46,21 @@ namespace Azer {
         write.descriptorCount = 1;
         write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         write.pBufferInfo = &descBufferInfo;
-        vkUpdateDescriptorSets(m_Context->Device, 1, &write, 0, nullptr);
+        vkUpdateDescriptorSets(ctx.Device, 1, &write, 0, nullptr);
     }
 
     VulkanUniformBuffer::~VulkanUniformBuffer()
     {
+        VulkanContext& ctx = VulkanContextManager::GetContext();
+
         if (m_DescriptorSet != VK_NULL_HANDLE)
         {
-            vkFreeDescriptorSets(m_Context->Device, m_Context->MyDescriptorPool, 1, &m_DescriptorSet);
+            vkFreeDescriptorSets(ctx.Device, ctx.MyDescriptorPool, 1, &m_DescriptorSet);
         }
 
         if (m_Buffer != VK_NULL_HANDLE)
         {
-            vmaDestroyBuffer(m_Context->Allocator, m_Buffer, m_Allocation);
+            vmaDestroyBuffer(ctx.Allocator, m_Buffer, m_Allocation);
         }
     }
 

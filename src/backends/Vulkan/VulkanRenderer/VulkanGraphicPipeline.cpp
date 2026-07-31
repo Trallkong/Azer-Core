@@ -6,9 +6,10 @@
 #include "Mesh2D.h"
 
 namespace Azer {
-    VulkanGraphicPipeline::VulkanGraphicPipeline(const Ref<VulkanContext>& context)
-        : m_Context(context)
+    VulkanGraphicPipeline::VulkanGraphicPipeline()
     {
+        const VulkanContext& ctx = VulkanContextManager::GetContext();
+
         VkPipelineInputAssemblyStateCreateInfo inputInfo {};
         inputInfo.sType                 = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
         inputInfo.topology              = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
@@ -62,15 +63,15 @@ namespace Azer {
 
         CreatePipelineLayout();
 
-        m_VertexShader = CreateScope<VulkanShader>(m_Context, FileSystem::ResolvePath("./assets/shaders/vulkan_vert.spv"), ShaderType::VERTEX);
-        m_FragmentShader = CreateScope<VulkanShader>(m_Context, FileSystem::ResolvePath("./assets/shaders/vulkan_frag.spv"), ShaderType::FRAGMENT);
+        m_VertexShader = CreateScope<VulkanShader>(FileSystem::ResolvePath("./assets/shaders/vulkan_vert.spv"), ShaderType::VERTEX);
+        m_FragmentShader = CreateScope<VulkanShader>(FileSystem::ResolvePath("./assets/shaders/vulkan_frag.spv"), ShaderType::FRAGMENT);
         
         VkPipelineShaderStageCreateInfo stages[] = { m_VertexShader->GetStageInfo(), m_FragmentShader->GetStageInfo() };
 
         VkPipelineRenderingCreateInfo pipelineRenderingInfo{};
         pipelineRenderingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
         pipelineRenderingInfo.colorAttachmentCount = 1;
-        pipelineRenderingInfo.pColorAttachmentFormats = &m_Context->SwapchainImageFormat;
+        pipelineRenderingInfo.pColorAttachmentFormats = &ctx.SwapchainImageFormat;
 
         std::vector<VulkanVertexAtrribute> attributes = {
             { VulkanVertexAttributeType::Float3, "a_Position" },
@@ -108,34 +109,38 @@ namespace Azer {
         VkPipelineCacheCreateInfo cacheInfo {};
         cacheInfo.sType     = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
 
-        vkCreatePipelineCache(m_Context->Device, &cacheInfo, nullptr, &m_Cache);
-        vkCreateGraphicsPipelines(m_Context->Device, m_Cache, 1, &pipelineInfo, nullptr, &m_GraphicPipeline);
+        vkCreatePipelineCache(ctx.Device, &cacheInfo, nullptr, &m_Cache);
+        vkCreateGraphicsPipelines(ctx.Device, m_Cache, 1, &pipelineInfo, nullptr, &m_GraphicPipeline);
     }
 
     VulkanGraphicPipeline::~VulkanGraphicPipeline()
     {
+        const VulkanContext& ctx = VulkanContextManager::GetContext();
+
         if (m_PipelineLayout != VK_NULL_HANDLE)
         {
-            vkDestroyPipelineLayout(m_Context->Device, m_PipelineLayout, nullptr);
+            vkDestroyPipelineLayout(ctx.Device, m_PipelineLayout, nullptr);
         }
 
         if (m_GraphicPipeline != VK_NULL_HANDLE)
         {
-            vkDestroyPipeline(m_Context->Device, m_GraphicPipeline, nullptr);
+            vkDestroyPipeline(ctx.Device, m_GraphicPipeline, nullptr);
         }
 
         if (m_Cache != VK_NULL_HANDLE)
         {
-            vkDestroyPipelineCache(m_Context->Device, m_Cache, nullptr);
+            vkDestroyPipelineCache(ctx.Device, m_Cache, nullptr);
         }
     }
 
     void VulkanGraphicPipeline::CreatePipelineLayout()
     {
+        const VulkanContext& ctx = VulkanContextManager::GetContext();
+
         // Pipeline layout：set 0 = UBO，set 1 = texture
         VkDescriptorSetLayout pipelineSetLayouts[] = {
-            m_Context->UboSetLayout,
-            m_Context->TextureSetLayout
+            ctx.UboSetLayout,
+            ctx.TextureSetLayout
         };
 
         VkPushConstantRange pushRange{};
@@ -150,6 +155,6 @@ namespace Azer {
         layoutInfo.pushConstantRangeCount = 1;
         layoutInfo.pPushConstantRanges = &pushRange;
 
-        vkCreatePipelineLayout(m_Context->Device, &layoutInfo, nullptr, &m_PipelineLayout);
+        vkCreatePipelineLayout(ctx.Device, &layoutInfo, nullptr, &m_PipelineLayout);
     }
 }

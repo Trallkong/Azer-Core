@@ -51,29 +51,29 @@ namespace Azer {
 
     VulkanTexture::~VulkanTexture()
     {
-        Ref<VulkanContext> ctx = VulkanContextManager::GetContext();
+        const VulkanContext& ctx = VulkanContextManager::GetContext();
 
         // 确保 GPU 不再使用该纹理的 descriptor set / image
-        vkDeviceWaitIdle(ctx->Device);
+        vkDeviceWaitIdle(ctx.Device);
 
         if (m_DescriptorSet != VK_NULL_HANDLE)
         {
-            vkFreeDescriptorSets(ctx->Device, ctx->TextureDescriptorPool, 1, &m_DescriptorSet);
+            vkFreeDescriptorSets(ctx.Device, ctx.TextureDescriptorPool, 1, &m_DescriptorSet);
         }
 
         if (m_Sampler != VK_NULL_HANDLE)
         {
-            vkDestroySampler(ctx->Device, m_Sampler, nullptr);
+            vkDestroySampler(ctx.Device, m_Sampler, nullptr);
         }
 
         if (m_ImageView != VK_NULL_HANDLE)
         {
-            vkDestroyImageView(ctx->Device, m_ImageView, nullptr);
+            vkDestroyImageView(ctx.Device, m_ImageView, nullptr);
         }
 
         if (m_Image != VK_NULL_HANDLE)
         {
-            vmaDestroyImage(ctx->Allocator, m_Image, m_Allocation);
+            vmaDestroyImage(ctx.Allocator, m_Image, m_Allocation);
         }
     }
 
@@ -90,7 +90,7 @@ namespace Azer {
 
     void VulkanTexture::CreateFromData(void* data, uint32_t width, uint32_t height, VkFormat format, uint32_t bytesPerPixel)
     {
-        Ref<VulkanContext> ctx = VulkanContextManager::GetContext();
+        const VulkanContext& ctx = VulkanContextManager::GetContext();
 
         m_Width = width;
         m_Height = height;
@@ -112,7 +112,7 @@ namespace Azer {
         VmaAllocationCreateInfo allocInfo{};
         allocInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
 
-        VkResult result = vmaCreateImage(ctx->Allocator, &imageInfo, &allocInfo,
+        VkResult result = vmaCreateImage(ctx.Allocator, &imageInfo, &allocInfo,
             &m_Image, &m_Allocation, nullptr);
         if (result != VK_SUCCESS)
         {
@@ -122,11 +122,11 @@ namespace Azer {
 
         // 2. staging buffer 拷贝像素数据
         VkDeviceSize imageSize = static_cast<VkDeviceSize>(width) * height * bytesPerPixel;
-        VulkanStagingBuffer staging(ctx, static_cast<uint32_t>(imageSize));
+        VulkanStagingBuffer staging(static_cast<uint32_t>(imageSize));
         staging.Upload(data, static_cast<uint32_t>(imageSize));
 
         // 3. 临时 command buffer：layout transition + copy + transition
-        VulkanCommandBuffer cmdBuffer(ctx);
+        VulkanCommandBuffer cmdBuffer;
         const VkCommandBuffer& cmd = cmdBuffer.Get();
 
         VkCommandBufferBeginInfo beginInfo{};
@@ -166,15 +166,15 @@ namespace Azer {
         VkFenceCreateInfo fenceInfo{};
         fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
         VkFence fence;
-        vkCreateFence(ctx->Device, &fenceInfo, nullptr, &fence);
+        vkCreateFence(ctx.Device, &fenceInfo, nullptr, &fence);
 
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &cmd;
-        vkQueueSubmit(ctx->GraphicsQueue, 1, &submitInfo, fence);
-        vkWaitForFences(ctx->Device, 1, &fence, VK_TRUE, UINT64_MAX);
-        vkDestroyFence(ctx->Device, fence, nullptr);
+        vkQueueSubmit(ctx.GraphicsQueue, 1, &submitInfo, fence);
+        vkWaitForFences(ctx.Device, 1, &fence, VK_TRUE, UINT64_MAX);
+        vkDestroyFence(ctx.Device, fence, nullptr);
 
         // 4. ImageView
         VkImageViewCreateInfo viewInfo{};
@@ -185,7 +185,7 @@ namespace Azer {
         viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         viewInfo.subresourceRange.levelCount = 1;
         viewInfo.subresourceRange.layerCount = 1;
-        vkCreateImageView(ctx->Device, &viewInfo, nullptr, &m_ImageView);
+        vkCreateImageView(ctx.Device, &viewInfo, nullptr, &m_ImageView);
 
         // 5. Sampler
         VkSamplerCreateInfo samplerInfo{};
@@ -195,15 +195,15 @@ namespace Azer {
         samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
         samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
         samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        vkCreateSampler(ctx->Device, &samplerInfo, nullptr, &m_Sampler);
+        vkCreateSampler(ctx.Device, &samplerInfo, nullptr, &m_Sampler);
 
         // 6. Descriptor set（set 1, binding 0 = combined image sampler）
         VkDescriptorSetAllocateInfo setAllocInfo{};
         setAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        setAllocInfo.descriptorPool = ctx->TextureDescriptorPool;
+        setAllocInfo.descriptorPool = ctx.TextureDescriptorPool;
         setAllocInfo.descriptorSetCount = 1;
-        setAllocInfo.pSetLayouts = &ctx->TextureSetLayout;
-        vkAllocateDescriptorSets(ctx->Device, &setAllocInfo, &m_DescriptorSet);
+        setAllocInfo.pSetLayouts = &ctx.TextureSetLayout;
+        vkAllocateDescriptorSets(ctx.Device, &setAllocInfo, &m_DescriptorSet);
 
         VkDescriptorImageInfo imageInfoDesc{};
         imageInfoDesc.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -217,6 +217,6 @@ namespace Azer {
         write.descriptorCount = 1;
         write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         write.pImageInfo = &imageInfoDesc;
-        vkUpdateDescriptorSets(ctx->Device, 1, &write, 0, nullptr);
+        vkUpdateDescriptorSets(ctx.Device, 1, &write, 0, nullptr);
     }
 }

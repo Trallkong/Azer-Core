@@ -11,14 +11,13 @@ namespace Azer {
 
     class VulkanGraphicPipeline {
     public:
-        VulkanGraphicPipeline(const Ref<VulkanContext>& context);
+        VulkanGraphicPipeline();
         ~VulkanGraphicPipeline();
 
         inline const VkPipeline& Get() const { return m_GraphicPipeline; }
         inline const VkPipelineLayout& Layout() const { return m_PipelineLayout; }
 
     private:
-        Ref<VulkanContext> m_Context;
         Ref<VulkanShader> m_VertexShader;
         Ref<VulkanShader> m_FragmentShader;
 

@@ -7,8 +7,8 @@
 
 namespace Azer {
 
-    VulkanShader::VulkanShader(const Ref<VulkanContext>& ctx, const std::string &filePath, ShaderType type, const std::string& entryPoint)
-        : m_Context(ctx), m_FilePath(filePath), m_Type(type), m_EntryPoint(entryPoint)
+    VulkanShader::VulkanShader(const std::string &filePath, ShaderType type, const std::string& entryPoint)
+        : m_FilePath(filePath), m_Type(type), m_EntryPoint(entryPoint)
     {
         std::vector<uint8_t> shaderBytes = FileSystem::ReadBytes(m_FilePath);
         CreateShaderModule(shaderBytes);
@@ -19,7 +19,7 @@ namespace Azer {
     {
         if (m_ShaderModule != VK_NULL_HANDLE)
         {
-            vkDestroyShaderModule(m_Context->Device, m_ShaderModule, nullptr);
+            vkDestroyShaderModule(VulkanContextManager::GetContext().Device, m_ShaderModule, nullptr);
         }
     }
 
@@ -30,7 +30,7 @@ namespace Azer {
         createInfo.codeSize = shaderBytes.size();
         createInfo.pCode = reinterpret_cast<const uint32_t*>(shaderBytes.data());
 
-        VkResult result = vkCreateShaderModule(m_Context->Device, &createInfo, nullptr, &m_ShaderModule);
+        VkResult result = vkCreateShaderModule(VulkanContextManager::GetContext().Device, &createInfo, nullptr, &m_ShaderModule);
         if (result != VK_SUCCESS) {
             AZ_CORE_ERROR("Failed to create shader module for file: {0}", m_FilePath);
         }

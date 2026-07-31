@@ -58,10 +58,12 @@ namespace Azer {
 
     private:
         VulkanContextManager m_CtxManager;
+
         uint32_t m_ImageIndex = 0;
         uint32_t m_CurrentFrameIndex = 0;
         std::array<FrameResources, MAX_FLIGHT_FRAMES> m_Frames;
         std::vector<VkSemaphore> m_RenderFinishedSemaphores;
+        
         VkViewport m_Viewport;
 
         Ref<VulkanGraphicPipeline> m_Pipeline;

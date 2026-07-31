@@ -6,13 +6,18 @@
 
 namespace Azer {
 
-    Ref<VulkanContext> VulkanContextManager::s_Context = nullptr;
+    VulkanContext* VulkanContextManager::s_Context = nullptr;
 
     void VulkanContextManager::Init(Window* window)
     {
-        m_Window = window;
+        if (s_Context != nullptr)
+        {
+            AZ_CORE_WARN("VulkanContext already initialized, skipping Init");
+            return;
+        }
 
-        s_Context = CreateRef<VulkanContext>();
+        m_Window = window;
+        s_Context = new VulkanContext();
 
         // Initialize Vulkan instance
         VkApplicationInfo appInfo{};
@@ -81,6 +86,12 @@ namespace Azer {
 
     void VulkanContextManager::Shutdown()
     {
+        if (s_Context == nullptr)
+        {
+            AZ_CORE_WARN("VulkanContext not initialized, skipping Shutdown");
+            return;
+        }
+
         // 1. 等待设备空闲
         if (s_Context->Device != VK_NULL_HANDLE) {
             vkDeviceWaitIdle(s_Context->Device);
@@ -155,6 +166,9 @@ namespace Azer {
             vkDestroyInstance(s_Context->Instance, nullptr);
             s_Context->Instance = VK_NULL_HANDLE;
         }
+
+        delete s_Context;
+        s_Context = nullptr;
     }
 
     void VulkanContextManager::ReCreateSwapchain(uint32_t width, uint32_t height)

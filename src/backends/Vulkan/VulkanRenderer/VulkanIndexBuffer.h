@@ -1,18 +1,14 @@
 #pragma once
 
 #include "Base.h"
-
 #include <vector>
 
 #include "vulkan/vulkan.h"
 
 #include "Mesh2D.h"
-
 #include "vk_mem_alloc.h"
 
 namespace Azer {
-
-    class VulkanContext;
 
     class VulkanIndexBuffer
     {
@@ -24,7 +20,6 @@ namespace Azer {
         void Bind(const VkCommandBuffer& cmd);
 
         uint32_t GetCount() const { return m_Count; }
-
     private:
         VkBuffer m_Buffer = VK_NULL_HANDLE;
         VmaAllocation m_Allocation = VK_NULL_HANDLE;
