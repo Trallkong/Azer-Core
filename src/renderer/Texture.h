@@ -23,7 +23,7 @@ namespace Azer
         virtual void Bind(uint32_t binding, const Ref<Shader>& shader) {}
 
         // 通过后端静态上下文构造对应派生类，不需要 Renderer
-        static Ref<Texture> Create(const std::string& filePath);
+        static Ref<Texture> Create(const std::string& filePath, bool isHDR = false);
         static Ref<Texture> Create(void* pixels, uint32_t width, uint32_t height);
 
         // 禁止拷贝，只许移动

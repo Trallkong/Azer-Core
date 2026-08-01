@@ -1,0 +1,50 @@
+@name quad2d
+
+@vertex
+#version 450
+
+layout(location = 0) in vec3 a_Position;
+layout(location = 1) in vec2 a_TexCoord;
+
+layout(set = 0, binding = 0) uniform Camera {
+    mat4 viewProjMat;
+} camera;
+
+layout(set = 0, binding = 1) uniform DrawData {
+    mat4 modelMat;
+    vec4 color;
+} drawData;
+
+layout(location = 0) out vec2 v_TexCoord;
+layout(location = 1) out vec4 v_Color;
+
+void main() {
+    gl_Position = camera.viewProjMat * drawData.modelMat * vec4(a_Position, 1.0);
+    v_TexCoord = a_TexCoord;
+    v_Color = drawData.color;
+}
+
+@fragment
+#version 450
+
+layout(location = 0) out vec4 o_Color;
+
+layout(location = 0) in vec2 v_TexCoord;
+layout(location = 1) in vec4 v_Color;
+
+layout(set = 1, binding = 0) uniform sampler2D u_Texture;
+
+void main() {
+    o_Color = texture(u_Texture, v_TexCoord) * v_Color;
+}
+
+@pipeline
+topology: triangle_list
+cull_mode: back
+front_face: ccw
+depth_test: false
+depth_write: false
+blend: alpha
+# 引擎自有的 VertexData 为 36 字节（pos vec3 + uv vec2 + color vec4），
+# 而 shader 只消费前 20 字节（pos + uv），需覆盖反射推导的打包 stride
+vertex_stride: 36

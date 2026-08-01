@@ -84,6 +84,8 @@ add_library(Azer
         backends/Vulkan/VulkanRenderer/VulkanIndexBuffer.cpp
         backends/Vulkan/VulkanRenderer/VulkanStagingBuffer.cpp
         backends/Vulkan/VulkanRenderer/VulkanTexture.cpp
+
+        resources/SkyBox.cpp
 )
 
 target_precompile_headers(Azer PRIVATE azpch.h)
@@ -103,6 +105,7 @@ target_include_directories(Azer PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/backends/Vulkan/VulkanRenderer
         ${CMAKE_CURRENT_SOURCE_DIR}/../assets/shaders
         ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/entt/single_include
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources
 )
 
 target_link_libraries(Azer PRIVATE vendor)
