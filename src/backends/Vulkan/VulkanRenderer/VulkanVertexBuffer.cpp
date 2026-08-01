@@ -5,6 +5,7 @@
 namespace Azer {
 
     VulkanVertexBuffer::VulkanVertexBuffer(uint32_t size)
+        : m_Size(size)
     {
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;

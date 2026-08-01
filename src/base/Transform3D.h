@@ -20,17 +20,17 @@ namespace Azer
         {
             glm::mat4 mat(1.0f);
             mat = glm::translate(mat, Position);
-            mat = glm::rotate(mat, glm::radians(Rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));  // yaw
-            mat = glm::rotate(mat, glm::radians(Rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));  // pitch
-            mat = glm::rotate(mat, glm::radians(Rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));  // roll
+            mat = glm::rotate(mat, Rotation.y, glm::vec3(0.0f, 1.0f, 0.0f));  // yaw
+            mat = glm::rotate(mat, Rotation.x, glm::vec3(1.0f, 0.0f, 0.0f));  // pitch
+            mat = glm::rotate(mat, Rotation.z, glm::vec3(0.0f, 0.0f, 1.0f));  // roll
             mat = glm::scale(mat, Scale);
             return mat;
         }
 
         glm::vec3 GetForward() const
         {
-            float pitch = glm::radians(Rotation.x);
-            float yaw   = glm::radians(Rotation.y);
+            float pitch = Rotation.x;
+            float yaw   = Rotation.y;
             return glm::normalize(glm::vec3(
                 cos(pitch) * sin(yaw),
                 sin(pitch),

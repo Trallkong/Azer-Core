@@ -18,17 +18,11 @@ namespace Azer
         void Shutdown() override;
         void BeginFrame(const glm::vec3& clearColor) override;
         void EndFrame() override;
-        void SetCamera(Camera& camera) override;
         void ResetRenderState() override;
         void SetRenderTarget(Framebuffer* target) override;
         void Resize(uint32_t width, uint32_t height) override {}
         void SetViewport(uint32_t width, uint32_t height, uint32_t offsetX, uint32_t offsetY) override {}
 
-
-        // Renderer2D
-        void DrawQuad(const Transform2D& transform, float alpha) override;
-        void DrawColorQuad(const Transform2D& transform, const glm::vec4& color) override;
-        void DrawTexture(const Ref<Texture>& tex, const Transform2D& transform, float alpha) override;
         Ref<Framebuffer> CreateFramebuffer(const FramebufferSpec& spec) override;
 
         // ImGui
@@ -39,10 +33,12 @@ namespace Azer
 
         static SDL_Renderer* GetRenderer() { return s_Renderer; }
 
-        // No Implement
-        void DrawCube(const Transform3D& transform) override { assert(false); }
-        void DrawModel(Model& model, const glm::mat4& worldTransform, float alpha) override { assert(false); }
-        void DrawSkybox(const Ref<Texture>& hdrTexture) override { assert(false); }
+        // 低层绘制（RenderCommand 使用）：当前后端不支持，占位
+        void DrawIndexed(const Ref<VertexBuffer>& vertexBuffer,
+                         const Ref<IndexBuffer>& indexBuffer,
+                         const Ref<Shader>& shader) override { assert(false); }
+        void Draw(const Ref<VertexBuffer>& vertexBuffer, uint32_t vertexCount,
+                  const Ref<Shader>& shader) override { assert(false); }
 
     private:
         SDL_Renderer* m_Renderer = nullptr;

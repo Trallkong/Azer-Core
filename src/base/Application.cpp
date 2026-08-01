@@ -3,11 +3,14 @@
 
 #include "Renderer.h"
 
+#include "RenderCommand.h"
+#include "Renderer2D.h"
+#include "Renderer3D.h"
+
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
 #include "Input.h"
 #include "Logger.h"
-#include "SDL3GPURenderer.h"
 
 #include "SplashLayer.h"
 
@@ -36,6 +39,10 @@ namespace Azer
             assert(false);
         }
 
+        RenderCommand::Init(m_Renderer.get());
+        Renderer2D::Init();
+        Renderer3D::Init();
+
         m_ImGuiLayer = new ImGuiLayer(m_Renderer.get());
         PushLayer(m_ImGuiLayer);
     }
@@ -48,6 +55,8 @@ namespace Azer
             delete *i;
         }
 
+        Renderer2D::Shutdown();
+        Renderer3D::Shutdown();
         m_Renderer->Shutdown();
         m_Renderer.reset();
 

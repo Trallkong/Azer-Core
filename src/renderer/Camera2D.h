@@ -50,10 +50,12 @@ namespace Azer
             const Transform2D& transform,
             const float width, const float height, const float zNear, const float zFar)
         {
+            // 正常正交（top > bottom）：世界 +Y → NDC +Y。
+            // Vulkan 的 Y 轴翻转统一由后端负高度视口处理，这里不再翻转，避免双翻转。
             const float left = transform.Position.x - width / 2.0f;
             const float right = transform.Position.x + width / 2.0f;
-            const float top = transform.Position.y - height / 2.0f;
-            const float bottom = transform.Position.y + height / 2.0f;
+            const float top = transform.Position.y + height / 2.0f;
+            const float bottom = transform.Position.y - height / 2.0f;
             return glm::ortho(left, right, bottom, top, zNear, zFar);
         }
 

@@ -30,9 +30,16 @@
 
 // Renderer
 #include "renderer/Texture.h"
+#include "renderer/Shader.h"
+#include "renderer/VertexBuffer.h"
+#include "renderer/IndexBuffer.h"
+#include "renderer/Mesh2D.h"
 #include "renderer/Framebuffer.h"
 #include "renderer/RendererAPI.h"
 #include "renderer/Renderer.h"
+#include "renderer/RenderCommand.h"
+#include "renderer/Renderer2D.h"
+#include "renderer/Renderer3D.h"
 #include "renderer/Camera.h"
 #include "renderer/Camera2D.h"
 #include "renderer/Camera3D.h"

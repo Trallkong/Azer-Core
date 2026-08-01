@@ -4,6 +4,9 @@
 #include "stb_image.h"
 
 #include "VulkanContextManager.h"
+#include "VulkanImageTransition.h"
+#include "VulkanShader.h"
+#include "VulkanRenderer.h"
 #include "VulkanStagingBuffer.h"
 #include "VulkanCommandBuffer.h"
 
@@ -56,10 +59,7 @@ namespace Azer {
         // 确保 GPU 不再使用该纹理的 descriptor set / image
         vkDeviceWaitIdle(ctx.Device);
 
-        if (m_DescriptorSet != VK_NULL_HANDLE)
-        {
-            vkFreeDescriptorSets(ctx.Device, ctx.TextureDescriptorPool, 1, &m_DescriptorSet);
-        }
+        // descriptor set 由 VulkanDescriptorAllocator 的池统一管理，池销毁时隐式释放
 
         if (m_Sampler != VK_NULL_HANDLE)
         {
@@ -82,15 +82,23 @@ namespace Azer {
         return reinterpret_cast<void*>(m_DescriptorSet);
     }
 
-    void VulkanTexture::Bind(const VkCommandBuffer& cmd, VkPipelineLayout pipelineLayout) const
+    void VulkanTexture::Bind(uint32_t binding, const Ref<Shader>& shader)
     {
-        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-            pipelineLayout, 1, 1, &m_DescriptorSet, 0, nullptr);
+        VulkanRenderer* renderer = VulkanRenderer::Get();
+        auto* vkShader = dynamic_cast<VulkanShader*>(shader.get());
+        if (renderer == nullptr || vkShader == nullptr)
+        {
+            return;
+        }
+
+        // 用 shader 的布局直接录制到当前帧命令缓冲（布局与绘制时一致，天然兼容）
+        vkCmdBindDescriptorSets(renderer->GetCurrentFrameCmdBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS,
+            vkShader->GetLayout(), binding, 1, &m_DescriptorSet, 0, nullptr);
     }
 
     void VulkanTexture::CreateFromData(void* data, uint32_t width, uint32_t height, VkFormat format, uint32_t bytesPerPixel)
     {
-        const VulkanContext& ctx = VulkanContextManager::GetContext();
+        VulkanContext& ctx = VulkanContextManager::GetContext();
 
         m_Width = width;
         m_Height = height;
@@ -127,18 +135,7 @@ namespace Azer {
 
         // 3. 一次性命令：layout transition + copy + transition（同步等待 GPU 完成）
         VulkanCommandBuffer::SubmitSingleTime([&](const VkCommandBuffer& cmd) {
-            VkImageMemoryBarrier barrier{};
-            barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-            barrier.image = m_Image;
-            barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-            barrier.srcAccessMask = 0;
-            barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            barrier.subresourceRange.levelCount = 1;
-            barrier.subresourceRange.layerCount = 1;
-            vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+            VulkanImageTransition::ToTransferDst(cmd, m_Image);
 
             VkBufferImageCopy region{};
             region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -147,12 +144,7 @@ namespace Azer {
             vkCmdCopyBufferToImage(cmd, staging.GetBuffer(), m_Image,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
-            barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-            barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+            VulkanImageTransition::ToShaderRead(cmd, m_Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
         });
 
         // 4. ImageView
@@ -177,12 +169,9 @@ namespace Azer {
         vkCreateSampler(ctx.Device, &samplerInfo, nullptr, &m_Sampler);
 
         // 6. Descriptor set（set 1, binding 0 = combined image sampler）
-        VkDescriptorSetAllocateInfo setAllocInfo{};
-        setAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        setAllocInfo.descriptorPool = ctx.TextureDescriptorPool;
-        setAllocInfo.descriptorSetCount = 1;
-        setAllocInfo.pSetLayouts = &ctx.TextureSetLayout;
-        vkAllocateDescriptorSets(ctx.Device, &setAllocInfo, &m_DescriptorSet);
+        // 使用共享的标准纹理布局，与 shader 反射出的 set 1 布局签名一致
+        VkDescriptorSetLayout textureLayout = VulkanShader::GetStandardTextureLayout();
+        m_DescriptorSet = ctx.DescriptorAllocator.Allocate(textureLayout);
 
         VkDescriptorImageInfo imageInfoDesc{};
         imageInfoDesc.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;

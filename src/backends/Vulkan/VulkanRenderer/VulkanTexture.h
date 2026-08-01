@@ -25,10 +25,12 @@ namespace Azer {
 
         void* GetHandle() const override;
 
-        // 绑定纹理到 pipeline layout 的 set 1
-        void Bind(const VkCommandBuffer& cmd, VkPipelineLayout pipelineLayout) const;
+        // 用 shader 的布局把本纹理绑定到 set binding，直接录制到当前帧命令缓冲
+        void Bind(uint32_t binding, const Ref<Shader>& shader) override;
 
         inline const VkDescriptorSet& GetDescriptorSet() const { return m_DescriptorSet; }
+        inline const VkImageView& GetImageView() const { return m_ImageView; }
+        inline const VkSampler& GetSampler() const { return m_Sampler; }
 
     private:
         void CreateFromData(void* data, uint32_t width, uint32_t height, VkFormat format, uint32_t bytesPerPixel);

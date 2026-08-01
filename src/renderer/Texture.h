@@ -8,6 +8,8 @@
 
 namespace Azer
 {
+    class Shader;
+
     class Texture
     {
     public:
@@ -15,6 +17,10 @@ namespace Azer
         inline virtual uint32_t GetWidth() const = 0;
         inline virtual uint32_t GetHeight() const = 0;
         virtual void* GetHandle() const = 0;
+
+        // 绑定纹理到某个 set（当前约定 set 1 为纹理集），用该 shader 的布局直接录制到当前命令缓冲。
+        // 后端实现；不支持的后端用默认空实现。
+        virtual void Bind(uint32_t binding, const Ref<Shader>& shader) {}
 
         // 通过后端静态上下文构造对应派生类，不需要 Renderer
         static Ref<Texture> Create(const std::string& filePath);

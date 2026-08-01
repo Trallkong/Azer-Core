@@ -45,22 +45,22 @@ add_library(Azer
 
         # --- Renderer (abstract) ---
         renderer/Framebuffer.cpp
+        renderer/IndexBuffer.cpp
         renderer/Model.cpp
+        renderer/RenderCommand.cpp
         renderer/Renderer.cpp
+        renderer/Renderer2D.cpp
+        renderer/Renderer3D.cpp
         renderer/RendererAPI.cpp
+        renderer/Shader.cpp
         renderer/Texture.cpp
+        renderer/VertexBuffer.cpp
         renderer/Mesh2D.h
 
         # --- Backend: SDL3 Renderer (2D) ---
         backends/SDL3Renderer/SDL3Renderer.cpp
         backends/SDL3Renderer/SDL3Texture.cpp
         backends/SDL3Renderer/SDL3Framebuffer.cpp
-
-        # --- Backend: SDL3 GPU Renderer (3D) ---
-        backends/SDL3GPURenderer/SDL3GPURenderer.cpp
-        backends/SDL3GPURenderer/SDL3GPURendererSupport.cpp
-        backends/SDL3GPURenderer/GPUTexture.cpp
-        backends/SDL3GPURenderer/SDL3GPUFramebuffer.cpp
 
         # --- Backend: SDL3 Window ---
         backends/SDL3Window/SDL3Window.cpp
@@ -76,14 +76,14 @@ add_library(Azer
         # --- Backend: Vulkan Renderer ---
         backends/Vulkan/VulkanRenderer/VulkanRenderer.cpp
         backends/Vulkan/VulkanRenderer/VulkanFrameBuffer.cpp
-        backends/Vulkan/VulkanRenderer/VulkanGraphicPipeline.cpp
         backends/Vulkan/VulkanRenderer/VulkanShader.cpp
+        backends/Vulkan/VulkanRenderer/VulkanDescriptorAllocator.cpp
+        backends/Vulkan/VulkanRenderer/VulkanDescriptorSet.cpp
         backends/Vulkan/VulkanRenderer/VulkanUniformBuffer.cpp
         backends/Vulkan/VulkanRenderer/VulkanVertexBuffer.cpp
         backends/Vulkan/VulkanRenderer/VulkanIndexBuffer.cpp
         backends/Vulkan/VulkanRenderer/VulkanStagingBuffer.cpp
         backends/Vulkan/VulkanRenderer/VulkanTexture.cpp
-        backends/Vulkan/VulkanRenderer/VulkanMeshPool.cpp
 )
 
 target_precompile_headers(Azer PRIVATE azpch.h)
@@ -97,7 +97,6 @@ target_include_directories(Azer PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/base/file_system
         ${CMAKE_CURRENT_SOURCE_DIR}/renderer
         ${CMAKE_CURRENT_SOURCE_DIR}/ecs
-        ${CMAKE_CURRENT_SOURCE_DIR}/backends/SDL3GPURenderer
         ${CMAKE_CURRENT_SOURCE_DIR}/backends/SDL3Renderer
         ${CMAKE_CURRENT_SOURCE_DIR}/backends/SDL3Window
         ${CMAKE_CURRENT_SOURCE_DIR}/backends/Vulkan

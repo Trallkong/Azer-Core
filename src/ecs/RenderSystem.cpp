@@ -5,19 +5,16 @@
 #include "azpch.h"
 #include "RenderSystem.h"
 #include "World.h"
-#include "Renderer.h"
+#include "Renderer2D.h"
 
 namespace Azer
 {
     void RenderSystem::OnInitialize(World& world, EngineContext& context)
     {
-        m_Renderer = &context.renderer;
     }
 
     void RenderSystem::OnRender(World& world)
     {
-        if (!m_Renderer) return;
-
         // 查询所有具有TransformComponent和RenderComponent的实体
         auto view = world.GetAllEntitiesWith<TransformComponent, RenderComponent>();
         
@@ -36,17 +33,16 @@ namespace Azer
 
             if (render.Texture)
             {
-                m_Renderer->DrawTexture(render.Texture, t, render.Color.a);
+                Renderer2D::DrawTexture(render.Texture, t, render.Color.a);
             }
             else
             {
-                m_Renderer->DrawColorQuad(t, render.Color);
+                Renderer2D::DrawColorQuad(t, render.Color);
             }
         }
     }
 
     void RenderSystem::OnShutdown()
     {
-        m_Renderer = nullptr;
     }
 }

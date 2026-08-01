@@ -9,8 +9,6 @@
 
 namespace Azer
 {
-    class Renderer;
-
     class RenderSystem : public System
     {
     public:
@@ -22,8 +20,5 @@ namespace Azer
         void OnShutdown() override;
 
         const char* GetName() const override { return "RenderSystem"; }
-
-    private:
-        Renderer* m_Renderer = nullptr;
     };
 }

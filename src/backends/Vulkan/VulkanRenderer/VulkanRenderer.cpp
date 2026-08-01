@@ -7,12 +7,15 @@
 #include "imgui_impl_vulkan.h"
 
 
-#include "Mesh2D.h"
+#include "VulkanImageTransition.h"
+#include "VulkanDescriptorSet.h"
+#include "VulkanTexture.h"
 #include "VulkanVertexBuffer.h"
 #include "VulkanIndexBuffer.h"
-#include "VulkanTexture.h"
 
 namespace Azer {
+
+    VulkanRenderer* VulkanRenderer::s_Instance = nullptr;
 
     VulkanRenderer::~VulkanRenderer()
     {
@@ -25,22 +28,18 @@ namespace Azer {
 
         const VulkanContext& ctx = VulkanContextManager::GetContext();
 
-        m_Pipeline = CreateRef<VulkanGraphicPipeline>();
+        s_Instance = this;
 
-        m_MeshPool = CreateScope<VulkanMeshPool>();
-
-        // 空白纹理：绘制纯色块时绑定到 set 1，保证 shader 采样为白色
-        {
-            uint32_t whitePixel = 0xFFFFFFFF;
-            m_WhiteTexture = CreateRef<VulkanTexture>(1, 1, &whitePixel);
-        }
+        CreateDepthResources();
 
         // 初始化 Viewport
+        // Vulkan 帧缓冲原点在左上、NDC Y 向下；用负高度视口在光栅化阶段翻转 Y，
+        // 使世界 +Y 渲染在屏幕上方（与 2D/3D 统一，且不影响背面剔除绕序）。
         VkViewport viewport{};
         viewport.x = 0;
-        viewport.y = 0;
-        viewport.width = window->GetWindowSize().width;
-        viewport.height = window->GetWindowSize().height;
+        viewport.y = static_cast<float>(window->GetWindowSize().height);
+        viewport.width = static_cast<float>(window->GetWindowSize().width);
+        viewport.height = -static_cast<float>(window->GetWindowSize().height);
         viewport.minDepth = 0;
         viewport.maxDepth = 1;
         m_Viewport = viewport;
@@ -56,7 +55,6 @@ namespace Azer {
         for (auto& frame : m_Frames)
         {
             frame.cmdBuffer = CreateScope<VulkanCommandBuffer>();
-            frame.ubo = CreateRef<VulkanUniformBuffer>();
 
             VkResult result = vkCreateFence(ctx.Device, &fenceInfo, nullptr, &frame.inFlightFence);
             AZ_ASSERT(result == VK_SUCCESS, "Failed to create fence");
@@ -76,13 +74,15 @@ namespace Azer {
         const VulkanContext& ctx = VulkanContextManager::GetContext();
         vkDeviceWaitIdle(ctx.Device);
 
-        m_MeshPool.reset();
-
-        m_Pipeline.reset();
-        m_WhiteTexture.reset();
+        DestroyDepthResources();
 
         DestroyFrameResources();
         ImGuiShutdown();
+
+        s_Instance = nullptr;
+
+        // 销毁共享描述符布局（此时所有 VulkanShader / 纹理均已释放）
+        VulkanShader::ShutdownSharedLayouts();
 
         m_CtxManager.Shutdown();
     }
@@ -116,28 +116,11 @@ namespace Azer {
         begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
         vkBeginCommandBuffer(cmd, &begin_info);
 
-        VkImageMemoryBarrier barrier{};
-        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        barrier.newLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
-        barrier.srcAccessMask = 0;
-        barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        barrier.image = ctx.Swapchain->GetImage()[m_ImageIndex];
-        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        barrier.subresourceRange.baseMipLevel = 0;
-        barrier.subresourceRange.levelCount = 1;
-        barrier.subresourceRange.baseArrayLayer = 0;
-        barrier.subresourceRange.layerCount = 1;
+        // 交换链颜色图：丢弃旧内容 -> 颜色附件布局
+        VulkanImageTransition::ToColorAttachment(cmd, ctx.Swapchain->GetImage()[m_ImageIndex]);
 
-        vkCmdPipelineBarrier(
-            cmd,
-            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-            0,
-            0, nullptr,
-            0, nullptr,
-            1, &barrier
-        );
+        // 深度图像在创建时一次性转到 DEPTH_STENCIL_ATTACHMENT_OPTIMAL 后保持不变，
+        // 每帧用 LOAD_OP_CLEAR 清零，无需每帧 barrier；帧间安全由 in-flight fence 保证
     
         VkRenderingInfo renderingInfo{};
         renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
@@ -152,10 +135,19 @@ namespace Azer {
         colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         colorAttachment.clearValue = { clearColor.r, clearColor.g, clearColor.b, 1.0f };
         renderingInfo.pColorAttachments = &colorAttachment;
+
+        // base3d 的 depth_test 需要深度附件
+        VkRenderingAttachmentInfo depthAttachment{};
+        depthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+        depthAttachment.imageView = m_DepthImageView;
+        depthAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        depthAttachment.clearValue.depthStencil.depth = 1.0f;
+        depthAttachment.clearValue.depthStencil.stencil = 0;
+        renderingInfo.pDepthAttachment = &depthAttachment;
         
         vkCmdBeginRendering(cmd, &renderingInfo);
-
-        vkCmdBindPipeline(cmd, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline->Get());
 
         vkCmdSetViewport(cmd, 0, 1, &m_Viewport);
 
@@ -175,28 +167,8 @@ namespace Azer {
         
         vkCmdEndRendering(cmd);
 
-        VkImageMemoryBarrier presentBarrier{};
-        presentBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        presentBarrier.oldLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
-        presentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        presentBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        presentBarrier.dstAccessMask = 0;
-        presentBarrier.image = ctx.Swapchain->GetImage()[m_ImageIndex];
-        presentBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        presentBarrier.subresourceRange.baseMipLevel = 0;
-        presentBarrier.subresourceRange.levelCount = 1;
-        presentBarrier.subresourceRange.baseArrayLayer = 0;
-        presentBarrier.subresourceRange.layerCount = 1;
-
-        vkCmdPipelineBarrier(
-            cmd,
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-            0,
-            0, nullptr,
-            0, nullptr,
-            1, &presentBarrier
-        );
+        // 颜色图 -> present 布局（渲染写、present 读，真实内存依赖）
+        VulkanImageTransition::ToPresent(cmd, ctx.Swapchain->GetImage()[m_ImageIndex]);
         
         vkEndCommandBuffer(cmd);
 
@@ -233,17 +205,6 @@ namespace Azer {
         }
 
         m_CurrentFrameIndex = (m_CurrentFrameIndex + 1) % MAX_FLIGHT_FRAMES;
-
-        // 清理本帧未使用的纹理网格缓存（使用状态已被本帧的 GetRenderData 置位）
-        m_MeshPool->CleanUp();
-    }
-
-    void VulkanRenderer::SetCamera(Camera &camera)
-    {
-        m_BufferData.viewProjMat = camera.GetViewProjectionMatrix();
-        uint32_t frame = m_CurrentFrameIndex;
-        m_Frames[frame].ubo->Upload(m_BufferData);
-        m_Frames[frame].ubo->Bind(m_Frames[frame].cmdBuffer->Get(), m_Pipeline->Layout());
     }
 
     void VulkanRenderer::ResetRenderState()
@@ -258,13 +219,15 @@ namespace Azer {
 
     void VulkanRenderer::SetViewport(uint32_t width, uint32_t height, uint32_t offsetX, uint32_t offsetY)
     {
-        m_Viewport = { (float)offsetX, (float)offsetY, (float)width, (float)height };
+        // 负高度视口：翻转 Y（同 Initialize）
+        m_Viewport = { (float)offsetX, (float)(offsetY + height), (float)width, -(float)height };
     }
 
     void VulkanRenderer::Resize(uint32_t width, uint32_t height)
     {
         VulkanContextManager::GetContext().Swapchain->RecreateSwapchain(width, height);
         RebuildSubmitSemaphores();
+        CreateDepthResources();
     }
 
     void VulkanRenderer::RecreateSwapchainFromWindow()
@@ -272,6 +235,7 @@ namespace Azer {
         WindowSize size = m_Window->GetWindowSize();
         VulkanContextManager::GetContext().Swapchain->RecreateSwapchain(size.width, size.height);
         RebuildSubmitSemaphores();
+        CreateDepthResources();
     }
 
     void VulkanRenderer::RebuildSubmitSemaphores()
@@ -299,75 +263,133 @@ namespace Azer {
         }
     }
 
-    void VulkanRenderer::DrawQuad(const Transform2D& transform, float alpha)
+    void VulkanRenderer::CreateDepthResources()
     {
-        DrawColorQuad(transform, {1.0f, 1.0f, 1.0f, 1.0f});
+        const VulkanContext& ctx = VulkanContextManager::GetContext();
+        VkExtent2D extent = ctx.Swapchain->GetExtent();
+
+        DestroyDepthResources();
+
+        VkImageCreateInfo imageInfo{};
+        imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        imageInfo.imageType = VK_IMAGE_TYPE_2D;
+        imageInfo.format = VK_FORMAT_D32_SFLOAT;
+        imageInfo.extent = { extent.width, extent.height, 1 };
+        imageInfo.mipLevels = 1;
+        imageInfo.arrayLayers = 1;
+        imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+        imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+        imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+        VmaAllocationCreateInfo allocInfo{};
+        allocInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
+
+        VkResult result = vmaCreateImage(ctx.Allocator, &imageInfo, &allocInfo,
+            &m_DepthImage, &m_DepthAllocation, nullptr);
+        AZ_ASSERT(result == VK_SUCCESS, "Failed to create depth image");
+
+        VkImageViewCreateInfo viewInfo{};
+        viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        viewInfo.image = m_DepthImage;
+        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        viewInfo.format = VK_FORMAT_D32_SFLOAT;
+        viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        viewInfo.subresourceRange.levelCount = 1;
+        viewInfo.subresourceRange.layerCount = 1;
+        result = vkCreateImageView(ctx.Device, &viewInfo, nullptr, &m_DepthImageView);
+        AZ_ASSERT(result == VK_SUCCESS, "Failed to create depth image view");
+
+        // 一次性布局转换：UNDEFINED -> DEPTH_STENCIL_ATTACHMENT_OPTIMAL。
+        // 此后深度图保持该布局，每帧靠 LOAD_OP_CLEAR 清零，不再需要每帧 barrier。
+        VulkanCommandBuffer::SubmitSingleTime([&](const VkCommandBuffer& cmd) {
+            VulkanImageTransition::ToDepthAttachment(cmd, m_DepthImage);
+        });
     }
 
-    void VulkanRenderer::DrawColorQuad(const Transform2D& transform, const glm::vec4 &color)
+    void VulkanRenderer::DestroyDepthResources()
+    {
+        const VulkanContext& ctx = VulkanContextManager::GetContext();
+
+        if (m_DepthImageView != VK_NULL_HANDLE)
+        {
+            vkDestroyImageView(ctx.Device, m_DepthImageView, nullptr);
+            m_DepthImageView = VK_NULL_HANDLE;
+        }
+        if (m_DepthImage != VK_NULL_HANDLE)
+        {
+            vmaDestroyImage(ctx.Allocator, m_DepthImage, m_DepthAllocation);
+            m_DepthImage = VK_NULL_HANDLE;
+            m_DepthAllocation = VK_NULL_HANDLE;
+        }
+    }
+
+    void VulkanRenderer::BindDrawState(const VulkanShader* vkShader)
     {
         const VkCommandBuffer& cmd = m_Frames[m_CurrentFrameIndex].cmdBuffer->Get();
+        const VulkanContext& ctx = VulkanContextManager::GetContext();
 
-        auto& frame = m_Frames[m_CurrentFrameIndex];
-        
-        MeshRenderData& renderData = m_MeshPool->GetRenderData(MeshType2D::QuadMesh);
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vkShader->GetPipeline());
 
-        frame.ubo->Bind(cmd, m_Pipeline->Layout());
-        renderData.Vbo->Bind(cmd);
-        renderData.Ibo->Bind(cmd);
-
-        DrawPushConstants pc;
-        pc.modelMat = transform.GetMatrix();
-        pc.color = color;
-        vkCmdPushConstants(cmd, m_Pipeline->Layout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(DrawPushConstants), &pc);
-
-        m_WhiteTexture->Bind(cmd, m_Pipeline->Layout());
-
-        vkCmdDrawIndexed(cmd, 6, 1, 0, 0, 0);
+        // 动态 viewport / scissor（当前绘制目标）
+        VkViewport viewport = m_Viewport;
+        vkCmdSetViewport(cmd, 0, 1, &viewport);
+        VkRect2D scissor{};
+        scissor.offset = { 0, 0 };
+        scissor.extent = ctx.Swapchain->GetExtent();
+        vkCmdSetScissor(cmd, 0, 1, &scissor);
     }
 
-    void VulkanRenderer::DrawTexture(const Ref<Texture>& tex, const Transform2D& transform, float alpha)
+    void VulkanRenderer::BindUniformSets(const VulkanShader* vkShader)
     {
+        // 绑定 shader 的 uniform 描述符集（当前帧，带动态偏移）
+        vkShader->BindFrameUniformSets(m_Frames[m_CurrentFrameIndex].cmdBuffer->Get(), m_CurrentFrameIndex);
+    }
+
+    void VulkanRenderer::DrawIndexed(const Ref<VertexBuffer>& vertexBuffer,
+                                     const Ref<IndexBuffer>& indexBuffer,
+                                     const Ref<Shader>& shader)
+    {
+        auto* vkShader = dynamic_cast<VulkanShader*>(shader.get());
+        auto* vkVbo = dynamic_cast<VulkanVertexBuffer*>(vertexBuffer.get());
+        auto* vkIbo = dynamic_cast<VulkanIndexBuffer*>(indexBuffer.get());
+        AZ_ASSERT(vkShader != nullptr && vkVbo != nullptr && vkIbo != nullptr,
+            "DrawIndexed: Vulkan backend requires Vulkan shader / vertex / index buffers");
+        if (vkShader == nullptr || vkVbo == nullptr || vkIbo == nullptr)
+        {
+            return;
+        }
+
         const VkCommandBuffer& cmd = m_Frames[m_CurrentFrameIndex].cmdBuffer->Get();
 
-        auto* vkTex = dynamic_cast<VulkanTexture*>(tex.get());
+        BindDrawState(vkShader);
+        BindUniformSets(vkShader);
 
-        // 用图片像素尺寸创建临时 QuadMesh，Scale 作为缩放倍率
-        QuadMesh quad;
-        quad.SetSize({static_cast<float>(vkTex->GetWidth()), static_cast<float>(vkTex->GetHeight())});
-
-        auto& frame = m_Frames[m_CurrentFrameIndex];
-
-        MeshRenderData& data = m_MeshPool->GetRenderData(vkTex->GetFilePath(), vkTex->GetWidth(), vkTex->GetHeight());
-
-        frame.ubo->Bind(cmd, m_Pipeline->Layout());
-        data.Vbo->Bind(cmd);
-        data.Ibo->Bind(cmd);
-
-        vkTex->Bind(cmd, m_Pipeline->Layout());
-
-        DrawPushConstants pc;
-        pc.modelMat = transform.GetMatrix();
-        pc.color = {1.0f, 1.0f, 1.0f, alpha};
-        vkCmdPushConstants(cmd, m_Pipeline->Layout(), VK_SHADER_STAGE_VERTEX_BIT,
-            0, sizeof(DrawPushConstants), &pc);
-
-        vkCmdDrawIndexed(cmd, 6, 1, 0, 0, 0);
+        vkVbo->Bind(cmd);
+        vkIbo->Bind(cmd);
+        vkCmdDrawIndexed(cmd, vkIbo->GetIndexCount(), 1, 0, 0, 0);
     }
 
-    void VulkanRenderer::DrawCube(const Transform3D& transform)
+    void VulkanRenderer::Draw(const Ref<VertexBuffer>& vertexBuffer, uint32_t vertexCount,
+                              const Ref<Shader>& shader)
     {
-        AZ_ASSERT(false, "VulkanRenderer::DrawCube not implemented yet");
-    }
+        auto* vkShader = dynamic_cast<VulkanShader*>(shader.get());
+        auto* vkVbo = dynamic_cast<VulkanVertexBuffer*>(vertexBuffer.get());
+        AZ_ASSERT(vkShader != nullptr && vkVbo != nullptr,
+            "Draw: Vulkan backend requires Vulkan shader / vertex buffer");
+        if (vkShader == nullptr || vkVbo == nullptr)
+        {
+            return;
+        }
 
-    void VulkanRenderer::DrawModel(Model &model, const glm::mat4 &worldTransform, float alpha)
-    {
-        AZ_ASSERT(false, "VulkanRenderer::DrawModel not implemented yet");
-    }
+        const VkCommandBuffer& cmd = m_Frames[m_CurrentFrameIndex].cmdBuffer->Get();
 
-    void VulkanRenderer::DrawSkybox(const Ref<Texture> &hdrTexture)
-    {
-        AZ_ASSERT(false, "VulkanRenderer::DrawSkybox not implemented yet");
+        BindDrawState(vkShader);
+        BindUniformSets(vkShader);
+
+        vkVbo->Bind(cmd);
+        vkCmdDraw(cmd, vertexCount, 1, 0, 0);
     }
 
     static void check_vk_result(VkResult err)
@@ -413,6 +435,7 @@ namespace Azer {
         init_info.PipelineInfoMain.PipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
         init_info.PipelineInfoMain.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
         init_info.PipelineInfoMain.PipelineRenderingCreateInfo.pColorAttachmentFormats = &ctx.Swapchain->GetFormat();
+        init_info.PipelineInfoMain.PipelineRenderingCreateInfo.depthAttachmentFormat = VK_FORMAT_D32_SFLOAT;
 
         ImGui_ImplVulkan_Init(&init_info);
     }
@@ -448,7 +471,6 @@ namespace Azer {
         for (auto& frame: m_Frames)
         {
             frame.cmdBuffer.reset();
-            frame.ubo.reset();
 
             if (frame.inFlightFence != VK_NULL_HANDLE)
             {

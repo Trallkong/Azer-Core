@@ -76,10 +76,8 @@ namespace Azer {
         s_Context->Swapchain = CreateScope<VulkanSwapchain>(window);
         createMemAllocator();
 
-        createMyDescriptorPool();
+        s_Context->DescriptorAllocator.Init(s_Context->Device);
         createImGuiDescriptorPool();
-        createTextureDescriptorPool();
-        createDescriptorSetLayouts();
         createCommandPool();
     }
 
@@ -108,23 +106,10 @@ namespace Azer {
             s_Context->ImGuiDescriptorPool = VK_NULL_HANDLE;
         }
 
-        // 4. 销毁你的自定义描述符池（如果有）
-        if (s_Context->MyDescriptorPool != VK_NULL_HANDLE) {
-            vkDestroyDescriptorPool(s_Context->Device, s_Context->MyDescriptorPool, nullptr);
-        }
-
-        // 4.1 销毁纹理描述符池 + set layout
-        if (s_Context->TextureDescriptorPool != VK_NULL_HANDLE) {
-            vkDestroyDescriptorPool(s_Context->Device, s_Context->TextureDescriptorPool, nullptr);
-            s_Context->TextureDescriptorPool = VK_NULL_HANDLE;
-        }
-        if (s_Context->UboSetLayout != VK_NULL_HANDLE) {
-            vkDestroyDescriptorSetLayout(s_Context->Device, s_Context->UboSetLayout, nullptr);
-            s_Context->UboSetLayout = VK_NULL_HANDLE;
-        }
-        if (s_Context->TextureSetLayout != VK_NULL_HANDLE) {
-            vkDestroyDescriptorSetLayout(s_Context->Device, s_Context->TextureSetLayout, nullptr);
-            s_Context->TextureSetLayout = VK_NULL_HANDLE;
+        // 4. 销毁通用描述符分配器
+        if (s_Context->Device != VK_NULL_HANDLE)
+        {
+            s_Context->DescriptorAllocator.Shutdown();
         }
 
         // 5. 销毁 VMA 分配器
@@ -390,20 +375,6 @@ namespace Azer {
         }
     }
 
-    void VulkanContextManager::createMyDescriptorPool()
-    {
-        std::array<VkDescriptorPoolSize, 2> poolSizes = {{
-            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
-            { VK_DESCRIPTOR_TYPE_SAMPLER, 10 }
-        }};
-
-        s_Context->MyDescriptorPool = createDescriptorPool(
-            s_Context->Device,
-            poolSizes,
-            10
-        );
-    }
-
     void VulkanContextManager::createImGuiDescriptorPool()
     {
         // 使用 std::array 定义描述符池大小
@@ -428,48 +399,6 @@ namespace Azer {
             poolSizes,
             maxSets
         );
-    }
-
-    void VulkanContextManager::createTextureDescriptorPool()
-    {
-        std::array<VkDescriptorPoolSize, 1> poolSizes = {{
-            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 100 }
-        }};
-
-        s_Context->TextureDescriptorPool = createDescriptorPool(
-            s_Context->Device,
-            poolSizes,
-            100
-        );
-    }
-
-    void VulkanContextManager::createDescriptorSetLayouts()
-    {
-        // set 0：UBO（顶点阶段）
-        VkDescriptorSetLayoutBinding uboBinding{};
-        uboBinding.binding = 0;
-        uboBinding.descriptorCount = 1;
-        uboBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        uboBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-        VkDescriptorSetLayoutCreateInfo uboLayoutInfo{};
-        uboLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        uboLayoutInfo.bindingCount = 1;
-        uboLayoutInfo.pBindings = &uboBinding;
-        vkCreateDescriptorSetLayout(s_Context->Device, &uboLayoutInfo, nullptr, &s_Context->UboSetLayout);
-
-        // set 1：纹理（片段阶段）
-        VkDescriptorSetLayoutBinding texBinding{};
-        texBinding.binding = 0;
-        texBinding.descriptorCount = 1;
-        texBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        texBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-        VkDescriptorSetLayoutCreateInfo texLayoutInfo{};
-        texLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        texLayoutInfo.bindingCount = 1;
-        texLayoutInfo.pBindings = &texBinding;
-        vkCreateDescriptorSetLayout(s_Context->Device, &texLayoutInfo, nullptr, &s_Context->TextureSetLayout);
     }
 
     void VulkanContextManager::createCommandPool()

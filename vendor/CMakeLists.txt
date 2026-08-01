@@ -4,6 +4,7 @@ add_subdirectory(glm)
 add_subdirectory(spdlog)
 add_subdirectory(cgltf)
 add_subdirectory(stb_image)
+add_subdirectory(spirv_reflect)
 
 set(JSON_BuildTests OFF CACHE BOOL "" FORCE)
 set(JSON_Install OFF CACHE BOOL "" FORCE)
@@ -23,6 +24,7 @@ target_link_libraries(vendor INTERFACE
     stb_image 
     nlohmann_json::nlohmann_json 
     entt
+    spirv_reflect
 )
 
 # entt (header-only)

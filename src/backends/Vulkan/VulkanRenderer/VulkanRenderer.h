@@ -7,9 +7,7 @@
 
 #include "VulkanContextManager.h"
 #include "VulkanCommandBuffer.h"
-#include "VulkanGraphicPipeline.h"
-#include "VulkanUniformBuffer.h"
-#include "VulkanMeshPool.h"
+#include "VulkanShader.h"
 
 namespace Azer {
 
@@ -28,19 +26,17 @@ namespace Azer {
 
         void BeginFrame(const glm::vec3& clearColor) override;
         void EndFrame() override;
-        void SetCamera(Camera& camera) override;
         void ResetRenderState() override;
         void SetRenderTarget(Framebuffer* target) override;  // nullptr = swapchain
         void Resize(uint32_t width, uint32_t height) override;
         void SetViewport(uint32_t width, uint32_t height, uint32_t offsetX, uint32_t offsetY) override;
+        uint32_t GetCurrentFrameIndex() const { return m_CurrentFrameIndex; }
 
-        void DrawQuad(const Transform2D& transform, float alpha = 1.0f) override;
-        void DrawColorQuad(const Transform2D& transform, const glm::vec4& color) override;
-        void DrawTexture(const Ref<Texture>& tex, const Transform2D& transform, float alpha = 1.0f) override;
-
-        void DrawCube(const Transform3D& transform) override;
-        void DrawModel(Model& model, const glm::mat4& worldTransform, float alpha = 1.0f) override;
-        void DrawSkybox(const Ref<Texture>& hdrTexture) override;
+        void DrawIndexed(const Ref<VertexBuffer>& vertexBuffer,
+                         const Ref<IndexBuffer>& indexBuffer,
+                         const Ref<Shader>& shader) override;
+        void Draw(const Ref<VertexBuffer>& vertexBuffer, uint32_t vertexCount,
+                  const Ref<Shader>& shader) override;
 
         void ImGuiInit(SDL_Window* window) override;
         void ImGuiShutdown() override;
@@ -49,12 +45,16 @@ namespace Azer {
 
         Ref<Framebuffer> CreateFramebuffer(const FramebufferSpec& spec) override;
 
+        // ---- 静态访问（后端单例）----
+        static VulkanRenderer* Get() { return s_Instance; }
+
+        // 当前在途帧的命令缓冲（BeginFrame 到 EndFrame 之间有效）
+        VkCommandBuffer GetCurrentFrameCmdBuffer() const { return m_Frames[m_CurrentFrameIndex].cmdBuffer->Get(); }
+
         struct FrameResources {
             Scope<VulkanCommandBuffer> cmdBuffer;
             VkSemaphore imageAvaliableSemaphore;
             VkFence inFlightFence;
-
-            Ref<VulkanUniformBuffer> ubo;
         };
 
         static constexpr uint32_t MAX_FLIGHT_FRAMES = 3;
@@ -75,16 +75,20 @@ namespace Azer {
         
         VkViewport m_Viewport;
 
-        Ref<VulkanGraphicPipeline> m_Pipeline;
-
-        Ref<VulkanTexture> m_WhiteTexture;
-
-        BufferData m_BufferData{};
-
-        Scope<VulkanMeshPool> m_MeshPool;
+        // 深度附件（base3d 的 depth_test 需要）
+        VkImage m_DepthImage = VK_NULL_HANDLE;
+        VmaAllocation m_DepthAllocation = VK_NULL_HANDLE;
+        VkImageView m_DepthImageView = VK_NULL_HANDLE;
 
         void RecreateSwapchainFromWindow();
         void RebuildSubmitSemaphores();
         void DestroyFrameResources();
+
+        void CreateDepthResources();
+        void DestroyDepthResources();
+        void BindDrawState(const VulkanShader* vkShader);
+        void BindUniformSets(const VulkanShader* vkShader);
+
+        static VulkanRenderer* s_Instance;
     };
 }

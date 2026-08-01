@@ -7,6 +7,7 @@
 #include "vk_mem_alloc.h"
 
 #include "VulkanSwapchain.h"
+#include "VulkanDescriptorAllocator.h"
 
 namespace Azer {
 
@@ -21,11 +22,8 @@ namespace Azer {
         VkSurfaceKHR Surface;
         Scope<VulkanSwapchain> Swapchain;
         VmaAllocator Allocator;
-        VkDescriptorPool MyDescriptorPool;
+        VulkanDescriptorAllocator DescriptorAllocator;
         VkDescriptorPool ImGuiDescriptorPool;
-        VkDescriptorPool TextureDescriptorPool;
-        VkDescriptorSetLayout UboSetLayout;      // set 0：uniform buffer
-        VkDescriptorSetLayout TextureSetLayout;  // set 1：combined image sampler
         VkCommandPool cmdPool;
     };
 
@@ -73,10 +71,7 @@ namespace Azer {
             VkDescriptorPoolCreateFlags flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT
         );
 
-        void createMyDescriptorPool();
         void createImGuiDescriptorPool();
-        void createTextureDescriptorPool();
-        void createDescriptorSetLayouts();
         void createCommandPool();
     };
 }
