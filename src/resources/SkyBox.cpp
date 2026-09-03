@@ -14,5 +14,9 @@ namespace Azer {
         {
             m_Texture = Texture::Create(m_ResourcePath, true);
         }
+
+        SkyBox::~SkyBox() {
+            m_Texture.reset();
+        }
     }
 }

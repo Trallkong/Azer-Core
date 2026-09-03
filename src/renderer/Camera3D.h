@@ -26,7 +26,7 @@ namespace Azer
             // 相机朝向 = m_Transform 的 +Z（GetForward）。
             // 标准右手视图（glm::lookAt 同款构造）：view 空间 -Z = 朝向，与 glm::perspective 约定一致。
             // 直接 inverse(变换矩阵) 会让 view 里朝向为 +Z，前方点被透视裁掉 → 不可见。
-            glm::vec3 f = glm::normalize(m_Transform.GetForward());
+            glm::vec3 f = glm::normalize(-m_Transform.basis.z);
             glm::vec3 s = glm::normalize(glm::cross(f, glm::vec3(0.0f, 1.0f, 0.0f)));  // 右
             glm::vec3 u = glm::cross(s, f);                                           // 上
 
@@ -34,9 +34,9 @@ namespace Azer
             view[0][0] = s.x; view[1][0] = s.y; view[2][0] = s.z;
             view[0][1] = u.x; view[1][1] = u.y; view[2][1] = u.z;
             view[0][2] = -f.x; view[1][2] = -f.y; view[2][2] = -f.z;
-            view[3][0] = -glm::dot(s, m_Transform.Position);
-            view[3][1] = -glm::dot(u, m_Transform.Position);
-            view[3][2] =  glm::dot(f, m_Transform.Position);
+            view[3][0] = -glm::dot(s, m_Transform.position);
+            view[3][1] = -glm::dot(u, m_Transform.position);
+            view[3][2] =  glm::dot(f, m_Transform.position);
             return view;
         }
 

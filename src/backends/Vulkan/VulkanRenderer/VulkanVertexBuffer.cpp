@@ -32,10 +32,9 @@ namespace Azer {
         }
     }
 
-    void VulkanVertexBuffer::Upload(const Vertices &vertices)
+    void VulkanVertexBuffer::Upload(void* vertices)
     {
-        uint32_t size = vertices.size() * sizeof(VertexData);
-        memcpy(m_MappedData, vertices.data(), size);
+        memcpy(m_MappedData, vertices, m_Size);
     }
 
     void VulkanVertexBuffer::Bind(const VkCommandBuffer &cmd)

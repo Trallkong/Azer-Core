@@ -19,16 +19,17 @@ namespace Azer
         s_Shader = Shader::Create("quad2d");
 
         // 单位四边形（-0.5..0.5），大小由 model 矩阵的缩放决定
+        // V 约定：V=0 为原图顶部（stb 不翻转），屏幕顶部(世界 +Y, TR/TL)采样 V=0
         Vertices quadVerts = {
-            { {-0.5f, -0.5f, 0.0f}, {0.0f, 0.0f}, {1.0f, 1.0f, 1.0f, 1.0f} },
-            { { 0.5f, -0.5f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f, 1.0f, 1.0f} },
-            { { 0.5f,  0.5f, 0.0f}, {1.0f, 1.0f}, {1.0f, 1.0f, 1.0f, 1.0f} },
-            { {-0.5f,  0.5f, 0.0f}, {0.0f, 1.0f}, {1.0f, 1.0f, 1.0f, 1.0f} },
+            { {-0.5f, -0.5f, 0.0f}, {0.0f, 1.0f}, {1.0f, 1.0f, 1.0f, 1.0f} },
+            { { 0.5f, -0.5f, 0.0f}, {1.0f, 1.0f}, {1.0f, 1.0f, 1.0f, 1.0f} },
+            { { 0.5f,  0.5f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f, 1.0f, 1.0f} },
+            { {-0.5f,  0.5f, 0.0f}, {0.0f, 0.0f}, {1.0f, 1.0f, 1.0f, 1.0f} },
         };
         Indices quadIdx = { 0, 1, 2, 2, 3, 0 };
 
         s_QuadVbo = VertexBuffer::Create(static_cast<uint32_t>(quadVerts.size() * sizeof(VertexData)));
-        s_QuadVbo->Upload(quadVerts);
+        s_QuadVbo->Upload(quadVerts.data());
         s_QuadIbo = IndexBuffer::Create(static_cast<uint32_t>(quadIdx.size() * sizeof(uint32_t)));
         s_QuadIbo->Upload(quadIdx);
 

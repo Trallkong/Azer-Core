@@ -27,9 +27,9 @@ namespace Azer
             if (!render.Visible) continue;
             
             Transform2D t;
-            t.Position = glm::vec2(transform.Transform.Position.x, transform.Transform.Position.y);
+            t.Position = glm::vec2(transform.Transform.position.x, transform.Transform.position.y);
             t.Scale = glm::vec2(render.Size.x, render.Size.y);
-            t.Rotation = transform.Transform.Rotation.z;
+            t.Rotation = transform.Transform.rotation.value().z;
 
             if (render.Texture)
             {

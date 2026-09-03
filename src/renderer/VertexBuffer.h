@@ -17,7 +17,7 @@ namespace Azer
 
         static Ref<VertexBuffer> Create(uint32_t size);
 
-        virtual void Upload(const Vertices& vertices) = 0;
+        virtual void Upload(void* vertices) = 0;
         virtual uint32_t GetSize() const = 0;
     };
 }

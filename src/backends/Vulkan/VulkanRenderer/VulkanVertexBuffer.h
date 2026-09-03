@@ -17,7 +17,7 @@ namespace Azer {
         VulkanVertexBuffer(uint32_t size);
         ~VulkanVertexBuffer();
 
-        void Upload(const Vertices& vertices) override;
+        void Upload(void* vertices) override;
         uint32_t GetSize() const override { return m_Size; }
 
         void Bind(const VkCommandBuffer& cmd);

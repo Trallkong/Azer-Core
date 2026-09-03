@@ -20,6 +20,9 @@ namespace Azer {
             explicit SkyBox(const std::string& resourcePath);
             ~SkyBox() override;
 
+            inline const Ref<Texture>& GetTexture() const { return m_Texture; }
+
+            float Exposure = 1.0f;
         private:
             std::string m_ResourcePath;
             Ref<Texture> m_Texture;

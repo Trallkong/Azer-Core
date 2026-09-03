@@ -10,8 +10,7 @@
 #include "VertexBuffer.h"
 #include "IndexBuffer.h"
 #include "Transform3D.h"
-
-#include <vector>
+#include "SkyBox.h"
 
 namespace Azer
 {
@@ -32,7 +31,7 @@ namespace Azer
                              const Ref<IndexBuffer>& indexBuffer,
                              const Ref<Shader>& shader);
 
-        static void DrawSkybox();
+        static void DrawSkybox(const Resources::SkyBox& skybox);
 
     private:
         static constexpr uint32_t CUBE_VERTEX_COUNT = 24;
@@ -42,5 +41,14 @@ namespace Azer
         static Ref<VertexBuffer> s_CubeVbo;
         static Ref<IndexBuffer> s_CubeIbo;
         static Ref<Texture> s_WhiteTexture;
+
+        static Ref<Shader> s_SkyboxShader;
+        static Ref<VertexBuffer> s_SkyVbo;
+
+        struct SkyBoxProperties {
+            float exposure = 1.0f;
+        };
+
+        static SkyBoxProperties s_SkyboxProperties;
     };
 }

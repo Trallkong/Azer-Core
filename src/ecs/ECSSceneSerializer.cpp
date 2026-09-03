@@ -26,9 +26,9 @@ namespace Azer
 
     static void SerializeTransformComponent(json& j, const TransformComponent& component)
     {
-        j["Position"] = {component.Transform.Position.x, component.Transform.Position.y, component.Transform.Position.z};
-        j["Rotation"] = {component.Transform.Rotation.x, component.Transform.Rotation.y, component.Transform.Rotation.z};
-        j["Scale"] = {component.Transform.Scale.x, component.Transform.Scale.y, component.Transform.Scale.z};
+        j["position"] = {component.Transform.position.x, component.Transform.position.y, component.Transform.position.z};
+        j["Rotation"] = {component.Transform.rotation.value().x, component.Transform.rotation.value().y, component.Transform.rotation.value().z};
+        j["Scale"] = {component.Transform.scale.x, component.Transform.scale.y, component.Transform.scale.z};
     }
 
     static void SerializeRenderComponent(json& j, const RenderComponent& component, const std::string& assetsRoot)
@@ -36,7 +36,7 @@ namespace Azer
         j["Size"] = {component.Size.x, component.Size.y, component.Size.z};
         j["Color"] = {component.Color.r, component.Color.g, component.Color.b, component.Color.a};
         j["Visible"] = component.Visible;
-        
+
         // 保存相对路径
         if (!component.TexturePath.empty())
         {
@@ -97,14 +97,14 @@ namespace Azer
 
     static void DeserializeTransformComponent(const json& j, TransformComponent& component)
     {
-        auto pos = j["Position"];
-        component.Transform.Position = glm::vec3(pos[0].get<float>(), pos[1].get<float>(), pos[2].get<float>());
-        
+        auto pos = j["position"];
+        component.Transform.position = glm::vec3(pos[0].get<float>(), pos[1].get<float>(), pos[2].get<float>());
+
         auto rot = j["Rotation"];
-        component.Transform.Rotation = glm::vec3(rot[0].get<float>(), rot[1].get<float>(), rot[2].get<float>());
-        
+        component.Transform.rotation = glm::vec3(rot[0].get<float>(), rot[1].get<float>(), rot[2].get<float>());
+
         auto scale = j["Scale"];
-        component.Transform.Scale = glm::vec3(scale[0].get<float>(), scale[1].get<float>(), scale[2].get<float>());
+        component.Transform.scale = glm::vec3(scale[0].get<float>(), scale[1].get<float>(), scale[2].get<float>());
     }
 
     static void DeserializeRenderComponent(const json& j, RenderComponent& component, const std::string& assetsRoot, Renderer& renderer)

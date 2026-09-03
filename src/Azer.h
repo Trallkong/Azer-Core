@@ -22,6 +22,10 @@
 #include "base/Collision.h"
 #include "base/file_system/FileSystem.h"
 
+// Resource
+#include "resources/Resource.h"
+#include "resources/SkyBox.h"
+
 // Animation
 #include "base/animation/AnimationPlayer.h"
 

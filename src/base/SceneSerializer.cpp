@@ -25,9 +25,9 @@ namespace Azer
 
             const auto& t = obj->GetTransform();
             jObj["transform"] = {
-                {"position", {t.Position.x, t.Position.y, t.Position.z}},
-                {"rotation", {t.Rotation.x, t.Rotation.y, t.Rotation.z}},
-                {"scale",    {t.Scale.x,    t.Scale.y,    t.Scale.z}}}
+                {"position", {t.position.x, t.position.y, t.position.z}},
+                {"rotation", {t.rotation.value().x, t.rotation.value().y, t.rotation.value().z}},
+                {"scale",    {t.scale.x,    t.scale.y,    t.scale.z}}}
             ;
 
             const auto& size = obj->GetSize();
@@ -117,17 +117,17 @@ namespace Azer
                 if (jt.contains("position"))
                 {
                     auto& p = jt["position"];
-                    obj.GetTransform().Position = {p[0].get<float>(), p[1].get<float>(), p[2].get<float>()};
+                    obj.GetTransform().position = {p[0].get<float>(), p[1].get<float>(), p[2].get<float>()};
                 }
                 if (jt.contains("rotation"))
                 {
                     auto& r = jt["rotation"];
-                    obj.GetTransform().Rotation = {r[0].get<float>(), r[1].get<float>(), r[2].get<float>()};
+                    obj.GetTransform().rotation = {r[0].get<float>(), r[1].get<float>(), r[2].get<float>()};
                 }
                 if (jt.contains("scale"))
                 {
                     auto& s = jt["scale"];
-                    obj.GetTransform().Scale = {s[0].get<float>(), s[1].get<float>(), s[2].get<float>()};
+                    obj.GetTransform().scale = {s[0].get<float>(), s[1].get<float>(), s[2].get<float>()};
                 }
             }
 

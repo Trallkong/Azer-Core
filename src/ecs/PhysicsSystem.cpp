@@ -45,7 +45,7 @@ namespace Azer
             physics.Velocity += physics.Acceleration * fixedDelta;
             
             // 更新位置
-            transform.Transform.Position += physics.Velocity * fixedDelta;
+            transform.Transform.position += physics.Velocity * fixedDelta;
             
             // 重置加速度（假设每帧重新施加力）
             physics.Acceleration = glm::vec3(0.0f);
@@ -77,9 +77,9 @@ namespace Azer
                 if (collisionA.ColliderType == CollisionComponent::Type::AABB &&
                     collisionB.ColliderType == CollisionComponent::Type::AABB)
                 {
-                    glm::vec3 posA = transformA.Transform.Position;
+                    glm::vec3 posA = transformA.Transform.position;
                     glm::vec3 sizeA = collisionA.Size;
-                    glm::vec3 posB = transformB.Transform.Position;
+                    glm::vec3 posB = transformB.Transform.position;
                     glm::vec3 sizeB = collisionB.Size;
                     
                     // 检查AABB碰撞

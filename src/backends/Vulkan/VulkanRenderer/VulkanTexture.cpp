@@ -15,8 +15,9 @@ namespace Azer {
     VulkanTexture::VulkanTexture(const std::string& filePath, bool isHDR)
         : m_FilePath(filePath)
     {
-        // Vulkan UV 原点在左上，stb 加载行序从上到下，需要垂直翻转保持方向一致
-        stbi_set_flip_vertically_on_load(true);
+        // 方向约定：V=0 对应原图顶部。Y 轴翻转统一由后端负高度视口处理，
+        // 这里不能再翻转 stb 行序，否则会双翻转导致纹理上下颠倒。
+        stbi_set_flip_vertically_on_load(false);
 
         int w, h, channels;
         if (isHDR)

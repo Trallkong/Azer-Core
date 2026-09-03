@@ -5,7 +5,7 @@
 #pragma once
 
 #include "Base.h"
-#include "boost/uuid.hpp"
+#include "UUID.h"
 
 namespace Azer {
 
@@ -15,13 +15,14 @@ namespace Azer {
         {
         public:
             Resources() {
-                boost::uuids::random_generator gen;
-                auto uuid = gen();
+                m_UUID = generate_uuid();
             }
             virtual ~Resources() = default;
 
+            [[nodiscard]] const std::string& GetUUID() const { return m_UUID; }
+
         private:
-            uint32_t m_UUID;
+            std::string m_UUID;
         };
     }
 }
