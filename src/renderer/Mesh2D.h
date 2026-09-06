@@ -3,7 +3,6 @@
 #include "Base.h"
 #include "glm/glm.hpp"
 #include <vector>
-#include <array>
 
 namespace Azer {
 

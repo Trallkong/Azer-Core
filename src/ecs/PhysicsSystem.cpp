@@ -6,6 +6,7 @@
 #include "PhysicsSystem.h"
 #include "World.h"
 #include "Collision.h"
+#include "Logger.h"
 
 namespace Azer
 {

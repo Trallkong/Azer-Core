@@ -1,6 +1,7 @@
 #include "azpch.h"
 #include "VulkanContextManager.h"
 
+#include "Logger.h"
 #include "SDL3/SDL.h"
 #include "SDL3/SDL_vulkan.h"
 
@@ -40,7 +41,9 @@ namespace Azer {
                     break;
                 }
             }
-            AZ_ASSERT(found, "Required Vulkan extension not found: %s", requiredExtensions[i]);
+
+
+            AZ_ASSERT(found, std::format("Required Vulkan extension not found: {}", requiredExtensions[i]));
         }
 
 
@@ -193,7 +196,7 @@ namespace Azer {
                 break;
             }
         }
-        AZ_ASSERT(found, "Vulkan layer not found: %s", layerName);
+        AZ_ASSERT(found, std::format("Vulkan layer not found: {}", layerName));
     }
 
     void VulkanContextManager::choosePhysicalDevice()
@@ -294,7 +297,7 @@ namespace Azer {
                     break;
                 }
             }
-            AZ_ASSERT(found, "Required Vulkan device extension not found: %s", requiredExtension);
+            AZ_ASSERT(found, std::format("Required Vulkan device extension not found: {}", requiredExtension));
         }
     }
 

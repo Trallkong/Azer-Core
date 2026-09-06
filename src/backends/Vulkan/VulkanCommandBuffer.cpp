@@ -1,5 +1,7 @@
 #include "azpch.h"
 #include "VulkanCommandBuffer.h"
+
+#include "Logger.h"
 #include "VulkanContextManager.h"
 
 namespace Azer {

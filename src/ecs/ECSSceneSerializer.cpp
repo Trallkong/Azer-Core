@@ -9,6 +9,8 @@
 #include <fstream>
 #include <iostream>
 
+#include "Logger.h"
+
 namespace Azer
 {
     using json = nlohmann::json;

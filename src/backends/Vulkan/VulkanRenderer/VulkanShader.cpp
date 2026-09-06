@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <sstream>
 
+#include "Logger.h"
 #include "VulkanRenderer.h"
 #ifdef _WIN32
     #include <cstdlib>

@@ -3,6 +3,7 @@
 
 #include <algorithm>
 
+#include "Logger.h"
 #include "VulkanShader.h"
 #include "VulkanTexture.h"
 #include "VulkanContextManager.h"

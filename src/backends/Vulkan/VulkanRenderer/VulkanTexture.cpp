@@ -1,6 +1,7 @@
 #include "azpch.h"
 #include "VulkanTexture.h"
 
+#include "Logger.h"
 #include "stb_image.h"
 
 #include "VulkanContextManager.h"

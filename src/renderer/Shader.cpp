@@ -1,6 +1,7 @@
 #include "azpch.h"
 #include "Shader.h"
 
+#include "Logger.h"
 #include "RendererAPI.h"
 
 #include "VulkanShader.h"

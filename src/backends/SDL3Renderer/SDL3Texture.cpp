@@ -1,6 +1,7 @@
 #include "azpch.h"
 #include "SDL3Texture.h"
 
+#include "Logger.h"
 #include "stb_image.h"
 
 #include "SDL3Renderer.h"

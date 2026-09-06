@@ -39,5 +39,5 @@ namespace Azer
     template<class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
 
-    #define AZ_ASSERT(x, ...) { if(!(x)) { AZ_CORE_ERROR("Assertion Failed: {0}", __VA_ARGS__); __debugbreak(); } }
+    #define AZ_ASSERT(x, message) { if(!(x)) { std::cout << "Assert Failed: " << message << std::endl;  __debugbreak(); } }
 }

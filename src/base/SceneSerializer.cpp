@@ -8,6 +8,8 @@
 #include <fstream>
 #include <filesystem>
 
+#include "Logger.h"
+
 namespace Azer
 {
     using json = nlohmann::json;

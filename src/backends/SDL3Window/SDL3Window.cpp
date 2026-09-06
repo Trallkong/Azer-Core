@@ -4,6 +4,8 @@
 
 #include "SDL3Window.h"
 
+#include "Logger.h"
+
 namespace Azer
 {
     SDL3Window::SDL3Window(const uint32_t width, const uint32_t height, const std::string& title)

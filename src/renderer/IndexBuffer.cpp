@@ -1,6 +1,7 @@
 #include "azpch.h"
 #include "IndexBuffer.h"
 
+#include "Logger.h"
 #include "RendererAPI.h"
 
 #include "VulkanIndexBuffer.h"

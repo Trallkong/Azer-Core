@@ -5,6 +5,8 @@
 #include "azpch.h"
 #include "AnimationPlayer.h"
 
+#include "Logger.h"
+
 namespace Azer
 {
     void AnimationPlayer::AddAnimation(Animation animation)

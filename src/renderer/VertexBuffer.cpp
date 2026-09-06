@@ -1,6 +1,7 @@
 #include "azpch.h"
 #include "VertexBuffer.h"
 
+#include "Logger.h"
 #include "RendererAPI.h"
 
 #include "VulkanVertexBuffer.h"

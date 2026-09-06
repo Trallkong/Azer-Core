@@ -8,6 +8,7 @@
 
 #define CGLTF_IMPLEMENTATION
 #include "cgltf.h"
+#include "Logger.h"
 
 #include "stb_image.h"
 

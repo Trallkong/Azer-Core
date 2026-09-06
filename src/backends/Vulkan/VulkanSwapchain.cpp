@@ -1,6 +1,7 @@
 #include "azpch.h"
 #include "VulkanSwapchain.h"
 
+#include "Logger.h"
 #include "VulkanContextManager.h"
 
 namespace Azer {

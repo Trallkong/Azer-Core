@@ -5,6 +5,8 @@
 #include "azpch.h"
 #include "FileSystem.h"
 
+#include "Logger.h"
+
 namespace Azer
 {
     Scope<FileSystem> FileSystem::s_Instance = nullptr;
