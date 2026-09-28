@@ -5,13 +5,13 @@
 #include "azpch.h"
 #include "Window.h"
 
-#include "SDL3Window.h"
+#include "WindowsWindow.h"
 
 namespace Azer
 {
     Scope<Window> Window::Create(uint32_t width, uint32_t height, const std::string& title)
     {
-        return CreateScope<SDL3Window>(width, height, title);
+        return CreateScope<WindowsWindow>(width, height, title.c_str());
     }
 }
 

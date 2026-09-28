@@ -2,7 +2,7 @@
 #include "VulkanContextManager.h"
 
 #include "Logger.h"
-#include "SDL3/SDL.h"
+#include "GLFW/glfw3.h"
 #include "SDL3/SDL_vulkan.h"
 
 namespace Azer {
@@ -31,7 +31,7 @@ namespace Azer {
 
         // 获取实例层扩展，与SDL_Vulkan_GetInstanceExtensions()返回的扩展列表进行比较，确保所有必需的扩展都可用
         uint32_t extensionCount = 0;
-        const char* const* requiredExtensions = SDL_Vulkan_GetInstanceExtensions(&extensionCount);
+        const char* const* requiredExtensions = glfwGetRequiredInstanceExtensions(&extensionCount);
         std::vector<VkExtensionProperties> instanceExtensions = EnumerateInstanceExtensions();
         for (uint32_t i = 0; i < extensionCount; ++i) {
             bool found = false;
@@ -41,7 +41,6 @@ namespace Azer {
                     break;
                 }
             }
-
 
             AZ_ASSERT(found, std::format("Required Vulkan extension not found: {}", requiredExtensions[i]));
         }
@@ -357,9 +356,11 @@ namespace Azer {
         vkGetDeviceQueue(s_Context->Device, s_Context->PresentQueueFamilyIndex, 0, &s_Context->PresentQueue);
     }
 
-    void VulkanContextManager::createSurface()
+    void VulkanContextManager::createSurface() const
     {
-        SDL_Vulkan_CreateSurface(static_cast<SDL_Window*>(m_Window->GetHandle()), s_Context->Instance, nullptr, &s_Context->Surface);
+        if (const VkResult result = glfwCreateWindowSurface(s_Context->Instance, static_cast<GLFWwindow*>(m_Window->GetHandle()), nullptr, &s_Context->Surface); result != VK_SUCCESS) {
+            AZ_ASSERT(false, "Failed to create surface!");
+        }
     }
 
     void VulkanContextManager::createMemAllocator()

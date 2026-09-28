@@ -8,11 +8,13 @@
 #include "ImGuiLayer.h"
 #include "LayerStack.h"
 #include "Renderer.h"
-#include "SDL3/SDL.h"
 #include "Window.h"
 
 namespace Azer
 {
+    class Event;
+    class WindowResizeEvent;
+    class WindowMinimizedEvent;
 
     class Application {
     public:
@@ -26,14 +28,17 @@ namespace Azer
         void PopLayer();
         void PopOverlay();
 
-        inline Window& GetWindow() const { return *m_Window.get(); }
-        inline Renderer* GetRenderer() const { return m_Renderer.get(); }
-        inline void SetCoreMenuVisibility(const bool show) { m_ShowSettings = show; }
-        inline const std::string& GetWindowTitle() const { return m_WindowTitle; }
-        inline void SetPhysicsHz(float hz) { m_PhysicsHz = hz; m_FixedTimestep = 1.0f / hz; }
-        inline float GetPhysicsHz() const { return m_PhysicsHz; }
+        Window& GetWindow() const { return *m_Window.get(); }
+        Renderer* GetRenderer() const { return m_Renderer.get(); }
+        void SetCoreMenuVisibility(const bool show) { m_ShowSettings = show; }
+        const std::string& GetWindowTitle() const { return m_WindowTitle; }
+        void SetPhysicsHz(float hz) { m_PhysicsHz = hz; m_FixedTimestep = 1.0f / hz; }
+        float GetPhysicsHz() const { return m_PhysicsHz; }
 
+        static Application& Get() { return *s_Instance; }
     private:
+        static Application* s_Instance;
+
         void OnEvent(const Event& e);
         void OnImGuiRender();
         bool OnWindowResize(const WindowResizeEvent& event);
@@ -44,7 +49,7 @@ namespace Azer
 
         bool m_Running = true;
         bool m_Minimized = false;
-        SDL_Event m_Event {};
+        Event m_Event;
 
         LayerStack m_LayerStack {};
         DeltaTime m_DeltaTime {};

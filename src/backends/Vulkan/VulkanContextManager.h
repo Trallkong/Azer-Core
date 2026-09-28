@@ -59,7 +59,7 @@ namespace Azer {
         void validateDeviceExtensions();
     
         void createLogicalDevice();
-        void createSurface();
+        void createSurface() const;
 
         void createMemAllocator();
 

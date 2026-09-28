@@ -15,6 +15,9 @@ add_library(Azer
         base/Variant.cpp
         base/Window.cpp
 
+        base/file_system/FileSystem.cpp
+        base/file_system/FileSystem.h
+
         # --- Events ---
         base/event/Event.cpp
 
@@ -57,15 +60,14 @@ add_library(Azer
         renderer/VertexBuffer.cpp
         renderer/Mesh2D.h
 
+        # --- Backend: WindowsWindow ---
+        backends/WindowsWindow/WindowsWindow.h
+        backends/WindowsWindow/WindowsWindow.cpp
+
         # --- Backend: SDL3 Renderer (2D) ---
         backends/SDL3Renderer/SDL3Renderer.cpp
         backends/SDL3Renderer/SDL3Texture.cpp
         backends/SDL3Renderer/SDL3Framebuffer.cpp
-
-        # --- Backend: SDL3 Window ---
-        backends/SDL3Window/SDL3Window.cpp
-        base/file_system/FileSystem.cpp
-        base/file_system/FileSystem.h
 
         # --- Backend: Vulkan ---
         backends/Vulkan/VulkanContextManager.cpp
@@ -100,15 +102,17 @@ target_include_directories(Azer PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/renderer
         ${CMAKE_CURRENT_SOURCE_DIR}/ecs
         ${CMAKE_CURRENT_SOURCE_DIR}/backends/SDL3Renderer
-        ${CMAKE_CURRENT_SOURCE_DIR}/backends/SDL3Window
         ${CMAKE_CURRENT_SOURCE_DIR}/backends/Vulkan
         ${CMAKE_CURRENT_SOURCE_DIR}/backends/Vulkan/VulkanRenderer
+        ${CMAKE_CURRENT_SOURCE_DIR}/backends/WindowsWindow
         ${CMAKE_CURRENT_SOURCE_DIR}/../assets/shaders
         ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/entt/single_include
         ${CMAKE_CURRENT_SOURCE_DIR}/resources
 )
 
-target_link_libraries(Azer PRIVATE vendor)
+# PUBLIC：Azer 的公共头文件用到了 vendor 里的库，且 spdlog 的
+# SPDLOG_COMPILED_LIB 定义必须传递给所有使用者，否则会重复定义。
+target_link_libraries(Azer PUBLIC vendor)
 
 target_compile_definitions(Azer PRIVATE _CRT_SECURE_NO_WARNINGS GLM_ENABLE_EXPERIMENTAL AZ_ENABLE_DEBUG)
 

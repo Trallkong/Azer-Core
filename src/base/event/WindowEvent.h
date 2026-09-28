@@ -1,47 +1,20 @@
 #pragma once
 
-#include "EventType.h"
+#include "Event.h"
 
 namespace Azer {
-    
-    // --- Window Events ---
-    class WindowCloseEvent 
-    {
-    public:
-        static EventType GetStaticType() { return EventType::WindowClose; }
-        EventType GetEventType() const { return GetStaticType(); }
-        const char* GetName() const { return "WindowClose"; }
-    };
 
-    class WindowResizeEvent 
+    // --- Window Events ---
+    class WindowCloseEvent : public EventBase<EventType::WindowCloseEvent, EventCategoryFlag::WindowEvent> { };
+
+    class WindowResizeEvent : public EventBase<EventType::WindowResizeEvent, EventCategoryFlag::WindowEvent>
     {
     public:
-        WindowResizeEvent(int width, int height)
+        explicit WindowResizeEvent(const uint32_t width, const uint32_t height)
             : m_Width(width), m_Height(height) {}
-        static EventType GetStaticType() { return EventType::WindowResize; }
-        EventType GetEventType() const  { return GetStaticType(); }
-        const char* GetName() const  { return "WindowResize"; }
-        int GetWidth() const { return m_Width; }
-        int GetHeight() const { return m_Height; }
+        uint32_t GetWidth() const { return m_Width; }
+        uint32_t GetHeight() const { return m_Height; }
     private:
         int m_Width, m_Height;
-    };
-
-    class WindowMinimizedEvent 
-    {
-    public:
-        WindowMinimizedEvent() = default;
-        static EventType GetStaticType() { return EventType::WindowMinimized; }
-        EventType GetEventType() const  { return GetStaticType(); }
-        const char* GetName() const  { return "WindowMinimized"; }
-    };
-
-    class WindowRestoredEvent
-    {
-    public:
-        WindowRestoredEvent() = default;
-        static EventType GetStaticType() { return EventType::WindowRestored; }
-        EventType GetEventType() const  { return GetStaticType(); }
-        const char* GetName() const  { return "WindowRestored"; }
     };
 }

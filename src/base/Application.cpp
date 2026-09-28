@@ -16,18 +16,18 @@
 
 #include "FileSystem.h"
 
+#include "GLFW/glfw3.h"
+
 namespace Azer
 {
+    Application* Application::s_Instance = nullptr;
+
     Application::Application(
         const std::string& windowTitle)
     {
-        FileSystem::Init("E:\\Projects\\GameDev\\azer_dev\\Azer");
+        s_Instance = this;
 
-        if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS))
-        {
-            std::cerr << "Failed to initialize SDL: " << SDL_GetError() << std::endl;
-            assert(false);
-        }
+        FileSystem::Init("E:\\Projects\\GameDev\\azer_dev\\Azer");
 
         m_Window = Window::Create(1280, 720, m_WindowTitle);
 
@@ -61,8 +61,6 @@ namespace Azer
         m_Renderer.reset();
 
         m_Window.reset();
-
-        SDL_Quit();
     }
 
     void Application::Run()

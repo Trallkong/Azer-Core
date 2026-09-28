@@ -1,18 +1,16 @@
 #pragma once
 
-#include "EventType.h"
+#include "Event.h"
 
 namespace Azer {
     
     // --- Key Events ---
-    class KeyPressedEvent 
+    class KeyPressedEvent : public EventBase<EventType::KeyPressedEvent, EventCategoryFlag::KeyboardEvent | EventCategoryFlag::InputEvent>
     {
     public:
-        KeyPressedEvent(unsigned int keycode, bool repeat)
+        explicit KeyPressedEvent(const unsigned int keycode, const bool repeat)
             : m_KeyCode(keycode), m_Repeat(repeat) {}
-        static EventType GetStaticType() { return EventType::KeyPressed; }
-        EventType GetEventType() const  { return GetStaticType(); }
-        const char* GetName() const  { return "KeyPressed"; }
+
         unsigned int GetKeyCode() const { return m_KeyCode; }
         bool IsRepeat() const { return m_Repeat; }
     private:
@@ -20,14 +18,12 @@ namespace Azer {
         bool m_Repeat;
     };
 
-    class KeyReleasedEvent 
+    class KeyReleasedEvent : public EventBase<EventType::KeyReleasedEvent, EventCategoryFlag::KeyboardEvent | EventCategoryFlag::InputEvent>
     {
     public:
         explicit KeyReleasedEvent(unsigned int keycode)
             : m_KeyCode(keycode) {}
-        static EventType GetStaticType() { return EventType::KeyReleased; }
-        EventType GetEventType() const  { return GetStaticType(); }
-        const char* GetName() const  { return "KeyReleased"; }
+
         unsigned int GetKeyCode() const { return m_KeyCode; }
     private:
         unsigned int m_KeyCode;
