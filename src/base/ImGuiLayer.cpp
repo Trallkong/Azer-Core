@@ -3,6 +3,7 @@
 
 #include "Renderer.h"
 #include "imgui.h"
+#include "GLFW/glfw3.h"
 
 void Azer::ImGuiLayer::OnAttach(EngineContext& ctx)
 {
@@ -15,7 +16,7 @@ void Azer::ImGuiLayer::OnAttach(EngineContext& ctx)
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 #endif
 
-    m_Renderer->ImGuiInit(static_cast<SDL_Window*>(ctx.window.GetHandle()));
+    m_Renderer->ImGuiInit(static_cast<GLFWwindow*>(ctx.window.GetHandle()));
 }
 
 void Azer::ImGuiLayer::Begin()

@@ -3,13 +3,12 @@
 
 #include "vulkan/vulkan.h"
 
-#include "imgui_impl_sdl3.h"
+#include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
 #include "Logger.h"
 
 
 #include "VulkanImageTransition.h"
-#include "VulkanDescriptorSet.h"
 #include "VulkanTexture.h"
 #include "VulkanVertexBuffer.h"
 #include "VulkanIndexBuffer.h"
@@ -36,11 +35,21 @@ namespace Azer {
         // 初始化 Viewport
         // Vulkan 帧缓冲原点在左上、NDC Y 向下；用负高度视口在光栅化阶段翻转 Y，
         // 使世界 +Y 渲染在屏幕上方（与 2D/3D 统一，且不影响背面剔除绕序）。
+        // 尺寸不能为 0（VUID-VkViewport-width-01770）：窗口尺寸拿不到时退回交换链尺寸。
+        uint32_t viewportWidth = window->GetWindowSize().width;
+        uint32_t viewportHeight = window->GetWindowSize().height;
+        if (viewportWidth == 0 || viewportHeight == 0)
+        {
+            const VkExtent2D swapchainExtent = ctx.Swapchain->GetExtent();
+            viewportWidth = swapchainExtent.width;
+            viewportHeight = swapchainExtent.height;
+        }
+
         VkViewport viewport{};
         viewport.x = 0;
-        viewport.y = static_cast<float>(window->GetWindowSize().height);
-        viewport.width = static_cast<float>(window->GetWindowSize().width);
-        viewport.height = -static_cast<float>(window->GetWindowSize().height);
+        viewport.y = static_cast<float>(viewportHeight);
+        viewport.width = static_cast<float>(viewportWidth);
+        viewport.height = -static_cast<float>(viewportHeight);
         viewport.minDepth = 0;
         viewport.maxDepth = 1;
         m_Viewport = viewport;
@@ -226,17 +235,36 @@ namespace Azer {
 
     void VulkanRenderer::Resize(uint32_t width, uint32_t height)
     {
+        if (width == 0 || height == 0)
+        {
+            AZ_CORE_WARN("VulkanRenderer: ignore resize to {0}x{1} (minimized?)", width, height);
+            return;
+        }
+
         VulkanContextManager::GetContext().Swapchain->RecreateSwapchain(width, height);
         RebuildSubmitSemaphores();
         CreateDepthResources();
+
+        // 视口必须跟随交换链：否则缩放窗口后画面会被拉伸/错位。
+        const VkExtent2D extent = VulkanContextManager::GetContext().Swapchain->GetExtent();
+        SetViewport(extent.width, extent.height, 0, 0);
     }
 
     void VulkanRenderer::RecreateSwapchainFromWindow()
     {
         WindowSize size = m_Window->GetWindowSize();
+        if (size.width == 0 || size.height == 0)
+        {
+            AZ_CORE_WARN("VulkanRenderer: window has no drawable area, skip swapchain recreation");
+            return;
+        }
+
         VulkanContextManager::GetContext().Swapchain->RecreateSwapchain(size.width, size.height);
         RebuildSubmitSemaphores();
         CreateDepthResources();
+
+        const VkExtent2D extent = VulkanContextManager::GetContext().Swapchain->GetExtent();
+        SetViewport(extent.width, extent.height, 0, 0);
     }
 
     void VulkanRenderer::RebuildSubmitSemaphores()
@@ -268,6 +296,15 @@ namespace Azer {
     {
         const VulkanContext& ctx = VulkanContextManager::GetContext();
         VkExtent2D extent = ctx.Swapchain->GetExtent();
+
+        // 交换链不可用（窗口最小化 / 重建被跳过）时不要用 0 尺寸创建图像，
+        // 否则 vmaCreateImage 失败并触发断言。保留旧深度图，等尺寸恢复后再建。
+        if (extent.width == 0 || extent.height == 0)
+        {
+            AZ_CORE_WARN("VulkanRenderer: skip depth resource creation, swapchain extent is {0}x{1}",
+                extent.width, extent.height);
+            return;
+        }
 
         DestroyDepthResources();
 
@@ -402,7 +439,7 @@ namespace Azer {
             abort();
     }
 
-    void VulkanRenderer::ImGuiInit(SDL_Window *window)
+    void VulkanRenderer::ImGuiInit(void* window)
     {
         const VulkanContext& ctx = VulkanContextManager::GetContext();
 
@@ -412,7 +449,7 @@ namespace Azer {
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // IF using Docking Branch
 
         // Setup Platform/Renderer backends
-        ImGui_ImplSDL3_InitForVulkan(window);
+        ImGui_ImplGlfw_InitForVulkan(static_cast<GLFWwindow*>(window), true);
 
         ImGui_ImplVulkan_InitInfo init_info = {};
         init_info.ApiVersion = VK_API_VERSION_1_3;
@@ -444,14 +481,14 @@ namespace Azer {
     void VulkanRenderer::ImGuiShutdown()
     {
         ImGui_ImplVulkan_Shutdown();
-        ImGui_ImplSDL3_Shutdown();
+        ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext();
     }
 
     void VulkanRenderer::ImGuiNewFrame()
     {
         ImGui_ImplVulkan_NewFrame();
-        ImGui_ImplSDL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
     }
 
     void VulkanRenderer::SetImGuiDrawData(ImDrawData *drawData)

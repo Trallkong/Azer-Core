@@ -39,7 +39,7 @@ namespace Azer
                           const Ref<Shader>& shader) = 0;
 
         // ImGui
-        virtual void ImGuiInit(SDL_Window* window) = 0;
+        virtual void ImGuiInit(void* window) = 0;
         virtual void ImGuiShutdown() = 0;
         virtual void ImGuiNewFrame() = 0;
         virtual void SetImGuiDrawData(ImDrawData* drawData) = 0;

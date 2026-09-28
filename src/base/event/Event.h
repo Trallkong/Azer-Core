@@ -16,6 +16,32 @@ namespace Azer
         InputEvent      = 1u << 3,
     };
 
+    // enum class has no built-in bitwise operators, so define them here.
+    constexpr EventCategoryFlag operator|(const EventCategoryFlag lhs, const EventCategoryFlag rhs) noexcept
+    {
+        return static_cast<EventCategoryFlag>(static_cast<unsigned>(lhs) | static_cast<unsigned>(rhs));
+    }
+
+    constexpr EventCategoryFlag operator&(const EventCategoryFlag lhs, const EventCategoryFlag rhs) noexcept
+    {
+        return static_cast<EventCategoryFlag>(static_cast<unsigned>(lhs) & static_cast<unsigned>(rhs));
+    }
+
+    constexpr EventCategoryFlag& operator|=(EventCategoryFlag& lhs, const EventCategoryFlag rhs) noexcept
+    {
+        return lhs = (lhs | rhs);
+    }
+
+    constexpr EventCategoryFlag& operator&=(EventCategoryFlag& lhs, const EventCategoryFlag rhs) noexcept
+    {
+        return lhs = (lhs & rhs);
+    }
+
+    constexpr bool HasFlag(const EventCategoryFlag value, const EventCategoryFlag flag) noexcept
+    {
+        return (value & flag) != EventCategoryFlag::None;
+    }
+
     enum class EventType
     {
         WindowCloseEvent, WindowResizeEvent, WindowFocusEvent, WindowLostFocusEvent,
@@ -27,6 +53,10 @@ namespace Azer
     class Event
     {
     public:
+        // Declaring the deleted copy ctor below suppresses the implicit default
+        // ctor, which would leave EventBase<> (and every event) non-default-
+        // constructible. Declare it explicitly.
+        Event() = default;
         virtual ~Event() = default;
 
         Event(const Event& event) = delete;

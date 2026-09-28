@@ -38,7 +38,7 @@ namespace Azer {
         void Draw(const Ref<VertexBuffer>& vertexBuffer, uint32_t vertexCount,
                   const Ref<Shader>& shader) override;
 
-        void ImGuiInit(SDL_Window* window) override;
+        void ImGuiInit(void* window) override;
         void ImGuiShutdown() override;
         void ImGuiNewFrame() override;
         void SetImGuiDrawData(ImDrawData* drawData) override;

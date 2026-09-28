@@ -4,7 +4,6 @@
 #include "RendererAPI.h"
 #include "FileSystem.h"
 
-#include "SDL3Texture.h"
 #include "VulkanTexture.h"
 
 namespace Azer
@@ -16,8 +15,6 @@ namespace Azer
 
         switch (RendererAPI::s_API)
         {
-        case RendererAPI::API::SDL_2D:
-            return SDL3Texture::Create(resolved);
         case RendererAPI::API::Vulkan:
             return CreateRef<VulkanTexture>(resolved, isHDR);
         default:
@@ -30,8 +27,6 @@ namespace Azer
     {
         switch (RendererAPI::s_API)
         {
-        case RendererAPI::API::SDL_2D:
-            return SDL3Texture::Create(pixels, width, height);
         case RendererAPI::API::Vulkan:
             return CreateRef<VulkanTexture>(width, height, pixels);
         default:

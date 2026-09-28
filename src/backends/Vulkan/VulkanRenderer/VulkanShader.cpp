@@ -681,6 +681,15 @@ namespace Azer {
 
     void VulkanShader::BuildPipeline()
     {
+        // 源码没读到就不会有任何 SPIR-V 阶段（Reflect 只在 source 非空时才跑）。
+        // 用 stageCount = 0 去建管线只会刷一屏 Vulkan 校验错误，这里直接明确报错。
+        if (m_Stages.empty())
+        {
+            AZ_CORE_ERROR("VulkanShader: '{0}' has no shader stages, skip pipeline creation "
+                          "(source: {1})", m_Name, m_FilePath);
+            return;
+        }
+
         const VulkanContext& ctx = VulkanContextManager::GetContext();
 
         // --- 顶点输入（反射 + stride 覆盖）---

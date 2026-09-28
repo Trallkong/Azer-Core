@@ -9,6 +9,8 @@
 #include "MouseEvent.h"
 #include "KeyEvent.h"
 
+#include "imgui_impl_glfw.h"
+
 namespace Azer {
     WindowsWindow::WindowsWindow(const uint32_t width, const uint32_t height, const char* title)
     {
@@ -30,17 +32,67 @@ namespace Azer {
 
         glfwMakeContextCurrent(m_Window);
 
+        // 记录初始帧缓冲尺寸作为兜底值。构造参数不一定等于真实客户区
+        // （DPI 缩放、系统边框等），而这个值会驱动 Vulkan 的 viewport 和
+        // 交换链重建，所以必须是确定的数值。
+        int frameBufferWidth = 0;
+        int frameBufferHeight = 0;
+        glfwGetFramebufferSize(m_Window, &frameBufferWidth, &frameBufferHeight);
+        m_Width = (frameBufferWidth > 0) ? static_cast<uint32_t>(frameBufferWidth) : width;
+        m_Height = (frameBufferHeight > 0) ? static_cast<uint32_t>(frameBufferHeight) : height;
+
         Application& app = Application::Get();
         glfwSetWindowUserPointer(m_Window, &app);
 
-        glfwSetKeyCallback(m_Window, [](GLFWwindow* window, int key, int scancode, int action, int mods) {
-            Application* app = static_cast<Application*>(glfwGetWindowUserPointer(window));
-            if (!app) return;
+        glfwSetKeyCallback(m_Window, [](GLFWwindow* window, int key, int scancode, const int action, int mods) {
+            auto* application = static_cast<Application*>(glfwGetWindowUserPointer(window));
+            if (!application) return;
 
-            if (action == GLFW_PRESS) {
-                KeyPressedEvent(key, false);
-                app->
+            if (action == GLFW_PRESS)
+            {
+                application->PushEvent(CreateScope<KeyPressedEvent>(key, false));
+            }
+            else if (action == GLFW_RELEASE)
+            {
+                application->PushEvent(CreateScope<KeyReleasedEvent>(key));
+            }
+            else if (action == GLFW_REPEAT)
+            {
+                application->PushEvent(CreateScope<KeyPressedEvent>(key, true));
             }
         });
+
+        glfwSetWindowCloseCallback(m_Window, [](GLFWwindow* window)
+        {
+            auto* application = static_cast<Application*>(glfwGetWindowUserPointer(window));
+            if (!application) return;
+
+            application->PushEvent(CreateScope<WindowCloseEvent>());
+        });
+    }
+
+    WindowSize WindowsWindow::GetWindowSize() const
+    {
+        if (m_Window == nullptr)
+            return WindowSize(m_Width, m_Height);
+
+        // 实时查询，避免窗口被拖动/缩放后返回过期尺寸。
+        // 窗口最小化时 GLFW 返回 0x0，这是有效信息：调用方必须跳过
+        // 交换链与视口更新，不能拿 0 去调 Vulkan。
+        int frameBufferWidth = 0;
+        int frameBufferHeight = 0;
+        glfwGetFramebufferSize(m_Window, &frameBufferWidth, &frameBufferHeight);
+
+        return WindowSize(
+            static_cast<uint32_t>(frameBufferWidth > 0 ? frameBufferWidth : 0),
+            static_cast<uint32_t>(frameBufferHeight > 0 ? frameBufferHeight : 0));
+    }
+
+    void WindowsWindow::Resize(const uint32_t width, const uint32_t height)
+    {
+        if (m_Window == nullptr || width == 0 || height == 0)
+            return;
+
+        glfwSetWindowSize(m_Window, static_cast<int>(width), static_cast<int>(height));
     }
 } // Azer

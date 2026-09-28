@@ -24,18 +24,31 @@ namespace Azer {
 
     void VulkanSwapchain::RecreateSwapchain(uint32_t width, uint32_t height)
     {
+        // 尺寸必须以 surface 的 currentExtent 为准，不能直接采信调用方：
+        // 窗口最小化时调用方给的是 0，用 0 建交换链会触发
+        // VUID-VkSwapchainCreateInfoKHR-imageExtent-01689，并让后续的
+        // 深度图创建失败（vmaCreateImage 返回错误 -> 断言崩溃）。
+        const VkExtent2D extent = ChooseSwapchainExtent(width, height);
+        if (extent.width == 0 || extent.height == 0)
+        {
+            // 窗口当前没有可绘制区域（最小化）：保留现有交换链，等窗口恢复后重建。
+            AZ_CORE_WARN("VulkanSwapchain: window has no drawable area ({0}x{1}), skip recreation",
+                extent.width, extent.height);
+            return;
+        }
+
         vkDeviceWaitIdle(VulkanContextManager::GetContext().Device);
 
         DestroySwapchainImageViews();
 
-        m_SwapchainImageExtent = { width, height };
+        m_SwapchainImageExtent = extent;
         m_Swapchain = CreateSwapchainInternal(m_Swapchain, m_SwapchainImageExtent);
 
         RetrieveSwapchainImages();
         CreateSwapchainImageViews();
     }
 
-    VkExtent2D VulkanSwapchain::ChooseSwapchainExtent()
+    VkExtent2D VulkanSwapchain::ChooseSwapchainExtent(uint32_t preferredWidth, uint32_t preferredHeight)
     {
         VkSurfaceCapabilitiesKHR surfaceCapabilities;
         vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
@@ -44,14 +57,16 @@ namespace Azer {
             &surfaceCapabilities
         );
 
+        // Win32 等平台会给出权威的 currentExtent，直接采用。
         if (surfaceCapabilities.currentExtent.width != UINT32_MAX) {
             return surfaceCapabilities.currentExtent;
         }
 
-        int width, height;
-        width = m_Window->GetWindowSize().width;
-        height = m_Window->GetWindowSize().height;
-        
+        // 其余平台（X11/Wayland）需要自己决定：优先用调用方给的尺寸，
+        // 没有就退回窗口尺寸，最后 clamp 到 surface 允许的范围。
+        uint32_t width = preferredWidth != 0 ? preferredWidth : m_Window->GetWindowSize().width;
+        uint32_t height = preferredHeight != 0 ? preferredHeight : m_Window->GetWindowSize().height;
+
         uint32_t c_width = std::clamp<uint32_t>(width, surfaceCapabilities.minImageExtent.width, surfaceCapabilities.maxImageExtent.width);
         uint32_t c_height = std::clamp<uint32_t>(height, surfaceCapabilities.minImageExtent.height, surfaceCapabilities.maxImageExtent.height);
         

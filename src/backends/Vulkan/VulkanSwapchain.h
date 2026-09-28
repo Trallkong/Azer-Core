@@ -33,7 +33,7 @@ namespace Azer {
         VkSurfaceFormatKHR m_SwapchainSurfaceFormat;
         VkPresentModeKHR m_SwapchainPresentMode;
 
-        VkExtent2D ChooseSwapchainExtent();
+        VkExtent2D ChooseSwapchainExtent(uint32_t preferredWidth = 0, uint32_t preferredHeight = 0);
         VkSurfaceFormatKHR ChooseSwapchainFormat();
         VkPresentModeKHR ChooseSwapchainPresentMode();
 

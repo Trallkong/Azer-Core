@@ -19,7 +19,10 @@ add_library(Azer
         base/file_system/FileSystem.h
 
         # --- Events ---
-        base/event/Event.cpp
+        base/event/Event.h
+        base/event/KeyEvent.h
+        base/event/MouseEvent.h
+        base/event/WindowEvent.h
 
         # --- File System ---
         base/file_system/FileSystem.cpp
@@ -64,11 +67,6 @@ add_library(Azer
         backends/WindowsWindow/WindowsWindow.h
         backends/WindowsWindow/WindowsWindow.cpp
 
-        # --- Backend: SDL3 Renderer (2D) ---
-        backends/SDL3Renderer/SDL3Renderer.cpp
-        backends/SDL3Renderer/SDL3Texture.cpp
-        backends/SDL3Renderer/SDL3Framebuffer.cpp
-
         # --- Backend: Vulkan ---
         backends/Vulkan/VulkanContextManager.cpp
         backends/Vulkan/vk_mem_alloc.cpp
@@ -101,7 +99,6 @@ target_include_directories(Azer PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/base/file_system
         ${CMAKE_CURRENT_SOURCE_DIR}/renderer
         ${CMAKE_CURRENT_SOURCE_DIR}/ecs
-        ${CMAKE_CURRENT_SOURCE_DIR}/backends/SDL3Renderer
         ${CMAKE_CURRENT_SOURCE_DIR}/backends/Vulkan
         ${CMAKE_CURRENT_SOURCE_DIR}/backends/Vulkan/VulkanRenderer
         ${CMAKE_CURRENT_SOURCE_DIR}/backends/WindowsWindow
@@ -115,6 +112,11 @@ target_include_directories(Azer PRIVATE
 target_link_libraries(Azer PUBLIC vendor)
 
 target_compile_definitions(Azer PRIVATE _CRT_SECURE_NO_WARNINGS GLM_ENABLE_EXPERIMENTAL AZ_ENABLE_DEBUG)
+
+# 资源根目录（Azer-Core/）：assets/shaders 等都相对于它解析。
+# 用编译期常量注入，避免在源码里写死某台机器的绝对路径。
+get_filename_component(AZER_ASSET_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
+target_compile_definitions(Azer PRIVATE AZER_ASSET_ROOT="${AZER_ASSET_ROOT}")
 
 if(AZER_ENABLE_DOCKING)
     target_compile_definitions(Azer PUBLIC AZER_ENABLE_DOCKING)

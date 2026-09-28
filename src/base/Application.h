@@ -10,6 +10,8 @@
 #include "Renderer.h"
 #include "Window.h"
 
+#include <queue>
+
 namespace Azer
 {
     class Event;
@@ -35,6 +37,10 @@ namespace Azer
         void SetPhysicsHz(float hz) { m_PhysicsHz = hz; m_FixedTimestep = 1.0f / hz; }
         float GetPhysicsHz() const { return m_PhysicsHz; }
 
+        // EventQueue
+        void PushEvent(Scope<Event> event);
+        Scope<Event> PopEvent();
+
         static Application& Get() { return *s_Instance; }
     private:
         static Application* s_Instance;
@@ -49,7 +55,7 @@ namespace Azer
 
         bool m_Running = true;
         bool m_Minimized = false;
-        Event m_Event;
+        std::queue<Scope<Event>> m_EventQueue;
 
         LayerStack m_LayerStack {};
         DeltaTime m_DeltaTime {};

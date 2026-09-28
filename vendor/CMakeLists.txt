@@ -1,11 +1,11 @@
 add_subdirectory(SDL)
+add_subdirectory(glfw)
 add_subdirectory(imgui)
 add_subdirectory(glm)
 add_subdirectory(spdlog)
 add_subdirectory(cgltf)
 add_subdirectory(stb_image)
 add_subdirectory(spirv_reflect)
-add_subdirectory(glfw)
 
 set(JSON_BuildTests OFF CACHE BOOL "" FORCE)
 set(JSON_Install OFF CACHE BOOL "" FORCE)
@@ -17,7 +17,8 @@ add_library(vendor INTERFACE)
 
 target_link_libraries(vendor INTERFACE 
     Vulkan::Vulkan
-    SDL3::SDL3 
+    SDL3::SDL3
+    GLFW
     imgui 
     glm::glm 
     spdlog::spdlog 
@@ -26,7 +27,6 @@ target_link_libraries(vendor INTERFACE
     nlohmann_json::nlohmann_json 
     entt
     spirv_reflect
-    GLFW
 )
 
 # entt (header-only)

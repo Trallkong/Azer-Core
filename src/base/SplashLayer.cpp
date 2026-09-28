@@ -30,12 +30,10 @@ namespace Azer
     void SplashLayer::OnEvent(const Event& event)
     {
         Layer::OnEvent(event);
-        std::visit([this](auto&& e){
-            using T = std::decay_t<decltype(e)>;
-            if constexpr (std::is_same_v<T, KeyPressedEvent>) {
-                RequestRemove();
-            }
-        }, event.data);
+        if (event.GetEventType() == EventType::KeyPressedEvent)
+        {
+            RequestRemove();
+        }
     }
 
     void SplashLayer::OnImGuiRender()

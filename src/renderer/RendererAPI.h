@@ -6,7 +6,6 @@ namespace Azer {
     public:
         enum class API {
             None = 0,
-            SDL_2D,
             Vulkan
         };
 

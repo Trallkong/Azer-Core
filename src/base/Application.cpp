@@ -1,5 +1,7 @@
-﻿#include "azpch.h"
+#include "azpch.h"
 #include "Application.h"
+
+#include <ranges>
 
 #include "Renderer.h"
 
@@ -8,18 +10,29 @@
 #include "Renderer3D.h"
 
 #include "imgui.h"
-#include "imgui_impl_sdl3.h"
-#include "Input.h"
 #include "Logger.h"
 
 #include "SplashLayer.h"
 
 #include "FileSystem.h"
+#include "WindowEvent.h"
 
 #include "GLFW/glfw3.h"
 
 namespace Azer
 {
+    void Application::PushEvent(Scope<Event> event)
+    {
+        m_EventQueue.push(std::move(event));
+    }
+
+    Scope<Event> Application::PopEvent()
+    {
+        Scope<Event> event = std::move(m_EventQueue.front());
+         m_EventQueue.pop();
+        return event;
+    }
+
     Application* Application::s_Instance = nullptr;
 
     Application::Application(
@@ -27,7 +40,9 @@ namespace Azer
     {
         s_Instance = this;
 
-        FileSystem::Init("E:\\Projects\\GameDev\\azer_dev\\Azer");
+        // 资源根目录由 CMake 传入（Azer-Core/），assets/shaders 等都在它下面。
+        // 不要在这里硬编码绝对路径：换机器/换仓库位置后 shader 会全部读不到。
+        FileSystem::Init(AZER_ASSET_ROOT);
 
         m_Window = Window::Create(1280, 720, m_WindowTitle);
 
@@ -49,10 +64,10 @@ namespace Azer
 
     Application::~Application()
     {
-        for (auto i = m_LayerStack.rbegin(); i != m_LayerStack.rend(); ++i)
+        for (const auto & i : std::views::reverse(m_LayerStack))
         {
-            (*i)->OnDetach();
-            delete *i;
+            i->OnDetach();
+            delete i;
         }
 
         Renderer2D::Shutdown();
@@ -69,24 +84,15 @@ namespace Azer
         {
             const auto& layers = m_LayerStack.GetLayers();
 
-            while (SDL_PollEvent((&m_Event)))
+            glfwPollEvents();
+
+            while (!m_EventQueue.empty())
             {
-                ImGui_ImplSDL3_ProcessEvent(&m_Event);
-
-                if (m_Event.type == SDL_EVENT_QUIT)
-                    m_Running = false;
-
-                Event event = CreateEventFromSDL(m_Event);
-
-                if (std::holds_alternative<std::monostate>(event.data))
-                    continue;
-
-                OnEvent(event);
-                for (auto i = layers.rbegin(); i != layers.rend(); ++i)
+                const Scope<Event>& event = PopEvent();
+                OnEvent(*event.get());
+                for (const auto layer : layers)
                 {
-                    (*i)->OnEvent(event);
-                    if (event.IsHandled())
-                        break;
+                    layer->OnEvent(*event.get());
                 }
             }
 
@@ -98,39 +104,46 @@ namespace Azer
             while (m_Accumulator >= m_FixedTimestep)
             {
                 m_Accumulator -= m_FixedTimestep;
-                for (auto i = layers.begin(); i != layers.end(); ++i)
-                    (*i)->OnPhysicsUpdate(m_FixedTimestep);
+                for (const auto layer : layers)
+                {
+                    layer->OnPhysicsUpdate(m_FixedTimestep);
+                }
             }
             // 防止螺旋死亡（掉帧太多时直接重置）
             if (m_Accumulator > m_FixedTimestep * 3.0f)
                 m_Accumulator = 0.0f;
 
             // 可变帧率更新（输入、相机等）
-            for (auto i = layers.begin(); i != layers.end(); ++i)
-                (*i)->OnUpdate(dt);
+            for (const auto layer : layers)
+            {
+                layer->OnUpdate(dt);
+            }
+
 
             // 物理插值（alpha = 当前帧在两次物理 tick 间的进度）
             const float alpha = m_FixedTimestep > 0.0f
                                     ? glm::clamp(m_Accumulator / m_FixedTimestep, 0.0f, 1.0f)
                                     : 1.0f;
-            for (auto i = layers.begin(); i != layers.end(); ++i)
-                (*i)->OnInterpolate(alpha);
+            for (const auto layer : layers)
+            {
+                layer->OnInterpolate(alpha);
+            }
 
             if (!m_Minimized)
             {
                 // OnDraw
                 m_ImGuiLayer->Begin();
                 OnImGuiRender();
-                for (auto i = layers.begin(); i != layers.end(); ++i)
+                for (const auto layer : layers)
                 {
-                    (*i)->OnImGuiRender();
+                    layer->OnImGuiRender();
                 }
                 m_ImGuiLayer->End();
 
                 m_Renderer->BeginFrame(glm::vec3(m_ClearColor[0], m_ClearColor[1], m_ClearColor[2]));
-                for (auto i = layers.begin(); i != layers.end(); ++i)
+                for (const auto layer : layers)
                 {
-                    (*i)->OnDraw();
+                    layer->OnDraw();
                 }
                 m_Renderer->EndFrame();
 
@@ -149,7 +162,9 @@ namespace Azer
 
             // 垃圾回收
             for (const auto* layer : m_LayersToDelete)
+            {
                 delete layer;
+            }
             m_LayersToDelete.clear();
         }
     }
@@ -184,16 +199,17 @@ namespace Azer
         m_LayerStack.PopOverlay();
     }
 
-    void Application::OnEvent(const Event& event)
+    void Application::OnEvent(const Event& e)
     {
-        std::visit(Overloaded{
-            [this](const WindowResizeEvent& arg) { OnWindowResize(arg); },
-            [this](const WindowMinimizedEvent& arg) { OnWindowMinimized(arg); },
-            [this](const WindowRestoredEvent& arg) { AZ_CORE_DEBUG("Window Restored!"); m_Minimized = false; },
-            [this](const KeyPressedEvent& arg) { Input::KeyPressed(arg.GetKeyCode()); },
-            [this](const KeyReleasedEvent& arg) { Input::KeyReleased(arg.GetKeyCode()); },
-            [](const auto&) {}
-        }, event.data);
+        if (e.GetEventType() == EventType::WindowCloseEvent)
+        {
+            m_Running = false;
+        }
+
+        if (e.GetEventType() == EventType::WindowResizeEvent)
+        {
+            OnWindowResize(dynamic_cast<const WindowResizeEvent&>(e));
+        }
     }
 
     void Application::OnImGuiRender()
