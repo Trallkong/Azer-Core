@@ -15,7 +15,7 @@ namespace Azer
     public:
         Camera2D() = default;
 
-        Camera2D(const Transform2D& transform, const uint32_t width, const uint32_t height, const float zNear = -1.0, const float zFar = 1.0)
+        Camera2D(const Transform2D& transform, const uint32_t width, const uint32_t height, const float zNear = 0.0, const float zFar = 1.0)
             : m_Transform(transform), m_Width(width), m_Height(height), zNear(zNear), zFar(zFar)
         {
             UpdateProjection();
@@ -65,7 +65,6 @@ namespace Azer
             m_Projection = GetOrthoMatrixFromTransform(m_Transform, m_Width / m_Zoom, m_Height / m_Zoom, zNear, zFar);
         }
 
-    private:
         glm::mat4 m_Projection;
 
         Transform2D m_Transform;

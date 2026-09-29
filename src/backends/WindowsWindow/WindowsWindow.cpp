@@ -5,11 +5,10 @@
 #include "WindowsWindow.h"
 
 #include "Application.h"
+#include "Input.h"
 #include "WindowEvent.h"
 #include "MouseEvent.h"
 #include "KeyEvent.h"
-
-#include "imgui_impl_glfw.h"
 
 namespace Azer {
     WindowsWindow::WindowsWindow(const uint32_t width, const uint32_t height, const char* title)
@@ -50,14 +49,17 @@ namespace Azer {
 
             if (action == GLFW_PRESS)
             {
+                Input::KeyPressed(key);
                 application->PushEvent(CreateScope<KeyPressedEvent>(key, false));
             }
             else if (action == GLFW_RELEASE)
             {
+                Input::KeyReleased(key);
                 application->PushEvent(CreateScope<KeyReleasedEvent>(key));
             }
             else if (action == GLFW_REPEAT)
             {
+                Input::KeyPressed(key);
                 application->PushEvent(CreateScope<KeyPressedEvent>(key, true));
             }
         });
@@ -68,6 +70,26 @@ namespace Azer {
             if (!application) return;
 
             application->PushEvent(CreateScope<WindowCloseEvent>());
+        });
+
+        glfwSetCursorPosCallback(m_Window, [](GLFWwindow* window, double x, double y)
+        {
+            auto* application = static_cast<Application*>(glfwGetWindowUserPointer(window));
+            if (!application) return;
+
+            application->PushEvent(CreateScope<MouseMoveEvent>(static_cast<float>(x), static_cast<float>(y)));
+            Input::MouseMoved(static_cast<float>(x), static_cast<float>(y));
+        });
+
+        glfwSetMouseButtonCallback(m_Window, [](GLFWwindow* window, int button, int action, int mods)
+        {
+            auto* application = static_cast<Application*>(glfwGetWindowUserPointer(window));
+            if (!application) return;
+
+            if (action == GLFW_PRESS)
+                application->PushEvent(CreateScope<MouseButtonPressedEvent>(button));
+            else if (action == GLFW_RELEASE)
+                application->PushEvent(CreateScope<MouseButtonReleasedEvent>(button));
         });
     }
 

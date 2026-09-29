@@ -17,7 +17,7 @@ namespace Azer
         explicit SplashLayer(Renderer& renderer, float duration = 2.0f);
         void OnAttach(EngineContext& ctx) override;
         void OnUpdate(float delta) override;
-        void OnEvent(const Event& event) override;
+        void OnEvent(Event& event) override;
         void OnImGuiRender() override;
 
         void SetLogo(const std::string& path);

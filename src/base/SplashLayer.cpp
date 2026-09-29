@@ -27,10 +27,10 @@ namespace Azer
             RequestRemove();
     }
 
-    void SplashLayer::OnEvent(const Event& event)
+    void SplashLayer::OnEvent(Event& event)
     {
         Layer::OnEvent(event);
-        if (event.GetEventType() == EventType::KeyPressedEvent)
+        if (event.GetEventType() == EventType::KeyPressed)
         {
             RequestRemove();
         }

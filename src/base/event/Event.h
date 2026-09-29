@@ -4,6 +4,7 @@
 
 #pragma once
 #include "Base.h"
+#include "Type.h"
 
 namespace Azer
 {
@@ -44,9 +45,9 @@ namespace Azer
 
     enum class EventType
     {
-        WindowCloseEvent, WindowResizeEvent, WindowFocusEvent, WindowLostFocusEvent,
-        KeyPressedEvent, KeyReleasedEvent,
-        MouseMovedEvent, MouseButtonPressedEvent, MouseButtonReleasedEvent,
+        WindowClose, WindowResize, WindowFocus, WindowLostFocus,
+        KeyPressed, KeyReleased,
+        MouseMoved, MouseButtonPressed, MouseButtonReleased,
     };
 
 
@@ -78,13 +79,6 @@ namespace Azer
         EventType GetEventType() const noexcept override { return Type; }
 
         EventCategoryFlag GetCategory() const noexcept override { return Category; }
-    };
-
-
-    class EventBus
-    {
-    public:
-        
     };
 }
 

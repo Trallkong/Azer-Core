@@ -3,17 +3,20 @@ add_library(Azer
         # --- Precompiled Header ---
         azpch.cpp
 
+
         # --- Core ---
         base/Application.cpp
         base/DeltaTime.cpp
         base/GameObject.cpp
-        base/Input.cpp
         base/LayerStack.cpp
         base/Logger.cpp
         base/Scene.cpp
         base/SplashLayer.cpp
         base/Variant.cpp
         base/Window.cpp
+        base/EntryPoint.h
+        base/Type.h
+        base/Input.h
 
         base/file_system/FileSystem.cpp
         base/file_system/FileSystem.h
@@ -38,16 +41,6 @@ add_library(Azer
 
         # --- Reflection ---
         base/reflection/PropertyAccessor.cpp
-
-        # --- ECS ---
-        ecs/World.cpp
-        ecs/SystemManager.cpp
-        ecs/RenderSystem.cpp
-        ecs/PhysicsSystem.cpp
-        ecs/ECSLayer.cpp
-        ecs/GameObjectWrapper.cpp
-        ecs/ECSScene.cpp
-        ecs/ECSSceneSerializer.cpp
 
         # --- Renderer (abstract) ---
         renderer/Framebuffer.cpp
@@ -85,12 +78,26 @@ add_library(Azer
         backends/Vulkan/VulkanRenderer/VulkanStagingBuffer.cpp
         backends/Vulkan/VulkanRenderer/VulkanTexture.cpp
 
+        # resources
         resources/SkyBox.cpp
+        resources/node/Node.h
+        resources/node/Node.cpp
+        resources/node/Node2D.h
+        resources/node/Node3D.h
+        resources/node/NodeManager.h
+        resources/node/NodeManager.cpp
+        resources/node/node2d/Sprite2D.h
+        resources/node/node2d/Sprite2D.cpp
+        resources/node/node2d/ui/Button.h
+        resources/node/node2d/ui/Button.cpp
+        base/KeyCode.h
+        base/Input.cpp
+
 )
 
 target_precompile_headers(Azer PRIVATE azpch.h)
 
-target_include_directories(Azer PRIVATE
+target_include_directories(Azer PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_CURRENT_SOURCE_DIR}/base
         ${CMAKE_CURRENT_SOURCE_DIR}/base/event
@@ -98,13 +105,14 @@ target_include_directories(Azer PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/base/reflection
         ${CMAKE_CURRENT_SOURCE_DIR}/base/file_system
         ${CMAKE_CURRENT_SOURCE_DIR}/renderer
-        ${CMAKE_CURRENT_SOURCE_DIR}/ecs
         ${CMAKE_CURRENT_SOURCE_DIR}/backends/Vulkan
         ${CMAKE_CURRENT_SOURCE_DIR}/backends/Vulkan/VulkanRenderer
         ${CMAKE_CURRENT_SOURCE_DIR}/backends/WindowsWindow
         ${CMAKE_CURRENT_SOURCE_DIR}/../assets/shaders
-        ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/entt/single_include
         ${CMAKE_CURRENT_SOURCE_DIR}/resources
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources/node
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources/node/node2d
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources/node/node2d/ui
 )
 
 # PUBLIC：Azer 的公共头文件用到了 vendor 里的库，且 spdlog 的

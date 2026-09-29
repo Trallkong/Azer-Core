@@ -11,6 +11,8 @@
 #include "IndexBuffer.h"
 #include "Transform2D.h"
 
+struct Color;
+
 namespace Azer
 {
     // 前端 2D 便利渲染器：内置单位四边形网格 + 默认 quad2d shader。
@@ -24,7 +26,7 @@ namespace Azer
 
         static void SetCamera(Camera& camera);
         static void DrawQuad(const Transform2D& transform, float alpha = 1.0f);
-        static void DrawColorQuad(const Transform2D& transform, const glm::vec4& color);
+        static void DrawColorQuad(const Transform2D& transform, const Color& color);
         static void DrawTexture(const Ref<Texture>& tex, const Transform2D& transform, float alpha = 1.0f);
 
     private:

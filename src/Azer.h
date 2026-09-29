@@ -21,9 +21,16 @@
 #include "base/SceneSerializer.h"
 #include "base/Collision.h"
 #include "base/file_system/FileSystem.h"
+#include "base/UUID.h"
+#include "base/Type.h"
 
 // Resource
 #include "resources/Resource.h"
+#include "resources/node/Node.h"
+#include "resources/node/Node2D.h"
+#include "resources/node/Node3D.h"
+#include "resources/node/node2d/Sprite2D.h"
+#include "resources/node/node2d/ui/Button.h"
 #include "resources/SkyBox.h"
 
 // Animation
@@ -50,15 +57,3 @@
 #include "renderer/Mesh.h"
 #include "renderer/Material.h"
 #include "renderer/Model.h"
-
-// ECS
-#include "ecs/Components.h"
-#include "ecs/World.h"
-#include "ecs/System.h"
-#include "ecs/SystemManager.h"
-#include "ecs/ECSLayer.h"
-#include "ecs/ECSScene.h"
-#include "ecs/ECSSceneSerializer.h"
-#include "ecs/GameObjectWrapper.h"
-#include "ecs/RenderSystem.h"
-#include "ecs/PhysicsSystem.h"

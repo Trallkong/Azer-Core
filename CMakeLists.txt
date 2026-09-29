@@ -9,3 +9,7 @@ option(AZER_ENABLE_DOCKING "Enable ImGui docking for editor-style applications" 
 
 add_subdirectory(vendor)
 add_subdirectory(src)
+
+add_library(AzerCore INTERFACE)
+
+target_link_libraries(AzerCore INTERFACE Azer vendor)

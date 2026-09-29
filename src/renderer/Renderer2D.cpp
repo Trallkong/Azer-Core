@@ -7,6 +7,8 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "Type.h"
+
 namespace Azer
 {
     Ref<Shader> Renderer2D::s_Shader;
@@ -54,14 +56,15 @@ namespace Azer
 
     void Renderer2D::DrawQuad(const Transform2D& transform, float alpha)
     {
-        DrawColorQuad(transform, { 1.0f, 1.0f, 1.0f, alpha });
+        const int a = 255 * alpha;
+        DrawColorQuad(transform, { .r = 255,  .g = 255, .b = 255, .a = static_cast<uint8_t>(a)});
     }
 
-    void Renderer2D::DrawColorQuad(const Transform2D& transform, const glm::vec4& color)
+    void Renderer2D::DrawColorQuad(const Transform2D& transform, const Color& color)
     {
         DrawPushConstants pc;
         pc.modelMat = transform.GetMatrix();
-        pc.color = color;
+        pc.color = {color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f};
         s_Shader->SetUniform("drawData", &pc, sizeof(pc));
         s_WhiteTexture->Bind(1, s_Shader);
         RenderCommand::DrawIndexed(s_QuadVbo, s_QuadIbo, s_Shader);

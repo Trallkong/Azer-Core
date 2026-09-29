@@ -3,7 +3,6 @@
 
 #include "Logger.h"
 #include "GLFW/glfw3.h"
-#include "SDL3/SDL_vulkan.h"
 
 namespace Azer {
 

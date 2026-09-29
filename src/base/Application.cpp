@@ -201,12 +201,12 @@ namespace Azer
 
     void Application::OnEvent(const Event& e)
     {
-        if (e.GetEventType() == EventType::WindowCloseEvent)
+        if (e.GetEventType() == EventType::WindowClose)
         {
             m_Running = false;
         }
 
-        if (e.GetEventType() == EventType::WindowResizeEvent)
+        if (e.GetEventType() == EventType::WindowResize)
         {
             OnWindowResize(dynamic_cast<const WindowResizeEvent&>(e));
         }

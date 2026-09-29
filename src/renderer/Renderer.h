@@ -1,17 +1,13 @@
 #pragma once
 #include "Base.h"
-#include "Texture.h"
 #include "Shader.h"
 #include "VertexBuffer.h"
 #include "IndexBuffer.h"
 #include "Framebuffer.h"
 #include "Window.h"
 
-#include <vector>
-
 #include "glm/glm.hpp"
 #include "imgui.h"
-#include "SDL3/SDL.h"
 
 namespace Azer
 {

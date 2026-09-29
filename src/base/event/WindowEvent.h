@@ -5,9 +5,9 @@
 namespace Azer {
 
     // --- Window Events ---
-    class WindowCloseEvent : public EventBase<EventType::WindowCloseEvent, EventCategoryFlag::WindowEvent> { };
+    class WindowCloseEvent : public EventBase<EventType::WindowClose, EventCategoryFlag::WindowEvent> { };
 
-    class WindowResizeEvent : public EventBase<EventType::WindowResizeEvent, EventCategoryFlag::WindowEvent>
+    class WindowResizeEvent : public EventBase<EventType::WindowResize, EventCategoryFlag::WindowEvent>
     {
     public:
         explicit WindowResizeEvent(const uint32_t width, const uint32_t height)

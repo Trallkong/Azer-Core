@@ -5,7 +5,7 @@
 namespace Azer {
     
     // --- Key Events ---
-    class KeyPressedEvent : public EventBase<EventType::KeyPressedEvent, EventCategoryFlag::KeyboardEvent | EventCategoryFlag::InputEvent>
+    class KeyPressedEvent : public EventBase<EventType::KeyPressed, EventCategoryFlag::KeyboardEvent | EventCategoryFlag::InputEvent>
     {
     public:
         explicit KeyPressedEvent(const unsigned int keycode, const bool repeat)
@@ -18,7 +18,7 @@ namespace Azer {
         bool m_Repeat;
     };
 
-    class KeyReleasedEvent : public EventBase<EventType::KeyReleasedEvent, EventCategoryFlag::KeyboardEvent | EventCategoryFlag::InputEvent>
+    class KeyReleasedEvent : public EventBase<EventType::KeyReleased, EventCategoryFlag::KeyboardEvent | EventCategoryFlag::InputEvent>
     {
     public:
         explicit KeyReleasedEvent(unsigned int keycode)

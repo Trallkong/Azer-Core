@@ -4,8 +4,6 @@ add_library(imgui
         imgui_tables.cpp
         imgui_widgets.cpp
         imgui_demo.cpp
-        backends/imgui_impl_sdl3.cpp
-        backends/imgui_impl_sdlrenderer3.cpp
         backends/imgui_impl_glfw.cpp
         backends/imgui_impl_vulkan.cpp
 )
@@ -19,4 +17,4 @@ target_include_directories(imgui PUBLIC
 # imgui_impl_glfw.cpp 需要 GLFW 的头文件，GLFW 是 INTERFACE 目标，
 # 不链接它就拿不到 include 目录（vendor 里链接 GLFW 只对最终可执行文件生效，
 # 不会传播到 imgui 自身的编译）。
-target_link_libraries(imgui PRIVATE SDL3::SDL3 GLFW Vulkan::Vulkan)
+target_link_libraries(imgui PRIVATE GLFW Vulkan::Vulkan)
