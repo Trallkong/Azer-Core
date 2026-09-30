@@ -22,7 +22,6 @@ namespace Azer
         virtual void OnDetach() {}
         virtual void OnUpdate(float delta) {}
         virtual void OnPhysicsUpdate(float fixedDelta) {}
-        virtual void OnInterpolate(float alpha) {}
         virtual void OnDraw() {}
         virtual void OnEvent(Event& event) {}
         virtual void OnImGuiRender() {}

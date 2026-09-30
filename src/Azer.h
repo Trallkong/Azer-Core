@@ -29,6 +29,7 @@
 #include "resources/node/Node.h"
 #include "resources/node/Node2D.h"
 #include "resources/node/Node3D.h"
+#include "resources/node/Timer.h"
 #include "resources/node/node2d/Sprite2D.h"
 #include "resources/node/node2d/ui/Button.h"
 #include "resources/SkyBox.h"

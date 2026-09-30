@@ -18,6 +18,7 @@
 #include <set>
 
 #include "Type.h"
+#include "Math.h"
 
 #include "glm/glm.hpp"
 #include "glm/ext/matrix_clip_space.hpp"

@@ -89,6 +89,11 @@ add_library(Azer
         resources/node/node2d/ui/Button.cpp
         base/KeyCode.h
         base/Input.cpp
+        resources/node/AnimationPlayer.cpp
+        resources/node/AnimationPlayer.h
+        resources/node/Timer.cpp
+        resources/node/Timer.h
+        base/Math.h
 
 )
 

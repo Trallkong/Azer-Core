@@ -125,16 +125,6 @@ namespace Azer
                 layer->OnUpdate(dt);
             }
 
-
-            // 物理插值（alpha = 当前帧在两次物理 tick 间的进度）
-            const float alpha = m_FixedTimestep > 0.0f
-                                    ? glm::clamp(m_Accumulator / m_FixedTimestep, 0.0f, 1.0f)
-                                    : 1.0f;
-            for (const auto layer : layers)
-            {
-                layer->OnInterpolate(alpha);
-            }
-
             if (!m_Minimized)
             {
                 // OnDraw

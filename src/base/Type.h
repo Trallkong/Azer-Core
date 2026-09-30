@@ -4,6 +4,7 @@
 
 #pragma once
 #include <cstdint>
+#include <variant>
 
 struct Color
 {
@@ -29,3 +30,5 @@ struct Vector3i
 {
     uint32_t x = 0, y = 0, z = 0;
 };
+
+using Numeric = std::variant<int, double, float, Vector2, Vector3, Vector3i, Vector2i, Vector3>;
