@@ -17,6 +17,8 @@
 #include <cassert>
 #include <set>
 
+#include "Type.h"
+
 #include "glm/glm.hpp"
 #include "glm/ext/matrix_clip_space.hpp"
 #include "glm/ext/matrix_transform.hpp"

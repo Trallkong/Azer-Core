@@ -7,20 +7,17 @@
 #include <string>
 #include <utility>
 
-#include "NodeManager.h"
-#include "UUID.h"
-
 namespace Azer
 {
+    class Event;
+    class NodeManager;
+
     class Node
     {
     public:
-        explicit Node(std::string name)
-            : Name(std::move(name))
-        {
-            UUID = generate_uuid();
-        };
-        virtual ~Node() = default;
+        explicit Node(std::string name);
+
+        virtual ~Node();
 
         virtual void Init();
         virtual void Ready();
@@ -35,14 +32,14 @@ namespace Azer
 
         inline void set_name(std::string name) { Name = std::move(name); }
 
-        void AddChild(const Ref<Node>& child);
-        Ref<Node> GetChild(const std::string& name) const;
+        void AddChild(const Ref<Node>& child) const;
+        [[nodiscard]] Ref<Node> GetChild(const std::string& name) const;
 
     private:
         std::string UUID;
         std::string Name;
 
-        NodeManager m_NodeManager;
+        Scope<NodeManager> m_NodeManager;
     };
 }
 

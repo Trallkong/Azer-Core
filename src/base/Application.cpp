@@ -4,6 +4,11 @@
 #include <ranges>
 
 #include "Renderer.h"
+#include "Window.h"
+
+#include "ImGuiLayer.h"
+#include "LayerStack.h"
+#include "DeltaTime.h"
 
 #include "RenderCommand.h"
 #include "Renderer2D.h"
@@ -11,8 +16,6 @@
 
 #include "imgui.h"
 #include "Logger.h"
-
-#include "SplashLayer.h"
 
 #include "FileSystem.h"
 #include "WindowEvent.h"
@@ -58,13 +61,16 @@ namespace Azer
         Renderer2D::Init();
         Renderer3D::Init();
 
+        m_LayerStack = CreateScope<LayerStack>();
         m_ImGuiLayer = new ImGuiLayer(m_Renderer.get());
         PushLayer(m_ImGuiLayer);
+
+        m_DeltaTime = CreateScope<DeltaTime>();
     }
 
     Application::~Application()
     {
-        for (const auto & i : std::views::reverse(m_LayerStack))
+        for (const auto & i : std::views::reverse(*m_LayerStack.get()))
         {
             i->OnDetach();
             delete i;
@@ -82,7 +88,7 @@ namespace Azer
     {
         while (m_Running)
         {
-            const auto& layers = m_LayerStack.GetLayers();
+            const auto& layers = m_LayerStack->GetLayers();
 
             glfwPollEvents();
 
@@ -97,7 +103,7 @@ namespace Azer
             }
 
             // OnUpdate
-            const float dt = m_DeltaTime.GetDeltaTime();
+            const float dt = m_DeltaTime->GetDeltaTime();
 
             // 固定时间步长（物理/确定性更新）
             m_Accumulator += dt;
@@ -149,13 +155,13 @@ namespace Azer
 
                 // 移除标记为待删的层
                 std::vector<Layer*> toDetach;
-                for (auto* layer : m_LayerStack)
+                for (auto* layer : m_LayerStack->GetLayers())
                     if (layer->IsPendingRemove())
                         toDetach.push_back(layer);
                 for (auto* layer : toDetach)
                 {
                     layer->OnDetach();
-                    m_LayerStack.Erase(layer);
+                    m_LayerStack->Erase(layer);
                     m_LayersToDelete.push_back(layer);
                 }
             }
@@ -169,34 +175,34 @@ namespace Azer
         }
     }
 
-    void Application::PushLayer(Layer* layer)
+    void Application::PushLayer(Layer* layer) const
     {
-        m_LayerStack.PushLayer(layer);
+        m_LayerStack->PushLayer(layer);
         EngineContext ctx{*m_Renderer, *m_Window};
         layer->OnAttach(ctx);
     }
 
-    void Application::PushOverlay(Layer* overlay)
+    void Application::PushOverlay(Layer* overlay) const
     {
-        m_LayerStack.PushOverlay(overlay);
-        EngineContext ctx{*m_Renderer, *m_Window};
+        m_LayerStack->PushOverlay(overlay);
+        EngineContext ctx{.renderer = *m_Renderer, .window = *m_Window};
         overlay->OnAttach(ctx);
     }
 
     void Application::PopLayer()
     {
-        Layer* layer = m_LayerStack.PeekLayer();
+        Layer* layer = m_LayerStack->PeekLayer();
         layer->OnDetach();
         m_LayersToDelete.push_back(layer);
-        m_LayerStack.PopLayer();
+        m_LayerStack->PopLayer();
     }
 
     void Application::PopOverlay()
     {
-        Layer* layer = m_LayerStack.PeekOverlay();
+        Layer* layer = m_LayerStack->PeekOverlay();
         layer->OnDetach();
         m_LayersToDelete.push_back(layer);
-        m_LayerStack.PopOverlay();
+        m_LayerStack->PopOverlay();
     }
 
     void Application::OnEvent(const Event& e)
@@ -222,16 +228,19 @@ namespace Azer
 
     bool Application::OnWindowResize(const WindowResizeEvent& event)
     {
+        const uint32_t width = event.GetWidth();
+        const uint32_t height = event.GetHeight();
+
+        if (width <= 0 || height <= 0)
+        {
+            AZ_CORE_DEBUG("Window Minimized!");
+            m_Minimized = true;
+            return false;
+        }
+
         AZ_CORE_TRACE("Window Resize Event: {0} {1}", event.GetWidth(), event.GetHeight());
         m_Renderer->Resize(event.GetWidth(), event.GetHeight());
         m_Minimized = false;
-        return false;
-    }
-
-    bool Application::OnWindowMinimized(const WindowMinimizedEvent &event)
-    {
-        AZ_CORE_DEBUG("Window Minimized!");
-        m_Minimized = true;
         return false;
     }
 }

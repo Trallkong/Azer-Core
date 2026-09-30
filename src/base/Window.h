@@ -10,12 +10,6 @@
 
 namespace Azer
 {
-    struct WindowSize
-    {
-        uint32_t width;
-        uint32_t height;
-    };
-
     class Window {
     public:
         virtual ~Window() = default;
@@ -27,8 +21,8 @@ namespace Azer
         virtual void SetWindowIcon(const std::string& path) = 0;
 
         // Getter
-        virtual void* GetHandle() const = 0;
-        virtual WindowSize GetWindowSize() const = 0;
+        [[nodiscard]] virtual void* GetHandle() const = 0;
+        [[nodiscard]] virtual Vector2i GetWindowSize() const = 0;
 
         static Scope<Window> Create(uint32_t width, uint32_t height, const std::string& title);
     };

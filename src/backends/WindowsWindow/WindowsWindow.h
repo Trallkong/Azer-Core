@@ -21,9 +21,9 @@ namespace Azer {
 
         void SetWindowIcon(const std::string &path) override {};
 
-        void * GetHandle() const override { return m_Window; };
+        [[nodiscard]] void* GetHandle() const override { return m_Window; };
 
-        WindowSize GetWindowSize() const override;
+        [[nodiscard]] Vector2i GetWindowSize() const override;
 
     private:
         GLFWwindow* m_Window = nullptr;

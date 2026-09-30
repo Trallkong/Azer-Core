@@ -35,7 +35,7 @@ namespace Azer
 
         ButtonState m_ButtonState = ButtonState::NORMAL;
 
-        bool CursorInBounds(Vector2 cursor_pos) const;
+        [[nodiscard]] bool CursorInBounds(Vector2 cursor_pos) const;
     };
 }
 

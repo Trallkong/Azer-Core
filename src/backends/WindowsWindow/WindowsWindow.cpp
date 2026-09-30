@@ -91,12 +91,20 @@ namespace Azer {
             else if (action == GLFW_RELEASE)
                 application->PushEvent(CreateScope<MouseButtonReleasedEvent>(button));
         });
+
+        glfwSetWindowSizeCallback(m_Window, [](GLFWwindow* window, int width, int height)
+        {
+            auto* application = static_cast<Application*>(glfwGetWindowUserPointer(window));
+            if (!application) return;
+
+            application->PushEvent(CreateScope<WindowResizeEvent>(static_cast<uint32_t>(width), static_cast<uint32_t>(height)));
+        });
     }
 
-    WindowSize WindowsWindow::GetWindowSize() const
+    Vector2i WindowsWindow::GetWindowSize() const
     {
         if (m_Window == nullptr)
-            return WindowSize(m_Width, m_Height);
+            return Vector2i(m_Width, m_Height);
 
         // 实时查询，避免窗口被拖动/缩放后返回过期尺寸。
         // 窗口最小化时 GLFW 返回 0x0，这是有效信息：调用方必须跳过
@@ -105,7 +113,7 @@ namespace Azer {
         int frameBufferHeight = 0;
         glfwGetFramebufferSize(m_Window, &frameBufferWidth, &frameBufferHeight);
 
-        return WindowSize(
+        return Vector2i(
             static_cast<uint32_t>(frameBufferWidth > 0 ? frameBufferWidth : 0),
             static_cast<uint32_t>(frameBufferHeight > 0 ? frameBufferHeight : 0));
     }

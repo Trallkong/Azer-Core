@@ -64,8 +64,8 @@ namespace Azer {
 
         // 其余平台（X11/Wayland）需要自己决定：优先用调用方给的尺寸，
         // 没有就退回窗口尺寸，最后 clamp 到 surface 允许的范围。
-        uint32_t width = preferredWidth != 0 ? preferredWidth : m_Window->GetWindowSize().width;
-        uint32_t height = preferredHeight != 0 ? preferredHeight : m_Window->GetWindowSize().height;
+        uint32_t width = preferredWidth != 0 ? preferredWidth : m_Window->GetWindowSize().x;
+        uint32_t height = preferredHeight != 0 ? preferredHeight : m_Window->GetWindowSize().y;
 
         uint32_t c_width = std::clamp<uint32_t>(width, surfaceCapabilities.minImageExtent.width, surfaceCapabilities.maxImageExtent.width);
         uint32_t c_height = std::clamp<uint32_t>(height, surfaceCapabilities.minImageExtent.height, surfaceCapabilities.maxImageExtent.height);

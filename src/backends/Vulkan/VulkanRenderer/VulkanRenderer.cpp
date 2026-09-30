@@ -36,8 +36,8 @@ namespace Azer {
         // Vulkan 帧缓冲原点在左上、NDC Y 向下；用负高度视口在光栅化阶段翻转 Y，
         // 使世界 +Y 渲染在屏幕上方（与 2D/3D 统一，且不影响背面剔除绕序）。
         // 尺寸不能为 0（VUID-VkViewport-width-01770）：窗口尺寸拿不到时退回交换链尺寸。
-        uint32_t viewportWidth = window->GetWindowSize().width;
-        uint32_t viewportHeight = window->GetWindowSize().height;
+        uint32_t viewportWidth = window->GetWindowSize().x;
+        uint32_t viewportHeight = window->GetWindowSize().y;
         if (viewportWidth == 0 || viewportHeight == 0)
         {
             const VkExtent2D swapchainExtent = ctx.Swapchain->GetExtent();
@@ -252,14 +252,14 @@ namespace Azer {
 
     void VulkanRenderer::RecreateSwapchainFromWindow()
     {
-        WindowSize size = m_Window->GetWindowSize();
-        if (size.width == 0 || size.height == 0)
+        Vector2i size = m_Window->GetWindowSize();
+        if (size.x == 0 || size.y == 0)
         {
             AZ_CORE_WARN("VulkanRenderer: window has no drawable area, skip swapchain recreation");
             return;
         }
 
-        VulkanContextManager::GetContext().Swapchain->RecreateSwapchain(size.width, size.height);
+        VulkanContextManager::GetContext().Swapchain->RecreateSwapchain(size.x, size.y);
         RebuildSubmitSemaphores();
         CreateDepthResources();
 

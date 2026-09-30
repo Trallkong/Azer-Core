@@ -11,15 +11,11 @@ add_library(Azer
         base/LayerStack.cpp
         base/Logger.cpp
         base/Scene.cpp
-        base/SplashLayer.cpp
         base/Variant.cpp
         base/Window.cpp
         base/EntryPoint.h
         base/Type.h
         base/Input.h
-
-        base/file_system/FileSystem.cpp
-        base/file_system/FileSystem.h
 
         # --- Events ---
         base/event/Event.h
@@ -29,6 +25,7 @@ add_library(Azer
 
         # --- File System ---
         base/file_system/FileSystem.cpp
+        base/file_system/FileSystem.h
 
         # --- ImGui ---
         base/ImGuiLayer.cpp

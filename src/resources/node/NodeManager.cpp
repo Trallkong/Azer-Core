@@ -6,6 +6,16 @@
 #include "NodeManager.h"
 #include "Node.h"
 
+Azer::NodeManager::NodeManager()
+{
+
+}
+
+Azer::NodeManager::~NodeManager()
+{
+
+}
+
 void Azer::NodeManager::init() const
 {
     for (const Ref<Node>& node : m_Nodes)
@@ -42,7 +52,7 @@ void Azer::NodeManager::input(Event& event) const
 {
     for (const Ref<Node>& node : m_Nodes)
     {
-        node->Input(event);
+        node->OnEvent(event);
     }
 }
 

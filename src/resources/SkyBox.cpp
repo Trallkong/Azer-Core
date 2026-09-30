@@ -5,12 +5,15 @@
 #include "azpch.h"
 #include "SkyBox.h"
 
+#include <utility>
+#include "Texture.h"
+
 namespace Azer {
 
     namespace Resources {
 
-        SkyBox::SkyBox(const std::string& resourcePath)
-            : m_ResourcePath(resourcePath)
+        SkyBox::SkyBox(std::string resourcePath)
+            : m_ResourcePath(std::move(resourcePath))
         {
             m_Texture = Texture::Create(m_ResourcePath, true);
         }

@@ -2,13 +2,10 @@
 // Created by csis on 2026/9/29.
 //
 
-#include "azpch.h"
 #include "Button.h"
 
 #include "Event.h"
 #include "Input.h"
-#include "Logger.h"
-#include "MouseEvent.h"
 #include "Renderer2D.h"
 
 namespace Azer
@@ -17,18 +14,12 @@ namespace Azer
     {
         Node2D::PhysicsProcess(delta);
 
-        switch (m_ButtonState)
+        if (CursorInBounds(Input::GetMousePosition()) && m_ButtonState != ButtonState::ACTIVE)
         {
-        case ButtonState::NORMAL:
-            if (m_ButtonState != ButtonState::ACTIVE && CursorInBounds(Input::GetMousePosition()))
-                m_ButtonState = ButtonState::HOVER;
-            break;
-        case ButtonState::HOVER:
-            if (m_ButtonState != ButtonState::ACTIVE && !CursorInBounds(Input::GetMousePosition()))
-                m_ButtonState = ButtonState::NORMAL;
-            break;
-        case ButtonState::ACTIVE:
-            break;
+            m_ButtonState = ButtonState::HOVER;
+        } else if (!CursorInBounds(Input::GetMousePosition()) && m_ButtonState != ButtonState::ACTIVE)
+        {
+            m_ButtonState = ButtonState::NORMAL;
         }
     }
 
@@ -54,18 +45,14 @@ namespace Azer
     {
         Node2D::OnEvent(event);
 
-        switch (m_ButtonState)
+        if (event.GetEventType() == EventType::MouseButtonPressed && CursorInBounds(Input::GetMousePosition()))
         {
-        case ButtonState::NORMAL:
-            if (event.GetEventType() == EventType::MouseButtonPressed)
-                m_ButtonState = ButtonState::ACTIVE;
-            break;
-        case ButtonState::HOVER:
-            if (event.GetEventType() == EventType::MouseButtonPressed)
-                m_ButtonState = ButtonState::ACTIVE;
-            break;
-        case ButtonState::ACTIVE:
-            break;
+            m_ButtonState = ButtonState::ACTIVE;
+        }
+
+        if (event.GetEventType() == EventType::MouseButtonReleased)
+        {
+            m_ButtonState = ButtonState::NORMAL;
         }
     }
 

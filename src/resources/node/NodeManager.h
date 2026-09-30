@@ -15,8 +15,8 @@ namespace Azer
     class NodeManager
     {
     public:
-        NodeManager() = default;
-        ~NodeManager() = default;
+        NodeManager();
+        ~NodeManager();
 
         void init() const;
         void ready() const;
