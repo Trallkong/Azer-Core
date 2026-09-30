@@ -54,8 +54,7 @@ Azer::Application* Azer::CreateApplication()
 '''
     
     # 项目 CMakeLists.txt
-    project_cmake_content = f'''
-cmake_minimum_required(VERSION 3.14)
+    project_cmake_content = f'''cmake_minimum_required(VERSION 3.14)
 
 project({project_name})
 
@@ -64,7 +63,21 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable({project_name} src/main.cpp)
 
-target_link_libraries({project_name} PRIVATE AzerCore)
+target_link_libraries({project_name} Azer)
+
+target_include_directories({project_name} PRIVATE
+    ${{CMAKE_CURRENT_SOURCE_DIR}}/../Azer-Core/src
+    ${{CMAKE_CURRENT_SOURCE_DIR}}/../Azer-Core/src/base
+    ${{CMAKE_CURRENT_SOURCE_DIR}}/../Azer-Core/src/renderer
+    ${{CMAKE_CURRENT_SOURCE_DIR}}/../Azer-Core/src/event
+    ${{CMAKE_CURRENT_SOURCE_DIR}}/../Azer-Core/src/resources
+    ${{CMAKE_CURRENT_SOURCE_DIR}}/../Azer-Core/src/ecs
+    ${{CMAKE_CURRENT_SOURCE_DIR}}/../Azer-Core/vendor/SDL/include
+    ${{CMAKE_CURRENT_SOURCE_DIR}}/../Azer-Core/vendor/glm
+    ${{CMAKE_CURRENT_SOURCE_DIR}}/../Azer-Core/vendor/imgui
+    ${{CMAKE_CURRENT_SOURCE_DIR}}/../Azer-Core/vendor/spdlog/include
+    ${{CMAKE_CURRENT_SOURCE_DIR}}/../Azer-Core/vendor/entt/single_include
+)
 
 target_compile_definitions({project_name} PRIVATE GLM_ENABLE_EXPERIMENTAL)
 '''
