@@ -11,11 +11,11 @@ add_library(Azer
         base/LayerStack.cpp
         base/Logger.cpp
         base/Scene.cpp
-        base/Variant.cpp
         base/Window.cpp
         base/EntryPoint.h
         base/Type.h
         base/Input.h
+        base/Math.h
 
         # --- Events ---
         base/event/Event.h
@@ -30,14 +30,8 @@ add_library(Azer
         # --- ImGui ---
         base/ImGuiLayer.cpp
 
-        # --- Animation ---
-        base/animation/AnimationPlayer.cpp
-
         # --- Serialization ---
         base/SceneSerializer.cpp
-
-        # --- Reflection ---
-        base/reflection/PropertyAccessor.cpp
 
         # --- Renderer (abstract) ---
         renderer/Framebuffer.cpp
@@ -93,7 +87,9 @@ add_library(Azer
         resources/node/AnimationPlayer.h
         resources/node/Timer.cpp
         resources/node/Timer.h
-        base/Math.h
+        base/Type.cpp
+        base/Math.cpp
+
 
 )
 
@@ -103,8 +99,6 @@ target_include_directories(Azer PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_CURRENT_SOURCE_DIR}/base
         ${CMAKE_CURRENT_SOURCE_DIR}/base/event
-        ${CMAKE_CURRENT_SOURCE_DIR}/base/animation
-        ${CMAKE_CURRENT_SOURCE_DIR}/base/reflection
         ${CMAKE_CURRENT_SOURCE_DIR}/base/file_system
         ${CMAKE_CURRENT_SOURCE_DIR}/renderer
         ${CMAKE_CURRENT_SOURCE_DIR}/backends/Vulkan

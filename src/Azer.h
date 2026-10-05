@@ -6,7 +6,6 @@
 
 // Base
 #include "base/Base.h"
-#include "base/Variant.h"
 #include "base/Application.h"
 #include "base/Logger.h"
 #include "base/event/Event.h"
@@ -30,15 +29,10 @@
 #include "resources/node/Node2D.h"
 #include "resources/node/Node3D.h"
 #include "resources/node/Timer.h"
+#include "resources/node/AnimationPlayer.h"
 #include "resources/node/node2d/Sprite2D.h"
 #include "resources/node/node2d/ui/Button.h"
 #include "resources/SkyBox.h"
-
-// Animation
-#include "base/animation/AnimationPlayer.h"
-
-// Reflection
-#include "base/reflection/PropertyAccessor.h"
 
 // Renderer
 #include "renderer/Texture.h"

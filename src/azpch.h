@@ -16,6 +16,7 @@
 #include <cstdlib>
 #include <cassert>
 #include <set>
+#include <ranges>
 
 #include "Type.h"
 #include "Math.h"

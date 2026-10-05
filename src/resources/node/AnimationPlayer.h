@@ -11,15 +11,15 @@ namespace Azer
 {
     struct KeyFrame
     {
-        float Time;
-        Numeric Value;
+        float Time = 0.0f;
+        Variant Value;
     };
 
     class AnimationChannel
     {
         friend class AnimationObject;
     public:
-        explicit AnimationChannel(Numeric* property)
+        explicit AnimationChannel(const VariantValue& property)
             : m_Property(property)
         {
 
@@ -27,8 +27,10 @@ namespace Azer
 
         void AddKeyFrame(const KeyFrame& keyFrame);
         void RemoveKeyFrame(float time);
+
+        [[nodiscard]] const Variant& GetCurrentProperty() const { return m_Property; }
     private:
-        Numeric* m_Property;
+        Variant m_Property;
         std::vector<KeyFrame> m_KeyFrames;
 
         uint32_t m_FrameIndex = 0;
@@ -39,7 +41,13 @@ namespace Azer
     class AnimationObject
     {
     public:
+        explicit AnimationObject(std::string name, const bool isLoop = false)
+            : Loop(isLoop), Name(std::move(name)) {}
+
         bool Loop = false;
+        std::string Name;
+
+        void Play();
     private:
         std::vector<AnimationChannel> m_Channels;
     };
@@ -53,10 +61,9 @@ namespace Azer
 
         void Process(float delta) override;
 
+        void Play(const std::string& name);
+        void CreateAnimation(std::string name);
     private:
-        float m_AccumulatedTime = 0.0f;
-
-        template<typename C, typename M>
-        static void SetMember(C& object, M C::* member, const M& value) { object.*member = value; }
+        std::vector<AnimationObject> m_Animations;
     };
 }

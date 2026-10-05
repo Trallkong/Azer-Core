@@ -9,6 +9,11 @@
 
 namespace Azer
 {
+    void AnimationObject::Play()
+    {
+
+    }
+
     AnimationPlayer::AnimationPlayer(const std::string& name)
         : Node(name)
     {
@@ -24,25 +29,42 @@ namespace Azer
     {
         Node::Process(delta);
 
+        for (auto& animation : m_Animations)
+        {
+
+        }
+    }
+
+    void AnimationPlayer::Play(const std::string& name)
+    {
+        auto result = m_Animations | std::views::filter([name](const AnimationObject& animation) { return animation.Name == name; });
+        if (result.empty())
+        {
+            AZ_CORE_INFO("No animation found!");
+            return;
+        }
+        result.begin()->Play();
     }
 
     void AnimationChannel::UpdateProperty(float delta, float time)
     {
         const float frame_time = m_KeyFrames[m_FrameIndex].Time;
-        const Numeric value = m_KeyFrames[m_FrameIndex].Value;
+        const Variant value = m_KeyFrames[m_FrameIndex].Value;
         if (time > frame_time)
         {
             m_FrameIndex++;
             m_FrameIndex %= m_KeyFrames.size();
         }
 
-        if (auto* p = std::get_if<float>(m_Property))
+        const Variant v = m_Property.Lerp(value, delta);
+
+        if (v.IsInt() && v.AsInt() == -1)
         {
-            if (const auto* t = std::get_if<float>(&value))
-            {
-                *p = Math::Lerp(*p, *t, delta);
-            }
+            AZ_CORE_ERROR("Wrong interpolate type!");
+            return;
         }
+
+        m_Property.Set(v.Get());
     }
 
     void AnimationChannel::AddKeyFrame(const KeyFrame& keyFrame)

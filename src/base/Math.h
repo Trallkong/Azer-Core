@@ -7,8 +7,9 @@
 
 namespace Azer::Math
 {
-    inline float Lerp(const float a, const float b, const float delta)
-    {
-        return a + (b - a) * delta;
-    }
+    float Lerp(float a, float b, float delta);
+
+    Vector2 Lerp(const Vector2& a, const Vector2& b, float delta);
+
+    Vector3 Lerp(const Vector3& a, const Vector3& b, float delta);
 }

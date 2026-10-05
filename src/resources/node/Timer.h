@@ -19,7 +19,7 @@ namespace Azer
 
         bool AutoStart = false;
         bool OneShot = false;
-        float WaitTime = 0.0f;
+        float WaitTime = 1.0f;
 
         void Ready() override;
         void Process(float delta) override;
