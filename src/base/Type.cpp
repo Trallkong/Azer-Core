@@ -7,26 +7,26 @@
 
 namespace Azer
 {
-    Variant Variant::Lerp(const Variant& to, const float delta) const
+    VariantValue Variant::Lerp(const VariantValue& to, const float delta) const
     {
-        if (IsFloat() && to.IsFloat())
+        if (IsFloat(*m_Value) && IsFloat(to))
         {
-            float v = Math::Lerp(AsFloat(), to.AsFloat(), delta);
-            return Variant(v);
+            float v = Math::Lerp(AsFloat(*m_Value), AsFloat(to), delta);
+            return v;
         }
 
-        if (IsVector2() && to.IsVector2())
+        if (IsVector2(*m_Value) && IsVector2(to))
         {
-            Vector2 v = Math::Lerp(AsVector2(), to.AsVector2(), delta);
-            return Variant(v);
+            Vector2 v = Math::Lerp(AsVector2(*m_Value), AsVector2(to), delta);
+            return v;
         }
 
-        if (IsVector3() && to.IsVector3())
+        if (IsVector3(*m_Value) && IsVector3(to))
         {
-            Vector3 v = Math::Lerp(AsVector3(), to.AsVector3(), delta);
-            return Variant(v);
+            Vector3 v = Math::Lerp(AsVector3(*m_Value), AsVector3(to), delta);
+            return v;
         }
 
-        return Variant(-1);
+        return -1;
     }
 }

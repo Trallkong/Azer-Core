@@ -51,38 +51,39 @@ namespace Azer
 
     using VariantValue = std::variant<int, double, float, Vector2, Vector3, Vector3i, Vector2i>;
 
+    // 将VariantValue类型交给Variant容器托管，指针依赖，可能有内存安全问题，使用时注意。
     class Variant
     {
     public:
-        explicit Variant(const VariantValue& v)
+        explicit Variant(VariantValue* v)
             : m_Value(v)
         {
 
         }
 
-        [[nodiscard]] bool IsInt()      const { return m_Value.index() == 0; }
-        [[nodiscard]] bool IsDouble()   const { return m_Value.index() == 1; }
-        [[nodiscard]] bool IsFloat()    const { return m_Value.index() == 2; }
-        [[nodiscard]] bool IsVector2()  const { return m_Value.index() == 3; }
-        [[nodiscard]] bool IsVector3()  const { return m_Value.index() == 4; }
-        [[nodiscard]] bool IsVector3i() const { return m_Value.index() == 5; }
-        [[nodiscard]] bool IsVector2i() const { return m_Value.index() == 6; }
+        static bool IsInt(const VariantValue& value)        { return value.index() == 0; }
+        static bool IsDouble(const VariantValue& value)     { return value.index() == 1; }
+        static bool IsFloat(const VariantValue& value)      { return value.index() == 2; }
+        static bool IsVector2(const VariantValue& value)    { return value.index() == 3; }
+        static bool IsVector3(const VariantValue& value)    { return value.index() == 4; }
+        static bool IsVector3i(const VariantValue& value)   { return value.index() == 5; }
+        static bool IsVector2i(const VariantValue& value)   { return value.index() == 6; }
 
-        [[nodiscard]] int       AsInt()         const { return std::get<0>(m_Value); }
-        [[nodiscard]] double    AsDouble()      const { return std::get<1>(m_Value); }
-        [[nodiscard]] float     AsFloat()       const { return std::get<2>(m_Value); }
-        [[nodiscard]] Vector2   AsVector2()     const { return std::get<3>(m_Value); }
-        [[nodiscard]] Vector3   AsVector3()     const { return std::get<4>(m_Value); }
-        [[nodiscard]] Vector3i  AsVector3i()    const { return std::get<5>(m_Value); }
-        [[nodiscard]] Vector2i  AsVector2i()    const { return std::get<6>(m_Value); }
+        static int       AsInt(const VariantValue& value)          { return std::get<0>(value); }
+        static double    AsDouble(const VariantValue& value)       { return std::get<1>(value); }
+        static float     AsFloat(const VariantValue& value)        { return std::get<2>(value); }
+        static Vector2   AsVector2(const VariantValue& value)      { return std::get<3>(value); }
+        static Vector3   AsVector3(const VariantValue& value)      { return std::get<4>(value); }
+        static Vector3i  AsVector3i(const VariantValue& value)     { return std::get<5>(value); }
+        static Vector2i  AsVector2i(const VariantValue& value)     { return std::get<6>(value); }
 
-        void Set(const VariantValue& v) { m_Value = v; }
-        [[nodiscard]] const VariantValue& Get() const { return m_Value; }
+        void Set(const VariantValue& v) const { *m_Value = v; }
+        [[nodiscard]] const VariantValue& Get() const { return *m_Value; }
 
-        Variant Lerp(const Variant& to, float delta) const;
+        [[nodiscard]] VariantValue Lerp(const VariantValue& to, float delta) const;
 
     private:
-        VariantValue m_Value;
+        VariantValue* m_Value;
     };
 }
 

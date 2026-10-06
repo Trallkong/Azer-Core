@@ -9,9 +9,21 @@
 
 namespace Azer
 {
+    void AnimationObject::Process(float delta)
+    {
+        for (auto& channel : m_Channels)
+        {
+            channel.UpdateProperty(delta, m_Time);
+        }
+    }
+
     void AnimationObject::Play()
     {
 
+    }
+
+    void AnimationObject::Stop()
+    {
     }
 
     AnimationPlayer::AnimationPlayer(const std::string& name)
@@ -25,46 +37,102 @@ namespace Azer
 
     }
 
-    void AnimationPlayer::Process(float delta)
+    void AnimationPlayer::Process(const float delta)
     {
         Node::Process(delta);
 
-        for (auto& animation : m_Animations)
+        if (m_PlayingAnimation)
         {
-
+            m_PlayingAnimation->Process(delta);
         }
     }
 
     void AnimationPlayer::Play(const std::string& name)
     {
-        auto result = m_Animations | std::views::filter([name](const AnimationObject& animation) { return animation.Name == name; });
+        auto result = m_Animations | std::views::filter([name](const Ref<AnimationObject>& animation) { return animation->Name == name; });
         if (result.empty())
         {
             AZ_CORE_INFO("No animation found!");
             return;
         }
-        result.begin()->Play();
+        result.begin()->get()->Play();
+        m_PlayingAnimation.reset(result.begin()->get());
+    }
+
+    void AnimationPlayer::Stop()
+    {
+        if (m_PlayingAnimation)
+        {
+            m_PlayingAnimation->Stop();
+            m_PlayingAnimation = nullptr;
+            return;
+        }
+        AZ_CORE_WARN("No animation playing!");
+    }
+
+    void AnimationPlayer::AddAnimation(std::string name)
+    {
+        for (const auto& animation : m_Animations)
+        {
+            if (animation->Name == name)
+            {
+                AZ_CORE_WARN("Animation already exists!");
+                return;
+            }
+        }
+
+        m_Animations.push_back(CreateRef<AnimationObject>(std::move(name)));
+    }
+
+    void AnimationPlayer::RemoveAnimation(const std::string& name)
+    {
+        int remove_index = -1;
+        for (int i = 0; i < m_Animations.size(); i++)
+        {
+            if (m_Animations[i]->Name == name)
+            {
+                remove_index = i;
+                break;
+            }
+        }
+        if (remove_index >= 0)
+        {
+            m_Animations.erase(m_Animations.begin() + remove_index);
+        }
+    }
+
+    const Ref<AnimationObject>& AnimationPlayer::GetAnimation(const std::string& name) const
+    {
+        for (auto& animation : m_Animations)
+        {
+            if (animation->Name == name)
+            {
+                return animation;
+            }
+        }
+
+        AZ_CORE_WARN("No animation found!");
+        return nullptr;
     }
 
     void AnimationChannel::UpdateProperty(float delta, float time)
     {
-        const float frame_time = m_KeyFrames[m_FrameIndex].Time;
-        const Variant value = m_KeyFrames[m_FrameIndex].Value;
-        if (time > frame_time)
+        if (const float frame_time = m_KeyFrames[m_FrameIndex].Time; time > frame_time)
         {
             m_FrameIndex++;
             m_FrameIndex %= m_KeyFrames.size();
         }
 
-        const Variant v = m_Property.Lerp(value, delta);
+        const VariantValue value = m_KeyFrames[m_FrameIndex].Value;
+        const VariantValue v = m_Property.Lerp(value, delta);
 
-        if (v.IsInt() && v.AsInt() == -1)
+        if (Variant::IsInt(v) && Variant::AsInt(v) == -1)
         {
             AZ_CORE_ERROR("Wrong interpolate type!");
             return;
         }
 
-        m_Property.Set(v.Get());
+        m_Property.Set(v);
     }
 
     void AnimationChannel::AddKeyFrame(const KeyFrame& keyFrame)
